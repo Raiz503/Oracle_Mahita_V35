@@ -79,6 +79,106 @@ st.markdown("""
             padding: 10px 15px; margin: 5px 40px 5px 0; border-radius: 10px; }
 .chat-bot-offline { background: rgba(255,255,255,0.05); border-left: 3px solid #FFA500; 
                     padding: 10px 15px; margin: 5px 40px 5px 0; border-radius: 10px; }
+
+/* ── CHAT BULLE FLOTTANT STYLE MESSENGER ── */
+#oracle-chat-bubble {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+#oracle-chat-toggle {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7FFFD4, #00b894);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(127,255,212,0.5);
+    font-size: 28px;
+    transition: transform 0.2s;
+}
+#oracle-chat-toggle:hover { transform: scale(1.1); }
+#oracle-chat-window {
+    position: absolute;
+    bottom: 72px; right: 0;
+    width: 380px;
+    max-height: 520px;
+    background: #1a1a2e;
+    border-radius: 18px;
+    border: 1px solid rgba(127,255,212,0.3);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    transform-origin: bottom right;
+}
+#oracle-chat-window.hidden {
+    opacity: 0; pointer-events: none; transform: scale(0.85);
+}
+#chat-header {
+    background: linear-gradient(135deg, #0f3460, #16213e);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid rgba(127,255,212,0.2);
+}
+#chat-header-title { color: #7FFFD4; font-weight: 700; font-size: 15px; flex: 1; }
+#chat-header-status { color: #00FF00; font-size: 12px; }
+#chat-close-btn {
+    background: none; border: none; color: #888; cursor: pointer;
+    font-size: 18px; padding: 0 4px;
+}
+#chat-messages {
+    flex: 1; overflow-y: auto; padding: 14px 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    scrollbar-width: thin; scrollbar-color: #7FFFD4 transparent;
+}
+.msg-user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #0f3460, #1a4480);
+    color: #fff; padding: 10px 14px;
+    border-radius: 18px 18px 4px 18px;
+    max-width: 75%; font-size: 14px; line-height: 1.4;
+}
+.msg-bot {
+    align-self: flex-start;
+    background: rgba(127,255,212,0.08);
+    border: 1px solid rgba(127,255,212,0.2);
+    color: #e0e0e0; padding: 10px 14px;
+    border-radius: 18px 18px 18px 4px;
+    max-width: 85%; font-size: 14px; line-height: 1.4;
+}
+.msg-bot-header { color: #7FFFD4; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+.msg-timestamp { color: #555; font-size: 10px; margin-top: 3px; text-align: right; }
+#chat-input-area {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(127,255,212,0.15);
+    display: flex; gap: 8px; align-items: center;
+    background: #16213e;
+}
+#chat-input-field {
+    flex: 1; background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(127,255,212,0.3);
+    border-radius: 22px; padding: 9px 14px;
+    color: #fff; font-size: 14px; outline: none;
+}
+#chat-input-field:focus { border-color: #7FFFD4; }
+#chat-send-btn {
+    background: linear-gradient(135deg, #7FFFD4, #00b894);
+    border: none; border-radius: 50%;
+    width: 38px; height: 38px; cursor: pointer;
+    color: #111; font-size: 16px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+#chat-notif-badge {
+    position: absolute; top: -4px; right: -4px;
+    background: #FF4B4B; color: #fff;
+    border-radius: 50%; width: 18px; height: 18px;
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    display: none;
+}
+.chat-typing { color: #7FFFD4; font-size: 12px; padding: 4px 8px; font-style: italic; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -186,6 +286,7 @@ def get_dernier_adversaire(history: dict, saison: str, equipe: str):
 
 # ===================== PERSISTENCE =====================
 DB_FILE = "oracle_history.json"
+CHAT_FILE = "oracle_chat_history.json"
 
 def load_db():
     if os.path.exists(DB_FILE):
@@ -202,10 +303,86 @@ def save_db(data):
     except Exception as e:
         st.error(f"Erreur de sauvegarde : {e}")
 
+def load_chat_history():
+    if os.path.exists(CHAT_FILE):
+        try:
+            with open(CHAT_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except: return []
+    return []
+
+def save_chat_history(messages):
+    try:
+        with open(CHAT_FILE, "w", encoding="utf-8") as f:
+            json.dump(messages, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        pass
+
+def build_full_context(history: dict, saison_active: str, standings: pd.DataFrame, next_j: int) -> str:
+    """Construit un contexte complet avec TOUTES les données de l'historique pour l'IA."""
+    ctx = []
+    ctx.append(f"=== ORACLE MAHITA — DONNÉES COMPLÈTES ===")
+    ctx.append(f"Saison active : {saison_active}")
+    ctx.append(f"Prochaine journée : J-{next_j}")
+    ctx.append("")
+
+    # Classement
+    ctx.append("--- CLASSEMENT ACTUEL ---")
+    if not standings.empty:
+        for _, row in standings.iterrows():
+            ctx.append(f"  {int(row['Rang'])}. {row['Équipe']} | {int(row['MJ'])} MJ | {int(row['V'])}V {int(row['N'])}N {int(row['D'])}D | BP:{int(row['BP'])} BC:{int(row['BC'])} Diff:{int(row['Diff'])} | {int(row['Pts'])} pts")
+    ctx.append("")
+
+    # Toutes les journées de toutes les saisons
+    for saison, saison_data in history.items():
+        ctx.append(f"=== SAISON : {saison} ===")
+        journees = sorted(saison_data.keys(), key=lambda x: int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 0)
+        for jk in journees:
+            jdata = saison_data[jk]
+            ctx.append(f"\n-- {jk} --")
+
+            # Calendrier
+            cal = jdata.get("cal", [])
+            if cal:
+                ctx.append("  CALENDRIER & COTES:")
+                for m in cal:
+                    cotes = m.get('o', ['-', '-', '-'])
+                    c_str = f"1={cotes[0]} X={cotes[1] if len(cotes)>1 else '-'} 2={cotes[2] if len(cotes)>2 else '-'}"
+                    ctx.append(f"    {m.get('h','?')} vs {m.get('a','?')} | {c_str}")
+
+            # Pronos
+            pro = jdata.get("pro", [])
+            if pro:
+                ctx.append("  PRONOSTICS:")
+                for p in pro:
+                    ctx.append(f"    {p.get('h','?')} vs {p.get('a','?')} → Prono:{p.get('p','?')} Conf:{p.get('c','?')}%")
+
+            # Résultats
+            res = jdata.get("res", [])
+            if res:
+                ctx.append("  RÉSULTATS:")
+                for r in res:
+                    score = r.get('s', '?')
+                    mt = r.get('mt', '')
+                    hm = r.get('hm', '')
+                    am = r.get('am', '')
+                    line = f"    {r.get('h','?')} {score} {r.get('a','?')}"
+                    if mt: line += f" (MT:{mt})"
+                    if hm: line += f" | Buteurs dom: {hm}"
+                    if am: line += f" | Buteurs ext: {am}"
+                    ctx.append(line)
+        ctx.append("")
+
+    return "\n".join(ctx)
+
 if 'history' not in st.session_state:
     st.session_state['history'] = load_db()
     if not st.session_state['history']:
         st.session_state['history']["Saison 2026"] = {}
+
+# ── Charger l'historique chat persistant ──
+if 'chat_messages' not in st.session_state:
+    st.session_state['chat_messages'] = load_chat_history()
 
 # ===================== OCR ENGINE =====================
 @st.cache_resource
@@ -773,6 +950,173 @@ st.markdown(f'<div class="next-day-box">PROCHAINE JOURNÉE : J-{next_j}</div>', 
 
 tabs = st.tabs(["🏆 CLASSEMENT", "📅 CALENDRIER", "🎯 PRONOS", "⚽ RÉSULTATS", 
                 "📚 HISTORIQUE", "⚙️ GESTION", "📊 PERFORMANCE", "🤖 ASSISTANT IA"])
+
+# ===================== CHAT BULLE FLOTTANT =====================
+def render_floating_chat():
+    """Rend le chat bulle flottant style Messenger avec accès à toutes les données."""
+    msgs_json = json.dumps(st.session_state.get('chat_messages', []), ensure_ascii=False)
+    
+    st.markdown(f"""
+    <div id="oracle-chat-bubble">
+        <span id="chat-notif-badge">!</span>
+        <button id="oracle-chat-toggle" onclick="toggleChat()" title="Assistant IA Oracle">🔮</button>
+        
+        <div id="oracle-chat-window" class="hidden">
+            <div id="chat-header">
+                <span style="font-size:20px;">🤖</span>
+                <div>
+                    <div id="chat-header-title">Oracle IA</div>
+                    <div id="chat-header-status">● En ligne · Accès complet aux données</div>
+                </div>
+                <button id="chat-close-btn" onclick="toggleChat()">✕</button>
+            </div>
+            
+            <div id="chat-messages" id="chat-scroll-area">
+                <div class="msg-bot">
+                    <div class="msg-bot-header">🔮 Oracle [Groq]</div>
+                    Bonjour ! Je suis l'Oracle, votre assistant IA. J'ai accès à toutes vos données : classements, résultats, pronostics et patterns. Posez-moi n'importe quelle question !
+                    <div class="msg-timestamp">Système</div>
+                </div>
+            </div>
+            
+            <div class="chat-typing" id="chat-typing" style="display:none;">Oracle réfléchit...</div>
+            
+            <div id="chat-input-area">
+                <input id="chat-input-field" type="text" 
+                    placeholder="Ex: Analyse Liverpool vs Chelsea..."
+                    onkeydown="if(event.key==='Enter') sendChatMessage()"/>
+                <button id="chat-send-btn" onclick="sendChatMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ── État du chat ──
+    let chatOpen = false;
+    let chatHistory = {msgs_json};
+    let isTyping = false;
+    
+    function toggleChat() {{
+        chatOpen = !chatOpen;
+        const win = document.getElementById('oracle-chat-window');
+        const badge = document.getElementById('chat-notif-badge');
+        if (chatOpen) {{
+            win.classList.remove('hidden');
+            badge.style.display = 'none';
+            setTimeout(() => scrollToBottom(), 100);
+            renderMessages();
+        }} else {{
+            win.classList.add('hidden');
+        }}
+    }}
+    
+    function scrollToBottom() {{
+        const area = document.getElementById('chat-messages');
+        if (area) area.scrollTop = area.scrollHeight;
+    }}
+    
+    function formatTime(ts) {{
+        if (!ts) return '';
+        const d = new Date(ts);
+        return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    }}
+    
+    function renderMessages() {{
+        const area = document.getElementById('chat-messages');
+        if (!area) return;
+        area.innerHTML = `
+            <div class="msg-bot">
+                <div class="msg-bot-header">🔮 Oracle</div>
+                Bonjour ! J'ai accès à toutes vos données (classements, résultats, pronos, patterns). Posez-moi n'importe quelle question !
+                <div class="msg-timestamp">Système</div>
+            </div>`;
+        chatHistory.forEach(msg => {{
+            const ts = formatTime(msg.ts || null);
+            if (msg.role === 'user') {{
+                area.innerHTML += `<div class="msg-user">${{msg.content}}<div class="msg-timestamp">${{ts}}</div></div>`;
+            }} else {{
+                const src = msg.source === 'groq' ? '🧠 Groq' : '🤖 Offline';
+                area.innerHTML += `
+                    <div class="msg-bot">
+                        <div class="msg-bot-header">🔮 Oracle [${{src}}]</div>
+                        ${{msg.content.replace(/\\n/g, '<br>')}}
+                        <div class="msg-timestamp">${{ts}}</div>
+                    </div>`;
+            }}
+        }});
+        setTimeout(() => scrollToBottom(), 50);
+    }}
+    
+    function sendChatMessage() {{
+        if (isTyping) return;
+        const input = document.getElementById('chat-input-field');
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        
+        // Afficher msg user immédiatement
+        const area = document.getElementById('chat-messages');
+        const now = new Date().toISOString();
+        area.innerHTML += `<div class="msg-user">${{text}}<div class="msg-timestamp">${{formatTime(now)}}</div></div>`;
+        scrollToBottom();
+        
+        // Afficher typing
+        document.getElementById('chat-typing').style.display = 'block';
+        isTyping = true;
+        scrollToBottom();
+        
+        // Envoyer via URL param pour Streamlit
+        const encoded = encodeURIComponent(text);
+        const url = new URL(window.location.href);
+        url.searchParams.set('chat_input', encoded);
+        url.searchParams.set('chat_ts', Date.now());
+        
+        // Utiliser fetch vers le composant Streamlit custom
+        // On passe par window.parent pour streamlit component
+        window.parent.postMessage({{
+            type: 'streamlit:setComponentValue',
+            value: {{ chat_input: text, ts: Date.now() }}
+        }}, '*');
+        
+        // Fallback: stocker dans sessionStorage et reloader
+        sessionStorage.setItem('pending_chat', JSON.stringify({{text, ts: Date.now()}}));
+        
+        // Simuler délai puis recharger
+        setTimeout(() => {{
+            isTyping = false;
+            document.getElementById('chat-typing').style.display = 'none';
+        }}, 500);
+    }}
+    
+    // Initialiser si déjà des messages
+    if (chatHistory && chatHistory.length > 0) {{
+        const badge = document.getElementById('chat-notif-badge');
+        if (badge && !chatOpen) {{
+            badge.style.display = 'flex';
+            badge.textContent = chatHistory.length > 9 ? '9+' : chatHistory.length;
+        }}
+    }}
+    
+    // Écouter les messages entrants depuis Streamlit
+    window.addEventListener('message', function(e) {{
+        if (e.data && e.data.type === 'oracle_new_message') {{
+            chatHistory = e.data.messages;
+            if (chatOpen) renderMessages();
+            else {{
+                const badge = document.getElementById('chat-notif-badge');
+                if (badge) {{ badge.style.display = 'flex'; badge.textContent = '!'; }}
+            }}
+            isTyping = false;
+            document.getElementById('chat-typing').style.display = 'none';
+        }}
+    }});
+    
+    // Auto-render si ouvert
+    if (chatOpen) renderMessages();
+    </script>
+    """, unsafe_allow_html=True)
+
+render_floating_chat()
 
 
 with tabs[0]:
@@ -1540,31 +1884,122 @@ with tabs[5]:
 # ===================== TAB 6 : PERFORMANCE =====================
 with tabs[6]:
     st.markdown("### 📊 Performance Oracle")
-    if st.session_state['history'][s_active]:
+    
+    # ── Statistiques calculées directement depuis l'historique ──
+    history_saison = st.session_state['history'][s_active]
+    
+    total_matchs_hist = 0
+    total_victoires_dom = 0
+    total_nuls = 0
+    total_victoires_ext = 0
+    total_pronos_corrects = 0
+    total_pronos = 0
+    
+    for jk, jdata in history_saison.items():
+        res = jdata.get("res", [])
+        pro = jdata.get("pro", [])
+        cal = jdata.get("cal", [])
+        
+        for r in res:
+            try:
+                sh, sa = map(int, r['s'].replace('-', ':').split(':'))
+                total_matchs_hist += 1
+                if sh > sa: total_victoires_dom += 1
+                elif sh == sa: total_nuls += 1
+                else: total_victoires_ext += 1
+            except: continue
+        
+        for i, p in enumerate(pro):
+            if i < len(res):
+                try:
+                    sh, sa = map(int, res[i]['s'].replace('-', ':').split(':'))
+                    res_reel = "1" if sh > sa else ("X" if sh == sa else "2")
+                    if p.get('p') == res_reel:
+                        total_pronos_corrects += 1
+                    total_pronos += 1
+                except: continue
+    
+    if total_matchs_hist > 0:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Matchs joués", total_matchs_hist)
+        c2.metric("Victoires Dom", f"{total_victoires_dom} ({total_victoires_dom/total_matchs_hist*100:.0f}%)")
+        c3.metric("Nuls", f"{total_nuls} ({total_nuls/total_matchs_hist*100:.0f}%)")
+        c4.metric("Victoires Ext", f"{total_victoires_ext} ({total_victoires_ext/total_matchs_hist*100:.0f}%)")
+        
+        if total_pronos > 0:
+            taux = total_pronos_corrects / total_pronos * 100
+            st.markdown(f"### 🎯 Précision des pronos : **{taux:.1f}%** ({total_pronos_corrects}/{total_pronos})")
+            color = "green" if taux >= 60 else "orange" if taux >= 45 else "red"
+            st.progress(int(taux))
+        
+        # Détail par équipe
+        st.divider()
+        st.markdown("#### 📈 Statistiques par Équipe")
+        standings_full = get_standings(history_saison, engine.teams_list)
+        if not standings_full.empty:
+            st.dataframe(standings_full, use_container_width=True, hide_index=True)
+        
+        # Détail par journée
+        st.divider()
+        st.markdown("#### 📅 Récapitulatif par Journée")
+        jours_data = []
+        for jk in sorted(history_saison.keys(), key=lambda x: int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 0):
+            jdata = history_saison[jk]
+            res = jdata.get("res", [])
+            cal = jdata.get("cal", [])
+            pro = jdata.get("pro", [])
+            nb_res = len(res)
+            nb_pronos = len(pro)
+            jours_data.append({
+                "Journée": jk,
+                "Matchs joués": nb_res,
+                "Pronos": nb_pronos,
+                "Calendrier": "✅" if cal else "❌"
+            })
+        if jours_data:
+            st.dataframe(pd.DataFrame(jours_data), use_container_width=True, hide_index=True)
+    else:
         if oracle_brain:
-            stats = oracle_brain.calculer_performance_globale(st.session_state['history'][s_active])
+            stats = oracle_brain.calculer_performance_globale(history_saison)
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Matchs analysés", stats.get("total_matchs", 0))
             c2.metric("Taux 1N2", f"{stats.get('taux_1n2', 0):.1f}%")
             c3.metric("Scores Exacts", stats.get("scores_exacts", 0))
             c4.metric("Points/Match", f"{stats.get('moyenne_points', 0):.2f}")
-
-            rating = stats.get("rating_general", 0)
-            color = "green" if rating >= 80 else "orange" if rating >= 50 else "red"
-            st.progress(int(rating))
-            st.markdown(f"<h2 style='color:{color};'>{rating:.1f} / 100</h2>", unsafe_allow_html=True)
         else:
-            st.info("Module Cerveau I non disponible.")
+            st.info("Aucun résultat enregistré pour cette saison. Commencez par importer un calendrier et des résultats !")
 
-        # Stats IA Apprentissage
-        if IA_DISPONIBLE:
-            st.divider()
-            st.markdown("### 🧠 Performance IA Apprentissage")
-            stats_ia = moteur_apprentissage.get_stats_apprentissage()
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Matchs appris", stats_ia.get("total", 0))
-            c2.metric("Taux réussite IA", f"{stats_ia.get('taux_reussite', 0):.1f}%")
-            c3.metric("Patterns découverts", stats_ia.get("patterns_connus", 0))
+    # Stats IA Apprentissage
+    if IA_DISPONIBLE:
+        st.divider()
+        st.markdown("### 🧠 Performance IA Apprentissage")
+        stats_ia = moteur_apprentissage.get_stats_apprentissage()
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Matchs appris", stats_ia.get("total", 0))
+        c2.metric("Taux réussite IA", f"{stats_ia.get('taux_reussite', 0):.1f}%")
+        c3.metric("Patterns découverts", stats_ia.get("patterns_connus", 0))
+        
+        # Patterns détectés (même si 0 matchs appris formellement)
+        st.divider()
+        st.markdown("#### 📊 Patterns de Cotes (données historiques)")
+        if moteur_apprentissage.patterns:
+            pattern_data = []
+            for p, d in moteur_apprentissage.patterns.items():
+                if isinstance(d, dict) and "total" in d and d["total"] >= 1:
+                    total = d["total"]
+                    pattern_data.append({
+                        "Pattern Cotes": p,
+                        "Occurrences": total,
+                        "1": f"{d.get('1',0)} ({d.get('1',0)/total*100:.0f}%)",
+                        "X": f"{d.get('X',0)} ({d.get('X',0)/total*100:.0f}%)",
+                        "2": f"{d.get('2',0)} ({d.get('2',0)/total*100:.0f}%)"
+                    })
+            if pattern_data:
+                st.dataframe(pd.DataFrame(pattern_data), use_container_width=True, hide_index=True)
+            else:
+                st.info("Enregistrez des résultats pour voir les patterns !")
+        else:
+            st.info("Aucun pattern encore. Enregistrez des résultats.")
 
 # ===================== TAB 7 : ASSISTANT IA =====================
 with tabs[7]:
@@ -1617,13 +2052,18 @@ with tabs[7]:
         with status_col3:
             st.info(f"🎯 {stats['taux_reussite']}% réussite")
 
+        # ── Infos contexte disponible ──
+        total_journees = sum(len(v) for v in st.session_state['history'].values())
+        total_res = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
+        st.success(f"🧠 Contexte IA : {len(st.session_state['history'])} saison(s) · {total_journees} journée(s) · {total_res} résultats enregistrés — L'IA a accès à toutes ces données !")
+
         st.divider()
 
         # Zone de chat
         st.markdown("### 💬 Discuter avec l'Oracle")
 
         if "chat_messages" not in st.session_state:
-            st.session_state.chat_messages = []
+            st.session_state.chat_messages = load_chat_history()
 
         # Affiche l'historique
         for msg in st.session_state.chat_messages:
@@ -1648,42 +2088,61 @@ with tabs[7]:
             user_input = st.text_input("Votre message...", 
                                        placeholder="Ex: Analyse Liverpool vs Manchester City",
                                        label_visibility="collapsed")
-            cols = st.columns([1, 1, 4])
+            cols = st.columns([1, 1, 1, 4])
             with cols[0]:
                 envoyer = st.form_submit_button("📤 Envoyer", use_container_width=True)
             with cols[1]:
                 if st.form_submit_button("🗑️ Effacer", use_container_width=True):
                     st.session_state.chat_messages = []
+                    save_chat_history([])
                     st.rerun()
+            with cols[2]:
+                if st.form_submit_button("📥 Contexte complet", use_container_width=True):
+                    # Afficher le contexte complet que l'IA reçoit
+                    standings_ctx = get_standings(st.session_state['history'][s_active], engine.teams_list)
+                    ctx = build_full_context(st.session_state['history'], s_active, standings_ctx, next_j)
+                    st.text_area("Contexte transmis à l'IA", ctx, height=300)
 
         if envoyer and user_input.strip():
-            st.session_state.chat_messages.append({"role": "user", "content": user_input})
+            import datetime
+            ts = datetime.datetime.now().isoformat()
+            st.session_state.chat_messages.append({"role": "user", "content": user_input, "ts": ts})
 
             standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
+            
+            # ── CONTEXTE COMPLET : toutes les données historiques ──
+            full_context = build_full_context(
+                st.session_state['history'], s_active, standings, next_j
+            )
+            
             moteur_ia_chat.set_contexte(
                 history=st.session_state['history'],
                 saison_active=s_active,
                 standings=standings,
-                prochaine_journee=next_j
+                prochaine_journee=next_j,
+                contexte_complet=full_context  # Nouveau paramètre
             )
 
             with st.spinner("L'Oracle réfléchit..."):
                 reponse = moteur_ia_chat.discuter(user_input)
 
+            ts_rep = datetime.datetime.now().isoformat()
             st.session_state.chat_messages.append({
                 "role": "assistant", 
                 "content": reponse["texte"],
                 "source": reponse["source"],
-                "confiance": reponse.get("confiance", 0)
+                "confiance": reponse.get("confiance", 0),
+                "ts": ts_rep
             })
+            save_chat_history(st.session_state.chat_messages)
             st.rerun()
 
         # Suggestions
         st.divider()
         st.markdown("#### ⚡ Questions rapides")
         suggestions = [
-            "Stats de l'IA",
-            "Quels patterns découverts ?",
+            "Résume toutes les journées",
+            "Quelle équipe performe le mieux ?",
             "Analyse la forme de Liverpool",
             "Pronostic prochaine journée",
             "Qui est favori selon les cotes ?"
@@ -1692,21 +2151,28 @@ with tabs[7]:
         for i, sugg in enumerate(suggestions):
             with sugg_cols[i]:
                 if st.button(sugg, key=f"sugg_{i}", use_container_width=True):
-                    st.session_state.chat_messages.append({"role": "user", "content": sugg})
+                    import datetime
+                    ts = datetime.datetime.now().isoformat()
+                    st.session_state.chat_messages.append({"role": "user", "content": sugg, "ts": ts})
                     standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
+                    full_context = build_full_context(st.session_state['history'], s_active, standings, next_j)
                     moteur_ia_chat.set_contexte(
                         history=st.session_state['history'],
                         saison_active=s_active,
                         standings=standings,
-                        prochaine_journee=next_j
+                        prochaine_journee=next_j,
+                        contexte_complet=full_context
                     )
                     with st.spinner("Analyse..."):
                         reponse = moteur_ia_chat.discuter(sugg)
+                    ts_rep = datetime.datetime.now().isoformat()
                     st.session_state.chat_messages.append({
                         "role": "assistant",
                         "content": reponse["texte"],
-                        "source": reponse["source"]
+                        "source": reponse["source"],
+                        "ts": ts_rep
                     })
+                    save_chat_history(st.session_state.chat_messages)
                     st.rerun()
 
         # Section apprentissage
