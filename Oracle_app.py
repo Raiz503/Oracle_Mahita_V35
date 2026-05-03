@@ -2001,217 +2001,342 @@ with tabs[6]:
         else:
             st.info("Aucun pattern encore. Enregistrez des résultats.")
 
+# ===================== CHAT FLOTTANT AMÉLIORÉ (à placer avant Tab 7) =====================
+def render_floating_chat():
+    """Chat bulle flottante style moderne - Version stable"""
+    
+    msgs = st.session_state.get('chat_messages', [])
+    msgs_json = json.dumps(msgs, ensure_ascii=False)
+    
+    st.markdown(f"""
+    <style>
+    #oracle-chat-bubble {{
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 9999;
+    }}
+    #chat-toggle-btn {{
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7FFFD4, #00b894);
+        border: none;
+        color: #111;
+        font-size: 34px;
+        cursor: pointer;
+        box-shadow: 0 8px 30px rgba(127, 255, 212, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }}
+    #chat-toggle-btn:hover {{
+        transform: scale(1.1);
+        box-shadow: 0 10px 35px rgba(127, 255, 212, 0.7);
+    }}
+
+    #chat-window {{
+        position: fixed;
+        bottom: 110px;
+        right: 30px;
+        width: 420px;
+        height: 620px;
+        background: #0F1626;
+        border-radius: 20px;
+        border: 2px solid #7FFFD4;
+        box-shadow: 0 15px 60px rgba(0, 0, 0, 0.85);
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 10000;
+    }}
+    #chat-window.open {{
+        display: flex;
+    }}
+
+    #chat-header {{
+        background: linear-gradient(135deg, #1a2338, #0f1626);
+        padding: 16px 20px;
+        border-bottom: 1px solid #7FFFD4;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }}
+
+    #chat-messages {{
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background: #0a0f1c;
+    }}
+
+    #chat-input-area {{
+        padding: 15px;
+        background: #0F1626;
+        border-top: 1px solid #7FFFD4;
+    }}
+
+    #chat-input {{
+        width: 100%;
+        background: #1a2338;
+        border: 1px solid #7FFFD4;
+        border-radius: 25px;
+        padding: 14px 20px;
+        color: white;
+        font-size: 15.5px;
+    }}
+    #chat-input:focus {{
+        outline: none;
+        border-color: #7FFFD4;
+        box-shadow: 0 0 0 3px rgba(127,255,212,0.25);
+    }}
+    </style>
+
+    <div id="oracle-chat-bubble">
+        <button id="chat-toggle-btn" onclick="toggleOracleChat()">🔮</button>
+        
+        <div id="chat-window">
+            <!-- Header -->
+            <div id="chat-header">
+                <span style="font-size: 32px;">🔮</span>
+                <div style="flex:1;">
+                    <strong style="color:#7FFFD4; font-size:18px;">Oracle Mahita</strong><br>
+                    <small style="color:#00FF88;">● En ligne • Accès total aux données</small>
+                </div>
+                <button onclick="toggleOracleChat()" 
+                        style="background:none; border:none; color:#aaa; font-size:28px; cursor:pointer; padding:0 8px;">
+                    ✕
+                </button>
+            </div>
+            
+            <!-- Messages -->
+            <div id="chat-messages"></div>
+            
+            <!-- Input -->
+            <div id="chat-input-area">
+                <input type="text" id="chat-input" 
+                       placeholder="Posez-moi n'importe quelle question..."
+                       onkeypress="if(event.key === 'Enter') sendOracleMessage()">
+            </div>
+        </div>
+    </div>
+
+    <script>
+    let chatOpen = false;
+
+    function toggleOracleChat() {{
+        chatOpen = !chatOpen;
+        const win = document.getElementById('chat-window');
+        if (chatOpen) {{
+            win.classList.add('open');
+            renderChatMessages();
+        }} else {{
+            win.classList.remove('open');
+        }}
+    }}
+
+    function renderChatMessages() {{
+        const area = document.getElementById('chat-messages');
+        const messages = {msgs_json};
+        
+        let html = `
+            <div style="background:rgba(127,255,212,0.1); padding:14px; border-radius:12px; border-left:4px solid #7FFFD4;">
+                Bonjour ! Je suis l'Oracle Mahita.<br>
+                Posez-moi n'importe quelle question sur vos données.
+            </div>`;
+
+        messages.forEach(msg => {{
+            if (msg.role === "user") {{
+                html += `
+                    <div style="align-self: flex-end; background: #1e2a4a; padding: 12px 16px; 
+                                border-radius: 18px 18px 4px 18px; max-width: 80%;">
+                        ${{msg.content}}
+                    </div>`;
+            }} else {{
+                html += `
+                    <div style="align-self: flex-start; background: rgba(127,255,212,0.08); 
+                                padding: 12px 16px; border-radius: 18px 18px 18px 4px; max-width: 85%;">
+                        ${{msg.content.replace(/\\n/g, '<br>')}}
+                    </div>`;
+            }}
+        }});
+        
+        area.innerHTML = html;
+        area.scrollTop = area.scrollHeight;
+    }}
+
+    function sendOracleMessage() {{
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text) return;
+        
+        // Envoi à Streamlit
+        const url = new URL(window.location.href);
+        url.searchParams.set('oracle_chat_input', encodeURIComponent(text));
+        window.location.href = url;
+        
+        input.value = '';
+    }}
+
+    // Fermer avec Echap
+    document.addEventListener('keydown', function(e) {{
+        if (e.key === "Escape" && chatOpen) {{
+            toggleOracleChat();
+        }}
+    }});
+    </script>
+    """, unsafe_allow_html=True)
+
 # ===================== TAB 7 : ASSISTANT IA =====================
 with tabs[7]:
     st.markdown("""
-    <div class="main-header" style="padding: 15px; margin-bottom: 15px;">
-        <h2 style="color: #7FFFD4; margin: 0;">🤖 Assistant IA Oracle</h2>
-        <p style="color: #888; margin: 5px 0 0 0;">Analyse · Prédiction · Apprentissage</p>
+    <div class="main-header" style="padding: 20px; margin-bottom: 25px; text-align:center;">
+        <h2 style="color: #7FFFD4; margin:0;">🤖 Oracle IA Assistant</h2>
+        <p style="color: #888; margin:8px 0 0 0;">Analyse intelligente • Contexte complet • Apprentissage continu</p>
     </div>
     """, unsafe_allow_html=True)
 
-    if not IA_DISPONIBLE:
-        st.error("❌ Modules IA non disponibles. Vérifiez que moteur_apprentissage.py et moteur_ia_chat.py sont présents.")
-    else:
-        # Configuration API Groq
-        with st.expander("🔑 Configuration API Groq", expanded=not moteur_ia_chat.est_connecte()):
-            col1, col2 = st.columns([3, 1])
-            api_key_input = col1.text_input("Clé API Groq", 
-                                          value=moteur_ia_chat.api_key,
-                                          type="password",
-                                          placeholder="gsk_...")
-            if col2.button("💾 Connecter", use_container_width=True):
-                if api_key_input:
-                    os.environ["GROQ_API_KEY"] = api_key_input
-                    moteur_ia_chat.api_key = api_key_input
-                    try:
-                        from groq import Groq
-                        moteur_ia_chat.client = Groq(api_key=api_key_input)
-                        custom_notify("✅ API Groq connectée !", "#00FF00")
-                    except Exception as e:
-                        st.error(f"Erreur : {e}")
-                    st.rerun()
+    # Chat flottant
+    render_floating_chat()
 
-            st.markdown("""
-            <small style="color: #888;">
-            📝 Clé gratuite sur <a href="https://console.groq.com" target="_blank">console.groq.com</a><br>
-            💡 Sans clé = mode offline avec patterns appris uniquement.
-            </small>
+    st.divider()
+
+    # Configuration Groq
+    st.markdown("### 🔑 Configuration Groq")
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        api_key_input = st.text_input(
+            "Clé API Groq", 
+            value=getattr(moteur_ia_chat, 'api_key', ''),
+            type="password",
+            placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxx"
+        )
+    with col2:
+        if st.button("🔗 Connecter", use_container_width=True):
+            if api_key_input:
+                os.environ["GROQ_API_KEY"] = api_key_input
+                moteur_ia_chat.api_key = api_key_input
+                try:
+                    from groq import Groq
+                    moteur_ia_chat.client = Groq(api_key=api_key_input)
+                    custom_notify("✅ Groq connecté avec succès !", "#00FF00")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erreur : {e}")
+
+    # Status
+    col_stat1, col_stat2, col_stat3 = st.columns(3)
+    with col_stat1:
+        if getattr(moteur_ia_chat, 'est_connecte', lambda: False)():
+            st.success("🟢 Groq Connecté")
+        else:
+            st.warning("🟡 Mode Offline")
+    with col_stat2:
+        stats_ia = moteur_apprentissage.get_stats_apprentissage() if IA_DISPONIBLE else {"total": 0}
+        st.metric("Matchs appris", stats_ia.get("total", 0))
+    with col_stat3:
+        total_res = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
+        st.metric("Résultats enregistrés", total_res)
+
+    st.divider()
+
+    # Zone de chat dans l'onglet (redondance utile)
+    st.markdown("### 💬 Discussion dans l'onglet")
+
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = load_chat_history()
+
+    # Affichage des messages
+    for msg in st.session_state.chat_messages:
+        if msg["role"] == "user":
+            st.markdown(f"""
+            <div class="chat-user">
+                <b>👤 Vous</b><br>{msg['content']}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            source = "🧠 Groq" if msg.get("source") == "groq" else "🤖 Offline"
+            st.markdown(f"""
+            <div class="chat-bot">
+                <b>🔮 Oracle</b> <small style="color:#888">[{source}]</small><br>
+                {msg['content']}
+            </div>
             """, unsafe_allow_html=True)
 
-        # Status
-        status_col1, status_col2, status_col3 = st.columns(3)
-        with status_col1:
-            if moteur_ia_chat.est_connecte():
-                st.success("🟢 IA Avancée")
-            else:
-                st.warning("🟡 Mode Offline")
-        with status_col2:
-            stats = moteur_apprentissage.get_stats_apprentissage()
-            st.info(f"📊 {stats['total']} matchs appris")
-        with status_col3:
-            st.info(f"🎯 {stats['taux_reussite']}% réussite")
+    # Formulaire de saisie
+    with st.form("chat_form_tab7", clear_on_submit=True):
+        user_input = st.text_input(
+            "", 
+            placeholder="Exemple : Analyse la forme actuelle de Liverpool...",
+            label_visibility="collapsed"
+        )
+        
+        c1, c2, c3 = st.columns([2, 1, 1])
+        with c1:
+            submit = st.form_submit_button("📤 Envoyer à l'Oracle", use_container_width=True)
+        with c2:
+            if st.form_submit_button("🗑️ Effacer", use_container_width=True):
+                st.session_state.chat_messages = []
+                save_chat_history([])
+                st.rerun()
+        with c3:
+            if st.form_submit_button("📋 Voir contexte", use_container_width=True):
+                standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
+                ctx = build_full_context(st.session_state['history'], s_active, standings, next_j)
+                st.text_area("Contexte complet transmis à l'IA", ctx, height=300)
 
-        # ── Infos contexte disponible ──
-        total_journees = sum(len(v) for v in st.session_state['history'].values())
-        total_res = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
-        st.success(f"🧠 Contexte IA : {len(st.session_state['history'])} saison(s) · {total_journees} journée(s) · {total_res} résultats enregistrés — L'IA a accès à toutes ces données !")
+    # Traitement de la réponse
+    if submit and user_input.strip():
+        import datetime
+        
+        ts = datetime.datetime.now().isoformat()
+        st.session_state.chat_messages.append({"role": "user", "content": user_input, "ts": ts})
 
-        st.divider()
+        # Contexte complet
+        standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
+        full_context = build_full_context(st.session_state['history'], s_active, standings, next_j)
 
-        # Zone de chat
-        st.markdown("### 💬 Discuter avec l'Oracle")
-
-        if "chat_messages" not in st.session_state:
-            st.session_state.chat_messages = load_chat_history()
-
-        # Affiche l'historique
-        for msg in st.session_state.chat_messages:
-            if msg["role"] == "user":
-                st.markdown(f"""
-                <div class="chat-user">
-                    <b>👤 Vous</b><br>{msg['content']}
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                css_class = "chat-bot" if msg.get("source") == "groq" else "chat-bot-offline"
-                source_text = "🧠 Groq" if msg.get("source") == "groq" else "🤖 Offline"
-                st.markdown(f"""
-                <div class="{css_class}">
-                    <b>🔮 Oracle</b> <span style="color: #888; font-size: 0.8em;">[{source_text}]</span>
-                    <br>{msg['content']}
-                </div>
-                """, unsafe_allow_html=True)
-
-        # Saisie
-        with st.form("chat_form", clear_on_submit=True):
-            user_input = st.text_input("Votre message...", 
-                                       placeholder="Ex: Analyse Liverpool vs Manchester City",
-                                       label_visibility="collapsed")
-            cols = st.columns([1, 1, 1, 4])
-            with cols[0]:
-                envoyer = st.form_submit_button("📤 Envoyer", use_container_width=True)
-            with cols[1]:
-                if st.form_submit_button("🗑️ Effacer", use_container_width=True):
-                    st.session_state.chat_messages = []
-                    save_chat_history([])
-                    st.rerun()
-            with cols[2]:
-                if st.form_submit_button("📥 Contexte complet", use_container_width=True):
-                    # Afficher le contexte complet que l'IA reçoit
-                    standings_ctx = get_standings(st.session_state['history'][s_active], engine.teams_list)
-                    ctx = build_full_context(st.session_state['history'], s_active, standings_ctx, next_j)
-                    st.text_area("Contexte transmis à l'IA", ctx, height=300)
-
-        if envoyer and user_input.strip():
-            import datetime
-            ts = datetime.datetime.now().isoformat()
-            st.session_state.chat_messages.append({"role": "user", "content": user_input, "ts": ts})
-
-            standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
-            
-            # ── CONTEXTE COMPLET : toutes les données historiques ──
-            full_context = build_full_context(
-                st.session_state['history'], s_active, standings, next_j
-            )
-            
+        if IA_DISPONIBLE:
             moteur_ia_chat.set_contexte(
                 history=st.session_state['history'],
                 saison_active=s_active,
                 standings=standings,
                 prochaine_journee=next_j,
-                contexte_complet=full_context  # Nouveau paramètre
+                contexte_complet=full_context
             )
 
-            with st.spinner("L'Oracle réfléchit..."):
-                reponse = moteur_ia_chat.discuter(user_input)
+        with st.spinner("🔮 L'Oracle réfléchit..."):
+            reponse = moteur_ia_chat.discuter(user_input)
 
-            ts_rep = datetime.datetime.now().isoformat()
-            st.session_state.chat_messages.append({
-                "role": "assistant", 
-                "content": reponse["texte"],
-                "source": reponse["source"],
-                "confiance": reponse.get("confiance", 0),
-                "ts": ts_rep
-            })
-            save_chat_history(st.session_state.chat_messages)
-            st.rerun()
+        st.session_state.chat_messages.append({
+            "role": "assistant",
+            "content": reponse.get("texte", "Je n'ai pas pu générer de réponse."),
+            "source": reponse.get("source", "offline"),
+            "ts": datetime.datetime.now().isoformat()
+        })
 
-        # Suggestions
-        st.divider()
-        st.markdown("#### ⚡ Questions rapides")
-        suggestions = [
-            "Résume toutes les journées",
-            "Quelle équipe performe le mieux ?",
-            "Analyse la forme de Liverpool",
-            "Pronostic prochaine journée",
-            "Qui est favori selon les cotes ?"
-        ]
-        sugg_cols = st.columns(len(suggestions))
-        for i, sugg in enumerate(suggestions):
-            with sugg_cols[i]:
-                if st.button(sugg, key=f"sugg_{i}", use_container_width=True):
-                    import datetime
-                    ts = datetime.datetime.now().isoformat()
-                    st.session_state.chat_messages.append({"role": "user", "content": sugg, "ts": ts})
-                    standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
-                    full_context = build_full_context(st.session_state['history'], s_active, standings, next_j)
-                    moteur_ia_chat.set_contexte(
-                        history=st.session_state['history'],
-                        saison_active=s_active,
-                        standings=standings,
-                        prochaine_journee=next_j,
-                        contexte_complet=full_context
-                    )
-                    with st.spinner("Analyse..."):
-                        reponse = moteur_ia_chat.discuter(sugg)
-                    ts_rep = datetime.datetime.now().isoformat()
-                    st.session_state.chat_messages.append({
-                        "role": "assistant",
-                        "content": reponse["texte"],
-                        "source": reponse["source"],
-                        "ts": ts_rep
-                    })
-                    save_chat_history(st.session_state.chat_messages)
-                    st.rerun()
+        save_chat_history(st.session_state.chat_messages)
+        st.rerun()
 
-        # Section apprentissage
-        st.divider()
-        st.markdown("### 🧠 Centre d'Apprentissage")
+    # Suggestions
+    st.markdown("#### ⚡ Suggestions rapides")
+    suggestions = [
+        "Quelle équipe est la plus en forme ?",
+        "Analyse Manchester Blue vs London Blues",
+        "Qui est favori pour le titre ?",
+        "Meilleures cotes valeur de la prochaine journée",
+        "Résume les performances de Liverpool"
+    ]
 
-        app_col1, app_col2 = st.columns(2)
-        with app_col1:
-            st.markdown("#### 📊 Patterns de Cotes")
-            if moteur_apprentissage.patterns:
-                pattern_data = []
-                for p, d in moteur_apprentissage.patterns.items():
-                    if isinstance(d, dict) and "total" in d and d["total"] >= 2:
-                        pattern_data.append({
-                            "Pattern": p,
-                            "Total": d["total"],
-                            "1": f"{d.get('1',0)} ({d.get('1',0)/d['total']*100:.0f}%)",
-                            "X": f"{d.get('X',0)} ({d.get('X',0)/d['total']*100:.0f}%)",
-                            "2": f"{d.get('2',0)} ({d.get('2',0)/d['total']*100:.0f}%)"
-                        })
-                if pattern_data:
-                    st.dataframe(pd.DataFrame(pattern_data), use_container_width=True, hide_index=True)
-                else:
-                    st.info("Jouez plus de matchs pour découvrir des patterns !")
-            else:
-                st.info("Aucun pattern encore. Enregistrez des résultats.")
-
-        with app_col2:
-            st.markdown("#### ⚖️ Poids des Facteurs")
-            poids_df = pd.DataFrame([
-                {"Facteur": k.replace("_", " ").title(), "Poids": f"{v:.3f}"}
-                for k, v in moteur_apprentissage.poids.items()
-            ])
-            st.dataframe(poids_df, use_container_width=True, hide_index=True)
-
-            if st.button("🔄 Réinitialiser les poids", key="btn_reset_poids"):
-                moteur_apprentissage.poids = moteur_apprentissage._init_poids()
-                moteur_apprentissage.save()
-                custom_notify("Poids réinitialisés !", "#FFA500")
+    cols = st.columns(3)
+    for idx, text in enumerate(suggestions):
+        with cols[idx % 3]:
+            if st.button(text, key=f"sugg_tab7_{idx}", use_container_width=True):
+                st.session_state.chat_messages.append({"role": "user", "content": text, "ts": datetime.datetime.now().isoformat()})
                 st.rerun()
 
 # ===================== Sauvegarde Globale =====================
