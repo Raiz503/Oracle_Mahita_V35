@@ -464,9 +464,9 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
 
     return matchs
 
-# ===================== OCR RÉSULTATS (CORRIGÉ V5 - MT ET BUTEURS) =====================
+# ===================== OCR RÉSULTATS (CORRIGÉ V6) =====================
 def ocr_resultats_bet261(image_bytes, debug=False):
-    """OCR avancé pour résultats Bet261 - VERSION FINALE."""
+    """OCR avancé pour résultats Bet261 - ZONE ÉTENDUE pour MT et buteurs."""
     img = Image.open(io.BytesIO(image_bytes))
     img_array = np.array(img)
     h_img, w_img = img_array.shape[:2]
@@ -493,7 +493,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
     
     rectangles_score.sort(key=lambda r: r['cy'])
     
-    # Filtrer doublons trop proches
+    # Filtrer doublons
     rectangles_filtres = []
     for rect in rectangles_score:
         if not rectangles_filtres:
@@ -516,20 +516,25 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 
     for i, rect in enumerate(rectangles_score):
         y_center = rect['cy']
-        y_start = max(0, y_center - 50)
-        y_end = min(h_img, y_center + 50)
+        
+        # === CORRECTION V6: Zone beaucoup plus grande vers le bas ===
+        # Le MT et les buteurs sont sous le score
+        y_start = max(0, y_center - 40)   # Moins vers le haut
+        y_end = min(h_img, y_center + 80)  # PLUS vers le bas pour capter MT et buteurs
         
         if i > 0:
             y_min_prev = matches[-1]['y_end'] if matches else 0
             y_start = max(y_start, y_min_prev + 2)
         if i < len(rectangles_score) - 1:
-            y_max_next = rectangles_score[i + 1]['cy'] - 50
+            y_max_next = rectangles_score[i + 1]['cy'] - 40
             y_end = min(y_end, y_max_next - 2)
         
         zone_match = img.crop((0, y_start, w_img, y_end))
-        zone_gauche = img.crop((0, y_start, int(w_img * 0.40), y_end))
-        zone_centre = img.crop((int(w_img * 0.40), y_start, int(w_img * 0.60), y_end))
-        zone_droite = img.crop((int(w_img * 0.60), y_start, w_img, y_end))
+        
+        # === CORRECTION V6: Zones plus larges pour capter tout ===
+        zone_gauche = img.crop((0, y_start, int(w_img * 0.42), y_end))
+        zone_centre = img.crop((int(w_img * 0.38), y_start, int(w_img * 0.62), y_end))  # Élargie
+        zone_droite = img.crop((int(w_img * 0.58), y_start, w_img, y_end))
         
         equipe_dom = ""
         equipe_ext = ""
@@ -538,7 +543,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
         buteurs_dom = ""
         buteurs_ext = ""
         
-        # === CORRECTION MT: Zone centre élargie et regex améliorée ===
+        # === CORRECTION V6: OCR sur zone centre complète ===
         try:
             centre_array = np.array(zone_centre)
             centre_pil = Image.fromarray(centre_array)
@@ -552,25 +557,24 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                 
                 if debug:
                     print(f"\n--- Match {i+1} CENTRE ---")
-                    print(f"Texte brut: '{texte_centre}'")
+                    print(f"Texte: '{texte_centre}'")
                 
-                # Score final
+                # Score final (premier X:Y trouvé)
                 match_score = re.search(r'(\d)\s*[:\\-]\s*(\d)', texte_centre)
                 if match_score:
                     score = f"{match_score.group(1)}:{match_score.group(2)}"
                 
-                # === CORRECTION MT: Regex plus permissive ===
-                # Formats possibles: "MT: 1:0", "MT 1:0", "MT:1-0", "MT1:0"
-                # Le MT est souvent sur la ligne du dessous ou collé au score
-                match_mt = re.search(r'[Mm][Tt][^\d]*(\d)\s*[:\\-\\.]\s*(\d)', texte_centre)
+                # === CORRECTION MT: Chercher "MT" puis chiffres ===
+                # Le MT est souvent sur une ligne séparée en dessous
+                # Format vu: "MT: 1:0", "MT:1:0", "MT 1:0"
+                match_mt = re.search(r'[Mm][Tt]\s*[:\\s]*(\d)\s*[:\\-\\.]\s*(\d)', texte_centre)
                 if match_mt:
                     mt = f"{match_mt.group(1)}:{match_mt.group(2)}"
                     if debug:
                         print(f"MT trouvé: {mt}")
                 
-                # Si toujours pas trouvé, chercher "MT" n'importe où avec chiffres après
+                # Si pas trouvé, chercher tout "MT" avec chiffres après
                 if not mt:
-                    # Chercher pattern "MT" suivi de n'importe quoi puis chiffre:chiffre
                     match_mt2 = re.search(r'[Mm][Tt].*?(\d)\s*[:\\-]\s*(\d)', texte_centre)
                     if match_mt2:
                         mt = f"{match_mt2.group(1)}:{match_mt2.group(2)}"
@@ -579,12 +583,11 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                         
         except Exception as e:
             if debug:
-                print(f"Erreur score/MT match {i+1}: {e}")
+                print(f"Erreur centre match {i+1}: {e}")
             pass
         
-        # === CORRECTION BUTEURS: Zone gauche/droite élargie et regex améliorée ===
+        # === CORRECTION V6: Zone gauche complète pour buteurs ===
         try:
-            # GAUCHE - Domicile et buteurs
             gauche_array = np.array(zone_gauche)
             gauche_pil = Image.fromarray(gauche_array)
             enhancer_g = ImageEnhance.Contrast(gauche_pil)
@@ -601,17 +604,16 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             minutes_gauche = []
             
             for bbox, text, prob in res_gauche:
-                if prob > 0.15:
+                if prob > 0.10:  # Seuil très bas pour capter les petites minutes
                     text = text.strip()
                     
-                    # === CORRECTION BUTEURS: Regex plus permissive pour minutes ===
-                    # Capture: 24', 82', 19', 41', 64', etc.
-                    # Avec ou sans espace entre les minutes
+                    # === CORRECTION BUTEURS: Capture toutes les minutes ===
+                    # Format: 24', 82', 19', etc. avec espace optionnel avant l'apostrophe
                     mins = re.findall(r"(\d{1,3})\s*['′`´]", text)
                     if mins:
                         minutes_gauche.extend(mins)
                         if debug:
-                            print(f"  Minute trouvée: {mins}")
+                            print(f"  Minute: {mins}")
                     elif len(text) > 2 and not re.match(r'^\d+$', text) and not re.match(r'^[Mm][Tt]', text):
                         text_propre = re.sub(r'^\d+\s*', '', text)
                         if len(text_propre) > 2:
@@ -622,11 +624,11 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                 equipe_dom = get_close_matches(noms_gauche[-1], engine.teams_list, n=1, cutoff=0.35)
                 equipe_dom = equipe_dom[0] if equipe_dom else noms_gauche[-1]
             
-            # === CORRECTION BUTEURS: Toutes les minutes, pas seulement la première ===
+            # Toutes les minutes trouvées
             if minutes_gauche:
                 buteurs_dom = ' '.join(f"{m}'" for m in minutes_gauche)
                 if debug:
-                    print(f"  Buteurs dom complets: {buteurs_dom}")
+                    print(f"  Buteurs dom: {buteurs_dom}")
             
             # DROITE - Extérieur et buteurs
             droite_array = np.array(zone_droite)
@@ -645,14 +647,14 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             minutes_droite = []
             
             for bbox, text, prob in res_droite:
-                if prob > 0.15:
+                if prob > 0.10:
                     text = text.strip()
                     
                     mins = re.findall(r"(\d{1,3})\s*['′`´]", text)
                     if mins:
                         minutes_droite.extend(mins)
                         if debug:
-                            print(f"  Minute trouvée: {mins}")
+                            print(f"  Minute: {mins}")
                     elif len(text) > 2 and not re.match(r'^\d+$', text) and not re.match(r'^[Mm][Tt]', text):
                         text_propre = re.sub(r'^\d+\s*', '', text)
                         if len(text_propre) > 2:
@@ -665,11 +667,11 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             if minutes_droite:
                 buteurs_ext = ' '.join(f"{m}'" for m in minutes_droite)
                 if debug:
-                    print(f"  Buteurs ext complets: {buteurs_ext}")
+                    print(f"  Buteurs ext: {buteurs_ext}")
                 
         except Exception as e:
             if debug:
-                print(f"Erreur équipes/buteurs match {i+1}: {e}")
+                print(f"Erreur côtés match {i+1}: {e}")
             pass
         
         matches.append({
