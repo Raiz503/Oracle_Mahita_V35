@@ -464,10 +464,10 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
 
     return matchs
 
-# ===================== OCR RÉSULTATS (CORRIGÉ V9 - ZONES PRÉCISES) =====================
+# ===================== OCR RÉSULTATS (CORRIGÉ V10 - NOMS + MT + BUTEURS) =====================
 def ocr_resultats_bet261(image_bytes, debug=False):
-    """OCR avancé pour résultats Bet261 - VERSION V9.
-    Zones précises pour éviter la contamination entre matchs."""
+    """OCR avancé pour résultats Bet261 - VERSION V10.
+    Corrections: noms d'équipes, MT, et isolation des buteurs."""
     img = Image.open(io.BytesIO(image_bytes))
     img_array = np.array(img)
     h_img, w_img = img_array.shape[:2]
@@ -504,26 +504,26 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 
     for i, rect in enumerate(rectangles):
         y_center = rect['cy']
-        # === ZONE RÉDUITE: ±45px pour éviter le chevauchement ===
-        y_start = max(0, y_center - 45)
-        y_end = min(h_img, y_center + 45)
+        # === ZONE VERTICALE: ±55px pour capturer noms + score + MT + buteurs ===
+        y_start = max(0, y_center - 55)
+        y_end = min(h_img, y_center + 55)
 
         # === ZONE CENTRE: score + MT (précise, autour du rectangle gris) ===
-        zone_centre = img.crop((rect['x']-10, y_start, rect['x']+rect['w']+10, y_end))
+        zone_centre = img.crop((rect['x']-15, y_start, rect['x']+rect['w']+15, y_end))
 
-        # === ZONES LATÉRALES: uniquement pour les noms d'équipes (partie HAUTE) ===
-        # Les noms sont au-dessus du rectangle de score
-        y_nom_start = max(0, y_center - 45)
-        y_nom_end = y_center - 5  # Juste au-dessus du rectangle
-        zone_nom_gauche = img.crop((0, y_nom_start, w_img//2 - 20, y_nom_end))
-        zone_nom_droite = img.crop((w_img//2 + 20, y_nom_start, w_img, y_nom_end))
+        # === ZONES NOMS D'ÉQUIPES: partie HAUTE (au-dessus du score) ===
+        # Les noms sont centrés verticalement au-dessus du rectangle
+        y_nom_start = max(0, y_center - 50)
+        y_nom_end = y_center - 8  # Juste au-dessus du rectangle gris
+        zone_nom_gauche = img.crop((0, y_nom_start, int(w_img * 0.42), y_nom_end))
+        zone_nom_droite = img.crop((int(w_img * 0.58), y_nom_start, w_img, y_nom_end))
 
-        # === ZONES BUTEURS: partie BASSE de la ligne ===
-        # Les minutes sont sous le rectangle de score
-        y_but_start = y_center + 5
-        y_but_end = min(h_img, y_center + 45)
-        zone_but_gauche = img.crop((0, y_but_start, w_img//2 - 20, y_but_end))
-        zone_but_droite = img.crop((w_img//2 + 20, y_but_start, w_img, y_but_end))
+        # === ZONES BUTEURS: partie BASSE (sous le score/MT) ===
+        # Les minutes sont sous le rectangle, dans une zone étroite
+        y_but_start = y_center + 8
+        y_but_end = min(h_img, y_center + 50)
+        zone_but_gauche = img.crop((0, y_but_start, int(w_img * 0.42), y_but_end))
+        zone_but_droite = img.crop((int(w_img * 0.58), y_but_start, w_img, y_but_end))
 
         # Image complète de la ligne pour l'affichage
         ligne_img = img.crop((0, y_start, w_img, y_end))
@@ -535,21 +535,54 @@ def ocr_resultats_bet261(image_bytes, debug=False):
         buteurs_dom = ""
         buteurs_ext = ""
 
-        # === SCORE + MT (zone centre) ===
+        # === SCORE + MT (zone centre avec detail=1 pour séparer lignes) ===
         try:
-            res_score = reader.readtext(np.array(zone_centre), detail=0, paragraph=False)
-            if res_score:
-                texte_score = ' '.join(res_score)
+            centre_array = np.array(zone_centre)
+            centre_pil = Image.fromarray(centre_array)
+            enhancer = ImageEnhance.Contrast(centre_pil)
+            centre_contraste = np.array(enhancer.enhance(3.0))
 
-                # Score final: X:Y ou X-Y
-                match_score = re.search(r'(\d{1,2})[:\-](\d{1,2})', texte_score)
+            res_centre = reader.readtext(centre_contraste, detail=1, paragraph=False)
+
+            # Trier par position Y
+            lignes_centre = []
+            for bbox, text, prob in res_centre:
+                if prob > 0.15:
+                    cy = (bbox[0][1] + bbox[2][1]) / 2
+                    lignes_centre.append((cy, text.strip(), prob))
+            lignes_centre.sort(key=lambda x: x[0])
+
+            if debug:
+                print(f"\n--- Match {i+1} CENTRE ---")
+                for cy, text, prob in lignes_centre:
+                    print(f"  Ligne Y={cy:.1f}: '{text}' | prob: {prob:.2f}")
+
+            # Première ligne = score final
+            if lignes_centre:
+                texte_premier = lignes_centre[0][1]
+                match_score = re.search(r'(\d{1,2})[:\-](\d{1,2})', texte_premier)
                 if match_score:
                     score = f"{match_score.group(1)}:{match_score.group(2)}"
 
-                # MT: MT X:Y ou MT X-Y
-                match_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', texte_score, re.IGNORECASE)
+            # Lignes suivantes = chercher MT
+            for cy, text, prob in lignes_centre[1:]:
+                # MT explicite
+                match_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', text, re.IGNORECASE)
                 if match_mt:
                     mt = f"{match_mt.group(1)}:{match_mt.group(2)}"
+                    if debug:
+                        print(f"  MT trouvé: {mt} dans '{text}'")
+                    break
+
+                # Fallback: deux chiffres sur ligne séparée
+                if not mt:
+                    match_simple = re.search(r'^(\d{1,2})[:\-\.](\d{1,2})$', text)
+                    if match_simple:
+                        mt = f"{match_simple.group(1)}:{match_simple.group(2)}"
+                        if debug:
+                            print(f"  MT fallback: {mt} dans '{text}'")
+                        break
+
         except Exception as e:
             if debug:
                 print(f"Erreur centre match {i+1}: {e}")
@@ -557,30 +590,65 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 
         # === NOM ÉQUIPE DOMICILE (zone nom gauche - HAUT) ===
         try:
-            res_nom_g = reader.readtext(np.array(zone_nom_gauche), detail=1, paragraph=False)
+            nom_g_array = np.array(zone_nom_gauche)
+            nom_g_pil = Image.fromarray(nom_g_array)
+            enhancer = ImageEnhance.Contrast(nom_g_pil)
+            nom_g_contraste = np.array(enhancer.enhance(2.5))
+
+            res_nom_g = reader.readtext(nom_g_contraste, detail=1, paragraph=False)
+
+            if debug:
+                print(f"\n--- Match {i+1} NOM GAUCHE ---")
+                for bbox, text, prob in res_nom_g:
+                    print(f"  '{text}' | prob: {prob:.2f}")
+
             noms_gauche = []
             for bbox, text, prob in res_nom_g:
-                if prob > 0.25 and len(text) > 2 and not re.match(r'^\d+$', text):
-                    noms_gauche.append(text.strip())
+                if prob > 0.20 and len(text) > 2 and not re.match(r'^\d+$', text):
+                    text_propre = text.strip()
+                    # Éliminer les minutes qui pourraient être dans la zone haute
+                    if not re.search(r"\d+\s*['′]", text_propre):
+                        noms_gauche.append(text_propre)
 
             if noms_gauche:
-                equipe_dom = get_close_matches(noms_gauche[-1], engine.teams_list, n=1, cutoff=0.35)
+                equipe_dom = get_close_matches(noms_gauche[-1], engine.teams_list, n=1, cutoff=0.30)
                 equipe_dom = equipe_dom[0] if equipe_dom else noms_gauche[-1]
-        except:
+                if debug:
+                    print(f"  Équipe dom: {equipe_dom}")
+        except Exception as e:
+            if debug:
+                print(f"Erreur nom gauche match {i+1}: {e}")
             pass
 
         # === NOM ÉQUIPE EXTÉRIEUR (zone nom droite - HAUT) ===
         try:
-            res_nom_d = reader.readtext(np.array(zone_nom_droite), detail=1, paragraph=False)
+            nom_d_array = np.array(zone_nom_droite)
+            nom_d_pil = Image.fromarray(nom_d_array)
+            enhancer = ImageEnhance.Contrast(nom_d_pil)
+            nom_d_contraste = np.array(enhancer.enhance(2.5))
+
+            res_nom_d = reader.readtext(nom_d_contraste, detail=1, paragraph=False)
+
+            if debug:
+                print(f"\n--- Match {i+1} NOM DROITE ---")
+                for bbox, text, prob in res_nom_d:
+                    print(f"  '{text}' | prob: {prob:.2f}")
+
             noms_droite = []
             for bbox, text, prob in res_nom_d:
-                if prob > 0.25 and len(text) > 2 and not re.match(r'^\d+$', text):
-                    noms_droite.append(text.strip())
+                if prob > 0.20 and len(text) > 2 and not re.match(r'^\d+$', text):
+                    text_propre = text.strip()
+                    if not re.search(r"\d+\s*['′]", text_propre):
+                        noms_droite.append(text_propre)
 
             if noms_droite:
-                equipe_ext = get_close_matches(noms_droite[-1], engine.teams_list, n=1, cutoff=0.35)
+                equipe_ext = get_close_matches(noms_droite[-1], engine.teams_list, n=1, cutoff=0.30)
                 equipe_ext = equipe_ext[0] if equipe_ext else noms_droite[-1]
-        except:
+                if debug:
+                    print(f"  Équipe ext: {equipe_ext}")
+        except Exception as e:
+            if debug:
+                print(f"Erreur nom droite match {i+1}: {e}")
             pass
 
         # === BUTEURS DOMICILE (zone but gauche - BAS) ===
@@ -591,17 +659,29 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             but_contraste = np.array(enhancer.enhance(2.5))
 
             res_but_g = reader.readtext(but_contraste, detail=1, paragraph=False)
+
+            if debug:
+                print(f"\n--- Match {i+1} BUT GAUCHE ---")
+                for bbox, text, prob in res_but_g:
+                    print(f"  '{text}' | prob: {prob:.2f}")
+
             minutes_gauche = []
             for bbox, text, prob in res_but_g:
-                if prob > 0.15:
+                if prob > 0.10:
                     text = text.strip()
                     mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
                     if mins:
                         minutes_gauche.extend(mins)
+                        if debug:
+                            print(f"  Minutes trouvées dans '{text}': {mins}")
 
             if minutes_gauche:
                 buteurs_dom = ' '.join(f"{m}'" for m in minutes_gauche)
-        except:
+                if debug:
+                    print(f"  Buteurs dom final: {buteurs_dom}")
+        except Exception as e:
+            if debug:
+                print(f"Erreur but gauche match {i+1}: {e}")
             pass
 
         # === BUTEURS EXTÉRIEUR (zone but droite - BAS) ===
@@ -612,17 +692,29 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             but_contraste = np.array(enhancer.enhance(2.5))
 
             res_but_d = reader.readtext(but_contraste, detail=1, paragraph=False)
+
+            if debug:
+                print(f"\n--- Match {i+1} BUT DROITE ---")
+                for bbox, text, prob in res_but_d:
+                    print(f"  '{text}' | prob: {prob:.2f}")
+
             minutes_droite = []
             for bbox, text, prob in res_but_d:
-                if prob > 0.15:
+                if prob > 0.10:
                     text = text.strip()
                     mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
                     if mins:
                         minutes_droite.extend(mins)
+                        if debug:
+                            print(f"  Minutes trouvées dans '{text}': {mins}")
 
             if minutes_droite:
                 buteurs_ext = ' '.join(f"{m}'" for m in minutes_droite)
-        except:
+                if debug:
+                    print(f"  Buteurs ext final: {buteurs_ext}")
+        except Exception as e:
+            if debug:
+                print(f"Erreur but droite match {i+1}: {e}")
             pass
 
         matches.append({
