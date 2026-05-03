@@ -45,25 +45,28 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
 .main-header {
-    text-align: center; padding: 20px; 
+    text-align: center; padding: 15px; 
     background: #0E1117; margin-bottom: 20px;
     border-bottom: 3px solid #7FFFD4;
 }
 .logo-container {
-    display: flex; align-items: center; justify-content: center; gap: 20px;
-    margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 15px;
+    margin-bottom: 8px;
 }
 .logo-svg {
-    width: 80px; height: 80px;
+    width: 50px; height: 50px;
+    flex-shrink: 0;
 }
 .header-title {
-    color: #7FFFD4; font-size: 3em; font-weight: 900; 
+    color: #7FFFD4; font-size: 3.5em; font-weight: 900;
     font-family: 'Orbitron', sans-serif;
-    text-transform: uppercase; letter-spacing: 4px;
-    text-shadow: 0 0 20px #7FFFD4, 0 0 40px rgba(127,255,212,0.5);
+    text-transform: uppercase; letter-spacing: 5px;
+    text-shadow: 0 0 25px #7FFFD4, 0 0 50px rgba(127,255,212,0.6);
+    line-height: 1;
 }
 .header-subtitle {
-    color: #888; font-size: 1.1em; letter-spacing: 2px;
+    color: #888; font-size: 1em; letter-spacing: 3px;
+    margin-top: 5px;
 }
 .prono-safe { border-left: 5px solid #00FF00; padding: 14px; background: rgba(0,255,0,0.08); border-radius: 8px; margin: 10px 0; }
 .prono-risque { border-left: 5px solid #FFA500; padding: 14px; background: rgba(255,165,0,0.08); border-radius: 8px; margin: 10px 0; }
@@ -81,48 +84,40 @@ st.markdown("""
 
 # ===================== LOGO SVG =====================
 LOGO_SVG = """
-<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <!-- Fond vert d'eau lumineux -->
-  <circle cx="100" cy="100" r="95" fill="#7FFFD4" opacity="0.15"/>
-  <circle cx="100" cy="100" r="85" fill="none" stroke="#7FFFD4" stroke-width="2" opacity="0.6"/>
-
-  <!-- Boule de cristal extérieure -->
-  <circle cx="100" cy="100" r="75" fill="none" stroke="#7FFFD4" stroke-width="3"/>
-  <circle cx="100" cy="100" r="70" fill="#0E1117" opacity="0.8"/>
-
-  <!-- Glow effect -->
-  <circle cx="100" cy="100" r="72" fill="none" stroke="#7FFFD4" stroke-width="1" opacity="0.3">
-    <animate attributeName="r" values="72;75;72" dur="3s" repeatCount="indefinite"/>
-    <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3s" repeatCount="indefinite"/>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond -->
+  <circle cx="50" cy="50" r="48" fill="#7FFFD4" opacity="0.15"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#7FFFD4" stroke-width="1.5" opacity="0.6"/>
+  
+  <!-- Boule cristal -->
+  <circle cx="50" cy="50" r="38" fill="none" stroke="#7FFFD4" stroke-width="2"/>
+  <circle cx="50" cy="50" r="35" fill="#0E1117" opacity="0.8"/>
+  
+  <!-- Glow -->
+  <circle cx="50" cy="50" r="36" fill="none" stroke="#7FFFD4" stroke-width="0.8" opacity="0.4">
+    <animate attributeName="r" values="36;38;36" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.4;0.7;0.4" dur="3s" repeatCount="indefinite"/>
   </circle>
-
-  <!-- Demi-ballon de foot (gauche) -->
-  <path d="M 55 100 A 45 45 0 0 1 145 100" fill="none" stroke="#7FFFD4" stroke-width="2"/>
-  <path d="M 70 75 L 85 90 L 70 105" fill="none" stroke="#7FFFD4" stroke-width="1.5"/>
-  <path d="M 130 75 L 115 90 L 130 105" fill="none" stroke="#7FFFD4" stroke-width="1.5"/>
-  <path d="M 85 90 L 115 90" fill="none" stroke="#7FFFD4" stroke-width="1.5"/>
-
-  <!-- Demi-cerveau IA (droite) -->
-  <path d="M 100 55 Q 140 55 140 100 Q 140 145 100 145" fill="none" stroke="#00FF00" stroke-width="2"/>
-
-  <!-- Neurones / connexions -->
-  <circle cx="115" cy="80" r="4" fill="#00FF00"/>
-  <circle cx="130" cy="95" r="4" fill="#00FF00"/>
-  <circle cx="120" cy="115" r="4" fill="#00FF00"/>
-  <circle cx="135" cy="125" r="4" fill="#00FF00"/>
-
-  <line x1="115" y1="80" x2="130" y2="95" stroke="#00FF00" stroke-width="1.5"/>
-  <line x1="130" y1="95" x2="120" y2="115" stroke="#00FF00" stroke-width="1.5"/>
-  <line x1="120" y1="115" x2="135" y2="125" stroke="#00FF00" stroke-width="1.5"/>
-
-  <!-- Étoiles de prédiction -->
-  <polygon points="100,25 103,33 111,33 105,38 107,46 100,41 93,46 95,38 89,33 97,33" fill="#FFD700"/>
-  <polygon points="45,70 47,75 52,75 48,78 50,83 45,80 40,83 42,78 38,75 43,75" fill="#FFD700" opacity="0.7"/>
-  <polygon points="155,70 157,75 162,75 158,78 160,83 155,80 150,83 152,78 148,75 153,75" fill="#FFD700" opacity="0.7"/>
-
-  <!-- Base de la boule de cristal -->
-  <ellipse cx="100" cy="175" rx="30" ry="8" fill="none" stroke="#7FFFD4" stroke-width="2"/>
-  <path d="M 75 175 Q 100 190 125 175" fill="none" stroke="#7FFFD4" stroke-width="2" opacity="0.5"/>
+  
+  <!-- Demi-ballon -->
+  <path d="M 25 50 A 25 25 0 0 1 75 50" fill="none" stroke="#7FFFD4" stroke-width="1.5"/>
+  <path d="M 35 38 L 42 45 L 35 52" fill="none" stroke="#7FFFD4" stroke-width="1"/>
+  <path d="M 65 38 L 58 45 L 65 52" fill="none" stroke="#7FFFD4" stroke-width="1"/>
+  <path d="M 42 45 L 58 45" fill="none" stroke="#7FFFD4" stroke-width="1"/>
+  
+  <!-- Demi-cerveau -->
+  <path d="M 50 30 Q 72 30 72 50 Q 72 70 50 70" fill="none" stroke="#00FF00" stroke-width="1.5"/>
+  <circle cx="58" cy="42" r="2" fill="#00FF00"/>
+  <circle cx="66" cy="48" r="2" fill="#00FF00"/>
+  <circle cx="60" cy="58" r="2" fill="#00FF00"/>
+  <line x1="58" y1="42" x2="66" y2="48" stroke="#00FF00" stroke-width="1"/>
+  <line x1="66" y1="48" x2="60" y2="58" stroke="#00FF00" stroke-width="1"/>
+  
+  <!-- Étoile -->
+  <polygon points="50,12 52,18 58,18 53,22 55,28 50,24 45,28 47,22 42,18 48,18" fill="#FFD700"/>
+  
+  <!-- Base -->
+  <ellipse cx="50" cy="88" rx="15" ry="4" fill="none" stroke="#7FFFD4" stroke-width="1.5"/>
 </svg>
 """
 
@@ -283,12 +278,29 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
         if not placed:
             lignes.append({'cy_mean': b['cy'], 'boutons': [b]})
 
-    # Filtrer lignes avec exactement 3 boutons
-    lignes_valides = [l for l in lignes if len(l['boutons']) == 3]
-
     # Ignorer header
-    min_y = int(h_img * 0.15)
-    lignes_valides = [l for l in lignes_valides if l['cy_mean'] > min_y]
+    min_y = int(h_img * 0.05)
+    lignes_valides = [l for l in lignes if l['cy_mean'] > min_y]
+
+    # Accepter les lignes avec >= 2 boutons (dernier match avec panier)
+    lignes_valides = [l for l in lignes_valides if len(l['boutons']) >= 2]
+
+    # Pour les lignes avec 2 boutons, ajouter un 3ème bouton "fantôme"
+    for ligne in lignes_valides:
+        if len(ligne['boutons']) == 2:
+            b1, b2 = sorted(ligne['boutons'], key=lambda b: b['cx'])
+            espacement = b2['cx'] - b1['cx']
+            b3_x = b2['cx'] + espacement
+            b3_y = b2['cy']
+            ligne['boutons'].append({
+                'x': int(b3_x - b2['w']//2),
+                'y': b2['y'],
+                'w': b2['w'],
+                'h': b2['h'],
+                'cx': int(b3_x),
+                'cy': b3_y,
+                'fantome': True
+            })
 
     # Limiter à 10
     lignes_valides = sorted(lignes_valides, key=lambda x: x['cy_mean'])[:10]
@@ -565,7 +577,7 @@ st.markdown(f"""
         <div class="logo-svg">{LOGO_SVG}</div>
         <div>
             <h1 class="header-title">ORACLE MAHITA</h1>
-            <div class="header-subtitle">V36.0 — IA Intégrée · Apprentissage Actif · OCR Bet261</div>
+            <div class="header-subtitle">V36.0 — IA Intégrée · Apprentissage Actif</div>
         </div>
     </div>
 </div>
@@ -800,7 +812,7 @@ with tabs[1]:
 
 # ===================== TAB 2 : PRONOS =====================
 with tabs[2]:
-    st.markdown("### 🎯 Pronostics — Cerveau I")
+    st.markdown("### 🎯 Pronostics — Analyse Multi-Moteurs")
 
     if 'current_ready' not in st.session_state or not st.session_state.get('current_ready'):
         st.info("Veuillez d'abord enregistrer un calendrier dans l'onglet **CALENDRIER**.")
@@ -809,10 +821,14 @@ with tabs[2]:
         j_num = st.session_state.get('current_j_num', 1)
         standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
 
+        # Récupérer les stats IA apprentissage
+        stats_ia = moteur_apprentissage.get_stats_apprentissage() if IA_DISPONIBLE else {}
+        patterns_cotes = moteur_apprentissage.patterns if IA_DISPONIBLE else {}
+
         safe_d, risque_d, fun_d = [], [], []
         all_analyses = []
 
-        for m in current_ready:
+        for idx, m in enumerate(current_ready):
             r_dom = int(standings[standings['Équipe'] == m['h']]['Rang'].values[0]) if not standings[standings['Équipe'] == m['h']].empty else 10
             r_ext = int(standings[standings['Équipe'] == m['a']]['Rang'].values[0]) if not standings[standings['Équipe'] == m['a']].empty else 10
 
@@ -822,63 +838,272 @@ with tabs[2]:
             serie_ext = get_serie_victoires(forme_ext)
             dernier_adv = get_dernier_adversaire(st.session_state['history'], s_active, m['h'])
 
+            # ═══ MOTEUR 1: Cerveau I ═══
+            analyse_cerveau = None
             if oracle_brain:
-                analyse = oracle_brain.analyser_match(
+                analyse_cerveau = oracle_brain.analyser_match(
                     equipe_dom=m['h'], equipe_ext=m['a'], cotes=m['o'],
                     journee=j_num, rang_dom=r_dom, rang_ext=r_ext,
                     serie_dom=serie_dom, serie_ext=serie_ext,
                     forme_dom=forme_dom, forme_ext=forme_ext,
                     match_precedent_dom=dernier_adv
                 )
+
+            # ═══ MOTEUR 2: IA Apprentissage (patterns cotes) ═══
+            prediction_ia = None
+            confiance_ia = 50
+            if IA_DISPONIBLE and patterns_cotes:
+                c1, cx, c2 = m['o']
+                pattern_key = f"{c1:.1f}_{cx:.1f}_{c2:.1f}"
+                pattern_proche = None
+
+                for pk, pdata in patterns_cotes.items():
+                    if isinstance(pdata, dict) and "total" in pdata and pdata["total"] >= 3:
+                        try:
+                            pc1, pcx, pc2 = map(float, pk.split('_'))
+                            diff = abs(pc1-c1) + abs(pcx-cx) + abs(pc2-c2)
+                            if diff < 1.5:
+                                pattern_proche = pdata
+                                break
+                        except:
+                            continue
+
+                if pattern_proche:
+                    total = pattern_proche['total']
+                    p1 = pattern_proche.get('1', 0) / total
+                    pX = pattern_proche.get('X', 0) / total
+                    p2 = pattern_proche.get('2', 0) / total
+
+                    if p1 > pX and p1 > p2:
+                        prediction_ia = "1"
+                        confiance_ia = int(p1 * 100)
+                    elif p2 > p1 and p2 > pX:
+                        prediction_ia = "2"
+                        confiance_ia = int(p2 * 100)
+                    else:
+                        prediction_ia = "X"
+                        confiance_ia = int(pX * 100)
+
+            # ═══ MOTEUR 3: Analyse statistique (cotes + classement + forme) ═══
+            cote_1, cote_x, cote_2 = m['o']
+
+            force_1 = 1 / cote_1
+            force_x = 1 / cote_x
+            force_2 = 1 / cote_2
+
+            diff_rang = r_ext - r_dom
+            force_1 += diff_rang * 0.015
+            force_2 -= diff_rang * 0.015
+
+            if forme_dom:
+                pts_dom = sum(3 if r == "V" else (1 if r == "N" else 0) for r in forme_dom[-5:])
+                force_1 += pts_dom * 0.01
+            if forme_ext:
+                pts_ext = sum(3 if r == "V" else (1 if r == "N" else 0) for r in forme_ext[-5:])
+                force_2 += pts_ext * 0.01
+
+            force_1 += serie_dom * 0.02
+            force_2 += serie_ext * 0.02
+
+            total_force = force_1 + force_x + force_2
+            prob_1 = force_1 / total_force
+            prob_x = force_x / total_force
+            prob_2 = force_2 / total_force
+
+            if prob_1 > prob_x and prob_1 > prob_2:
+                prediction_stats = "1"
+                confiance_stats = int(prob_1 * 100)
+            elif prob_2 > prob_1 and prob_2 > prob_x:
+                prediction_stats = "2"
+                confiance_stats = int(prob_2 * 100)
             else:
-                analyse = {
-                    'choix_expert': f"{m['h']} (cote {m['o'][0]})",
-                    'indice_confiance': 60,
-                    'confiance': 'MOYEN'
+                prediction_stats = "X"
+                confiance_stats = int(prob_x * 100)
+
+            # ═══ FUSION DES MOTEURS ═══
+            predictions = []
+            confiances = []
+
+            if analyse_cerveau:
+                pred_cerv = "1" if "1" in analyse_cerveau.get('choix_expert', '') else (
+                    "2" if "2" in analyse_cerveau.get('choix_expert', '') else "X"
+                )
+                predictions.append(pred_cerv)
+                confiances.append(analyse_cerveau.get('indice_confiance', 50))
+
+            if prediction_ia:
+                predictions.append(prediction_ia)
+                confiances.append(confiance_ia)
+
+            predictions.append(prediction_stats)
+            confiances.append(confiance_stats)
+
+            from collections import Counter
+            vote = Counter(predictions)
+            prediction_finale = vote.most_common(1)[0][0]
+
+            confiance_finale = int(sum(confiances) / len(confiances))
+
+            if len(set(predictions)) == 1:
+                confiance_finale = min(95, confiance_finale + 15)
+            elif len(set(predictions)) == 2:
+                confiance_finale = max(40, confiance_finale - 10)
+
+            # ═══ CALCUL SCORE PROBABLE ═══
+            if prediction_finale == "1":
+                buts_dom = max(1, round(prob_1 * 4))
+                buts_ext = max(0, round(prob_2 * 2))
+            elif prediction_finale == "2":
+                buts_dom = max(0, round(prob_1 * 2))
+                buts_ext = max(1, round(prob_2 * 4))
+            else:
+                buts_dom = max(1, round(prob_1 * 2.5))
+                buts_ext = buts_dom
+
+            if forme_dom and "V" in forme_dom[-3:]:
+                buts_dom += 1
+            if forme_ext and "V" in forme_ext[-3:]:
+                buts_ext += 1
+
+            buts_dom = min(buts_dom, 5)
+            buts_ext = min(buts_ext, 5)
+
+            score_probable = f"{buts_dom}-{buts_ext}"
+
+            # ═══ CHOIX EXPERT FINAL ═══
+            if prediction_finale == "1":
+                choix_final = f"{m['h']} (cote {cote_1})"
+                cote_choix = cote_1
+            elif prediction_finale == "2":
+                choix_final = f"{m['a']} (cote {cote_2})"
+                cote_choix = cote_2
+            else:
+                choix_final = f"Nul (cote {cote_x})"
+                cote_choix = cote_x
+
+            if confiance_finale >= 75:
+                confiance_label = "BANKER"
+            elif confiance_finale >= 55:
+                confiance_label = "RISQUE CALCULÉ"
+            else:
+                confiance_label = "FUN"
+
+            analyse_finale = {
+                'choix_expert': choix_final,
+                'indice_confiance': confiance_finale,
+                'confiance': confiance_label,
+                'score_probable': score_probable,
+                'prediction': prediction_finale,
+                'details_moteurs': {
+                    'cerveau': analyse_cerveau.get('choix_expert', 'N/A') if analyse_cerveau else 'Non dispo',
+                    'ia': f"{prediction_ia} ({confiance_ia}%)" if prediction_ia else 'Non dispo',
+                    'stats': f"{prediction_stats} ({confiance_stats}%)"
                 }
-
-            all_analyses.append((m, analyse))
-
-            item = {
-                "txt": analyse['choix_expert'],
-                "cote": max(m['o']),
-                "match": f"{m['h']} vs {m['a']}",
-                "indice": analyse['indice_confiance']
             }
 
-            if analyse.get('confiance') == "BANKER":
+            all_analyses.append((m, analyse_finale))
+
+            item = {
+                "match": f"{m['h']} vs {m['a']}",
+                "choix": choix_final,
+                "score": score_probable,
+                "cote": cote_choix,
+                "indice": confiance_finale,
+                "prediction": prediction_finale
+            }
+
+            if confiance_label == "BANKER":
                 safe_d.append(item)
-            elif analyse.get('confiance') == "RISQUE CALCULÉ":
+            elif confiance_label == "RISQUE CALCULÉ":
                 risque_d.append(item)
             else:
                 fun_d.append(item)
 
-        st.markdown(f"**Journée {j_num}** — Analyse de {len(current_ready)} matchs")
-        for m, analyse in all_analyses:
+        # Affichage des analyses
+        st.markdown(f"**Journée {j_num}** — {len(current_ready)} matchs analysés par multi-moteurs")
+
+        for idx, (m, analyse) in enumerate(all_analyses):
             with st.container():
-                st.markdown(f"**{m['h']} vs {m['a']}** — {analyse['choix_expert']} ({analyse['indice_confiance']}% )")
-                st.caption(f"Cotes : {m['o']} | Confiance : {analyse.get('confiance', 'N/A')}")
+                st.markdown(f"**⚽ Match {idx+1} : {m['h']} vs {m['a']}**")
+
+                col1, col2, col3, col4 = st.columns([2, 2, 2, 2])
+
+                with col1:
+                    st.markdown("📊 **Cotes**")
+                    st.caption(f"1: {m['o'][0]} | X: {m['o'][1]} | 2: {m['o'][2]}")
+                    st.caption(f"Classement: {m['h']} #{r_dom} vs {m['a']} #{r_ext}")
+
+                with col2:
+                    st.markdown("🧠 **Prédiction**")
+                    color_conf = "#00FF00" if analyse['confiance'] == "BANKER" else (
+                        "#FFA500" if analyse['confiance'] == "RISQUE CALCULÉ" else "#FF4B4B"
+                    )
+                    st.markdown(f"<span style='color:{color_conf};font-weight:bold;'>{analyse['confiance']}</span>", unsafe_allow_html=True)
+                    st.markdown(f"**{analyse['choix_expert']}**")
+                    st.caption(f"Confiance: {analyse['indice_confiance']}%")
+
+                with col3:
+                    st.markdown("⚽ **Score Probable**")
+                    st.markdown(f"<div style='text-align:center;padding:8px;background:rgba(127,255,212,0.15);border-radius:8px;border:1px solid #7FFFD4;'>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='font-size:1.8em;font-weight:bold;color:#7FFFD4;'>{analyse['score_probable']}</span>", unsafe_allow_html=True)
+                    st.markdown(f"</div>", unsafe_allow_html=True)
+
+                with col4:
+                    st.markdown("🔍 **Détails Moteurs**")
+                    details = analyse['details_moteurs']
+                    st.caption(f"Cerveau: {details['cerveau']}")
+                    st.caption(f"IA: {details['ia']}")
+                    st.caption(f"Stats: {details['stats']}")
+
+                conf = analyse['indice_confiance']
+                st.progress(conf, text=f"Indice de confiance global: {conf}%")
+
             st.divider()
 
         # Sauvegarde pronos
         jk = f"Journée {j_num}"
         if jk in st.session_state['history'][s_active]:
             st.session_state['history'][s_active][jk]["pro"] = [
-                {"m": a['choix_expert'], "c": m['o'], "indice": a['indice_confiance'], "classe": a.get('confiance')}
+                {
+                    "m": a['choix_expert'],
+                    "c": m['o'],
+                    "indice": a['indice_confiance'],
+                    "classe": a['confiance'],
+                    "score": a['score_probable'],
+                    "prediction": a['prediction']
+                }
                 for m, a in all_analyses
             ]
             save_db(st.session_state['history'])
 
         # Tickets
+        st.markdown("---")
+        st.markdown("### 🎫 Tickets recommandés")
+
         c1, c2, c3 = st.columns(3)
+
         def show_ticket(col, title, data, emoji, css):
             with col:
                 st.markdown(f"### {emoji} {title}")
+                if len(data) == 0:
+                    st.info("Aucun match dans cette catégorie")
+                    return
+
                 total = 1.0
-                for x in data[:3]:
-                    st.markdown(f"<div class='{css}'><b>{x['match']}</b><br>{x['txt']}<br>Indice: {x['indice']}%</div>", unsafe_allow_html=True)
+                for i, x in enumerate(data[:3]):
+                    st.markdown(f"""
+                    <div class='{css}' style='margin-bottom:10px;padding:10px;'>
+                        <b>#{i+1} {x['match']}</b><br>
+                        🎯 {x['choix']}<br>
+                        ⚽ Score: <b>{x['score']}</b><br>
+                        📊 Confiance: {x['indice']}%
+                    </div>
+                    """, unsafe_allow_html=True)
                     total *= x['cote']
-                st.info(f"Cote combinée ≈ {total:.2f}")
+
+                st.info(f"📈 Cote combinée: {total:.2f}")
+                if len(data) > 3:
+                    st.caption(f"+ {len(data)-3} autres matchs")
 
         show_ticket(c1, "TICKET SAFE", safe_d, "🟢", "prono-safe")
         show_ticket(c2, "TICKET RISQUE", risque_d, "🟡", "prono-risque")
@@ -905,29 +1130,41 @@ with tabs[3]:
         else:
             st.warning("OCR faible. Complétez manuellement.")
 
+    # Compléter avec le calendrier si manquant
     if cal_ref and len(extracted) < len(cal_ref):
         known = {(m.get('h'), m.get('a')) for m in extracted}
         for cm in cal_ref:
             if (cm['h'], cm['a']) not in known:
-                extracted.append({"h": cm['h'], "a": cm['a'], "s": "", "mt": "", "hm": "", "am": ""})
+                extracted.append({
+                    "h": cm['h'], "a": cm['a'],
+                    "s": "", "mt": "", "hm": "", "am": ""
+                })
 
     with st.form("form_resultats"):
         st.markdown("#### Correction des résultats")
         final_res = []
         for i, m in enumerate(extracted):
             st.markdown(f"**Match {i+1} : {m.get('h','?')} vs {m.get('a','?')}**")
-            c1, c2 = st.columns([2, 1.5])
-            score = c1.text_input("Score Final", m.get('s', '0:0'), key=f"score_{i}")
-            mt_score = c2.text_input("Mi-temps", m.get('mt', ''), key=f"mt_{i}")
-            b1, b2 = st.columns(2)
-            hm = b1.text_input(f"Buteurs {m.get('h','')}", m.get('hm', ''), key=f"hm_{i}")
-            am = b2.text_input(f"Buteurs {m.get('a','')}", m.get('am', ''), key=f"am_{i}")
-            final_res.append({"h": m.get('h'), "a": m.get('a'), "s": score, "mt": mt_score, "hm": hm, "am": am})
+
+            col1, col2 = st.columns([2, 1.5])
+            score = col1.text_input("Score Final (format X:Y)", m.get('s', '0:0'), key=f"score_{i}")
+            mt_score = col2.text_input("Mi-temps (format X:Y)", m.get('mt', ''), key=f"mt_{i}")
+
+            col3, col4 = st.columns(2)
+            hm = col3.text_input(f"Buteurs {m.get('h','Domicile')} (ex: 24' 82')", m.get('hm', ''), key=f"hm_{i}")
+            am = col4.text_input(f"Buteurs {m.get('a','Extérieur')} (ex: 41' 64')", m.get('am', ''), key=f"am_{i}")
+
+            final_res.append({
+                "h": m.get('h'), "a": m.get('a'),
+                "s": score, "mt": mt_score,
+                "hm": hm, "am": am
+            })
             st.divider()
 
         if st.form_submit_button("✅ Enregistrer Résultats"):
             if jk not in st.session_state['history'][s_active]:
                 st.session_state['history'][s_active][jk] = {"cal": cal_ref, "res": [], "pro": []}
+
             st.session_state['history'][s_active][jk]["res"] = final_res
             save_db(st.session_state['history'])
 
@@ -938,10 +1175,20 @@ with tabs[3]:
                         sh, sa = map(int, m['s'].replace('-', ':').split(':'))
                         resultat = "1" if sh > sa else ("X" if sh == sa else "2")
                         cotes = cal_ref[i].get('o', [2.0, 3.0, 3.0]) if cal_ref and i < len(cal_ref) else [2.0, 3.0, 3.0]
+
                         moteur_apprentissage.analyser_pattern_cotes(cotes[0], cotes[1], cotes[2], resultat)
-                        moteur_apprentissage.analyser_pattern_equipe(m['h'], "V" if resultat=="1" else ("N" if resultat=="X" else "D"), {"domicile": True})
-                        moteur_apprentissage.analyser_pattern_equipe(m['a'], "V" if resultat=="2" else ("N" if resultat=="X" else "D"), {"domicile": False})
-                    except: pass
+                        moteur_apprentissage.analyser_pattern_equipe(
+                            m['h'],
+                            "V" if resultat=="1" else ("N" if resultat=="X" else "D"),
+                            {"domicile": True}
+                        )
+                        moteur_apprentissage.analyser_pattern_equipe(
+                            m['a'],
+                            "V" if resultat=="2" else ("N" if resultat=="X" else "D"),
+                            {"domicile": False}
+                        )
+                    except:
+                        pass
                 moteur_apprentissage.save()
                 custom_notify("🧠 IA : Patterns mis à jour !", "#7FFFD4")
 
