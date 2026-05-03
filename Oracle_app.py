@@ -589,13 +589,18 @@ with tabs[0]:
 
     def style_classement(row):
         rang = row['Rang']
-        if rang <= 3: return ['background-color: rgba(0,255,0,0.12)'] * len(row)
-        elif rang >= 17: return ['background-color: rgba(255,75,75,0.12)'] * len(row)
+        if 1 <= rang <= 5:
+            return ['background-color: rgba(255,75,75,0.10)'] * len(row)  # Rouge transparent
+        elif 6 <= rang <= 10:
+            return ['background-color: rgba(75,150,255,0.10)'] * len(row)  # Bleu transparent
+        elif 11 <= rang <= 15:
+            return ['background-color: rgba(75,255,150,0.10)'] * len(row)  # Vert transparent
+        elif 16 <= rang <= 20:
+            return ['background-color: rgba(255,105,180,0.10)'] * len(row)  # Rose transparent
         return [''] * len(row)
 
     st.dataframe(standings.style.apply(style_classement, axis=1), use_container_width=True, hide_index=True)
-    st.caption("🟢 Top 3 (Titre) · 🔴 Zone de relégation")
-
+    st.caption("🔴 Top 5 (Titre) · 🔵 6-10 · 🟢 11-15 · 🩷 16-20 (Relégation)")
 # ===================== TAB 1 : CALENDRIER =====================
 with tabs[1]:
     st.markdown("### 📅 Import du Calendrier")
