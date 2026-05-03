@@ -37,7 +37,7 @@ except ImportError:
     oracle_brain = None
 
 # ── Configuration ──
-st.set_page_config(page_title="Oracle Mahita V36", layout="wide", page_icon="🔮")
+st.set_page_config(page_title="Oracle Mahita V37", layout="wide", page_icon="🔮")
 
 # ── CSS ──
 st.markdown("""
