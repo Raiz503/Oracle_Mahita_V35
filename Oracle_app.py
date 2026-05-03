@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
-║           ORACLE MAHITA V37.0 — IA INTÉGRÉE                 ║
+║           ORACLE MAHITA V38 0 — IA INTÉGRÉE                 ║
 ║           OCR Bet261 · Apprentissage · Chat IA              ║
 ╚══════════════════════════════════════════════════════════════╝
 """
@@ -529,8 +529,8 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 
         # === ZONES SOUS LE RECT: buteurs + MT ===
         # MT et buteurs sont sur la même bande sous le rectangle
-        y_sub_start = rect_bot + 2
-        y_sub_end = min(h_img, rect_bot + 48)
+        y_sub_start = rect_bot
+        y_sub_end = min(h_img, rect_bot + 38)
         # Buteurs dom: côté gauche (sous le nom dom)
         zone_but_gauche = img.crop((0, y_sub_start, rect['x'] - 10, y_sub_end))
         # Buteurs ext: côté droit (sous le nom ext)
@@ -669,71 +669,66 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                 print(f"Erreur nom droite match {i+1}: {e}")
             pass
 
-        # === BUTEURS DOMICILE (zone but gauche - BAS) ===
-        try:
-            but_array = np.array(zone_but_gauche)
-            but_pil = Image.fromarray(but_array)
-            enhancer = ImageEnhance.Contrast(but_pil)
-            but_contraste = np.array(enhancer.enhance(2.5))
+        def extraire_minutes(zone_img, label="", debug=False):
+            """Extrait les minutes de buteurs depuis une zone image.
+            Gère les apostrophes manquantes (fallback chiffres 1-120)."""
+            try:
+                arr = np.array(zone_img)
+                pil = Image.fromarray(arr)
+                # Agrandir x2 pour améliorer la lisibilité des petits chiffres
+                pil_big = pil.resize((pil.width * 2, pil.height * 2), Image.LANCZOS)
+                enhanced = np.array(ImageEnhance.Contrast(pil_big).enhance(3.0))
 
-            res_but_g = reader.readtext(but_contraste, detail=1, paragraph=False)
+                res = reader.readtext(enhanced, detail=1, paragraph=False)
 
-            if debug:
-                print(f"\n--- Match {i+1} BUT GAUCHE ---")
-                for bbox, text, prob in res_but_g:
-                    print(f"  '{text}' | prob: {prob:.2f}")
-
-            minutes_gauche = []
-            for bbox, text, prob in res_but_g:
-                if prob > 0.10:
-                    text = text.strip()
-                    mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
-                    if mins:
-                        minutes_gauche.extend(mins)
-                        if debug:
-                            print(f"  Minutes trouvées dans '{text}': {mins}")
-
-            if minutes_gauche:
-                buteurs_dom = ' '.join(f"{m}'" for m in minutes_gauche)
                 if debug:
-                    print(f"  Buteurs dom final: {buteurs_dom}")
-        except Exception as e:
-            if debug:
-                print(f"Erreur but gauche match {i+1}: {e}")
-            pass
+                    print(f"\n--- {label} ---")
+                    for bbox, text, prob in res:
+                        print(f"  '{text}' | prob: {prob:.2f}")
 
-        # === BUTEURS EXTÉRIEUR (zone but droite - BAS) ===
-        try:
-            but_array = np.array(zone_but_droite)
-            but_pil = Image.fromarray(but_array)
-            enhancer = ImageEnhance.Contrast(but_pil)
-            but_contraste = np.array(enhancer.enhance(2.5))
+                minutes = []
+                texte_concat = ""
 
-            res_but_d = reader.readtext(but_contraste, detail=1, paragraph=False)
+                for bbox, text, prob in res:
+                    if prob > 0.08:
+                        t = text.strip()
+                        texte_concat += " " + t
 
-            if debug:
-                print(f"\n--- Match {i+1} BUT DROITE ---")
-                for bbox, text, prob in res_but_d:
-                    print(f"  '{text}' | prob: {prob:.2f}")
+                        # Priorité 1: chiffres suivis d'apostrophe (toutes variantes)
+                        mins = re.findall(r"(\d{1,3})\s*['\u2019\u02bc\u0060\u00b4\u2018′‛`´]", t)
+                        if mins:
+                            minutes.extend(mins)
+                            continue
 
-            minutes_droite = []
-            for bbox, text, prob in res_but_d:
-                if prob > 0.10:
-                    text = text.strip()
-                    mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
-                    if mins:
-                        minutes_droite.extend(mins)
-                        if debug:
-                            print(f"  Minutes trouvées dans '{text}': {mins}")
+                        # Priorité 2: fallback — tous les chiffres 1-120 dans la zone
+                        # (dans la zone buteurs, les chiffres = minutes à coup sûr)
+                        mins_fb = re.findall(r'\b(\d{1,3})\b', t)
+                        for m in mins_fb:
+                            if 1 <= int(m) <= 120:
+                                minutes.append(m)
 
-            if minutes_droite:
-                buteurs_ext = ' '.join(f"{m}'" for m in minutes_droite)
+                # Dédoublonner en gardant l'ordre
+                seen = set()
+                minutes_uniq = []
+                for m in minutes:
+                    if m not in seen:
+                        seen.add(m)
+                        minutes_uniq.append(m)
+
+                result = ' '.join(f"{m}'" for m in minutes_uniq)
+                if debug and result:
+                    print(f"  → Résultat: {result}")
+                return result
+            except Exception as e:
                 if debug:
-                    print(f"  Buteurs ext final: {buteurs_ext}")
-        except Exception as e:
-            if debug:
-                print(f"Erreur but droite match {i+1}: {e}")
-            pass
+                    print(f"  Erreur: {e}")
+                return ""
+
+        # === BUTEURS DOMICILE ===
+        buteurs_dom = extraire_minutes(zone_but_gauche, f"BUT GAUCHE M{i+1}", debug)
+
+        # === BUTEURS EXTÉRIEUR ===
+        buteurs_ext = extraire_minutes(zone_but_droite, f"BUT DROITE M{i+1}", debug)
 
         matches.append({
             'h': equipe_dom,
