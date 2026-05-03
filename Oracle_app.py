@@ -394,7 +394,7 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
             res_noms = reader.readtext(zone_noms_contraste, detail=1, paragraph=False)
             
             if debug:
-                print("\n" + f"--- Match {i+1} ---")
+                print(f"\n--- Match {i+1} ---")
                 print(f"Zone noms trouvés: {len(res_noms)}")
             
             # Filtrer et regrouper par position Y
@@ -560,7 +560,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             lignes_centre.sort(key=lambda x: x[0])
 
             if debug:
-                print("\n" + f"--- Match {i+1} CENTRE ---")
+                print(f"\n--- Match {i+1} CENTRE ---")
                 for cy, text, prob in lignes_centre:
                     print(f"  Ligne Y={cy:.1f}: '{text}' | prob: {prob:.2f}")
 
@@ -605,7 +605,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             res_gauche = reader.readtext(gauche_contraste, detail=1, paragraph=False)
 
             if debug:
-                print("\n" + f"--- Match {i+1} GAUCHE ---")
+                print(f"\n--- Match {i+1} GAUCHE ---")
                 for bbox, text, prob in res_gauche:
                     print(f"  '{text}' | prob: {prob:.2f}")
 
@@ -656,7 +656,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             res_droite = reader.readtext(droite_contraste, detail=1, paragraph=False)
 
             if debug:
-                print("\n" + f"--- Match {i+1} DROITE ---")
+                print(f"\n--- Match {i+1} DROITE ---")
                 for bbox, text, prob in res_droite:
                     print(f"  '{text}' | prob: {prob:.2f}")
 
@@ -708,6 +708,31 @@ def ocr_resultats_bet261(image_bytes, debug=False):
     return matches
 
 # ===================== TAB 0 : CLASSEMENT =====================
+# ===================== HEADER & SAISON =====================
+st.markdown(f"""
+<div class="main-header">
+    <div class="logo-container">
+        <div class="logo-svg">{LOGO_SVG}</div>
+        <div>
+            <h1 class="header-title">ORACLE MAHITA</h1>
+            <div class="header-subtitle">V37.0 — IA Intégrée · Apprentissage Actif · OCR Bet261</div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+s_active = st.selectbox("Saison", list(st.session_state['history'].keys()), label_visibility="collapsed")
+st.session_state['s_active'] = s_active
+
+days = [int(re.search(r'\d+', k).group()) for k in st.session_state['history'][s_active].keys() 
+        if re.search(r'\d+', k) and st.session_state['history'][s_active][k].get("res")]
+next_j = max(days) + 1 if days else 1
+st.markdown(f'<div class="next-day-box">PROCHAINE JOURNÉE : J-{next_j}</div>', unsafe_allow_html=True)
+
+tabs = st.tabs(["🏆 CLASSEMENT", "📅 CALENDRIER", "🎯 PRONOS", "⚽ RÉSULTATS", 
+                "📚 HISTORIQUE", "⚙️ GESTION", "📊 PERFORMANCE", "🤖 ASSISTANT IA"])
+
+
 with tabs[0]:
     st.markdown("### 🏆 Classement de la Saison")
     standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
