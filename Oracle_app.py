@@ -464,9 +464,10 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
 
     return matchs
 
-# ===================== OCR RÉSULTATS (CORRIGÉ V2) =====================
+# ===================== OCR RÉSULTATS (CORRIGÉ V3) =====================
 def ocr_resultats_bet261(image_bytes, debug=False):
-    """OCR avancé pour résultats Bet261 avec détection des scores, MT et buteurs."""
+    """OCR avancé pour résultats Bet261 avec détection des scores, MT et buteurs.
+    VERSION V3 - Corrige la détection des noms, scores, MT et buteurs."""
     img = Image.open(io.BytesIO(image_bytes))
     img_array = np.array(img)
     h_img, w_img = img_array.shape[:2]
@@ -476,9 +477,9 @@ def ocr_resultats_bet261(image_bytes, debug=False):
     # Convertir en niveaux de gris
     gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
     
-    # Détecter les rectangles de score (gris foncé)
-    # Les scores sont dans des rectangles gris foncé au centre
-    _, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
+    # Détecter les rectangles de score (gris foncé au centre)
+    # Les scores sont dans des rectangles gris foncé
+    _, thresh = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
     
     # Trouver les contours des rectangles de score
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -489,10 +490,10 @@ def ocr_resultats_bet261(image_bytes, debug=False):
         area = bw * bh
         aspect = bw / bh if bh > 0 else 0
         # Rectangle de score: carré/presque carré, taille moyenne, au centre horizontal
-        if 800 < area < 8000 and 0.8 < aspect < 3.0 and bw > 30 and bh > 20:
+        if 600 < area < 10000 and 0.7 < aspect < 3.0 and bw > 25 and bh > 20:
             # Vérifier qu'il est au centre de l'image (zone des scores)
             cx = x + bw // 2
-            if w_img * 0.3 < cx < w_img * 0.7:
+            if w_img * 0.25 < cx < w_img * 0.75:
                 rectangles_score.append({
                     'x': x, 'y': y, 'w': bw, 'h': bh,
                     'cx': cx, 'cy': y + bh // 2,
@@ -503,7 +504,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
     rectangles_score.sort(key=lambda r: r['cy'])
     
     # Filtrer le header (trop haut)
-    min_y = int(h_img * 0.12)
+    min_y = int(h_img * 0.10)
     rectangles_score = [r for r in rectangles_score if r['cy'] > min_y]
     
     # Limiter à 10
@@ -518,16 +519,16 @@ def ocr_resultats_bet261(image_bytes, debug=False):
         y_center = rect['cy']
         
         # Zone du match: centré sur le rectangle de score, étendu verticalement
-        y_start = max(0, y_center - 55)
-        y_end = min(h_img, y_center + 55)
+        y_start = max(0, y_center - 65)
+        y_end = min(h_img, y_center + 65)
         
         # Zone complète du match
         zone_match = img.crop((0, y_start, w_img, y_end))
         
         # Zones spécifiques
-        zone_gauche = img.crop((0, y_start, int(w_img * 0.32), y_end))      # Domicile + buteurs
-        zone_centre = img.crop((int(w_img * 0.32), y_start, int(w_img * 0.68), y_end))  # Score + MT
-        zone_droite = img.crop((int(w_img * 0.68), y_start, w_img, y_end))   # Extérieur + buteurs
+        zone_gauche = img.crop((0, y_start, int(w_img * 0.38), y_end))      # Domicile + buteurs
+        zone_centre = img.crop((int(w_img * 0.38), y_start, int(w_img * 0.62), y_end))  # Score + MT
+        zone_droite = img.crop((int(w_img * 0.62), y_start, w_img, y_end))   # Extérieur + buteurs
         
         equipe_dom = ""
         equipe_ext = ""
@@ -542,29 +543,39 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             centre_array = np.array(zone_centre)
             centre_pil = Image.fromarray(centre_array)
             enhancer = ImageEnhance.Contrast(centre_pil)
-            centre_contraste = np.array(enhancer.enhance(2.5))
+            centre_contraste = np.array(enhancer.enhance(3.0))
             
             res_centre = reader.readtext(centre_contraste, detail=0, paragraph=False)
             
             if res_centre:
                 texte_centre = ' '.join(res_centre)
                 
+                if debug:
+                    print(f"\n--- Match {i+1} CENTRE ---")
+                    print(f"Texte brut: '{texte_centre}'")
+                
                 # Chercher score final X:Y ou X-Y (dans le rectangle gris)
                 # Format: "1:0" ou "2:2" ou "0:4"
                 match_score = re.search(r'(\d)\s*[:\\-]\s*(\d)', texte_centre)
                 if match_score:
                     score = f"{match_score.group(1)}:{match_score.group(2)}"
+                    if debug:
+                        print(f"Score trouvé: {score}")
                 
-                # Chercher MT: X:Y ou MT X:Y
-                match_mt = re.search(r'[Mm][Tt][:;\\s]*(\d)\s*[:\\-]\s*(\d)', texte_centre)
+                # Chercher MT: X:Y ou MT X:Y ou MT: X.Y
+                match_mt = re.search(r'[Mm][Tt][:;\\s]*(\d)\s*[:\\-\\.]\s*(\d)', texte_centre)
                 if match_mt:
                     mt = f"{match_mt.group(1)}:{match_mt.group(2)}"
+                    if debug:
+                        print(f"MT trouvé: {mt}")
                 
-                # Si pas de MT trouvé, chercher "MT" suivi de chiffres
+                # Si pas de MT trouvé, chercher "MT" suivi de chiffres avec point
                 if not mt:
-                    match_mt2 = re.search(r'[Mm][Tt]\s*(\d)\s*[:\\-]\s*(\d)', texte_centre)
+                    match_mt2 = re.search(r'[Mm][Tt]\s*(\d)\s*[\\.\\:]\s*(\d)', texte_centre)
                     if match_mt2:
                         mt = f"{match_mt2.group(1)}:{match_mt2.group(2)}"
+                        if debug:
+                            print(f"MT trouvé (format 2): {mt}")
                         
         except Exception as e:
             if debug:
@@ -577,60 +588,89 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             gauche_array = np.array(zone_gauche)
             gauche_pil = Image.fromarray(gauche_array)
             enhancer_g = ImageEnhance.Contrast(gauche_pil)
-            gauche_contraste = np.array(enhancer_g.enhance(2.0))
+            gauche_contraste = np.array(enhancer_g.enhance(2.5))
             
             res_gauche = reader.readtext(gauche_contraste, detail=1, paragraph=False)
+            
+            if debug:
+                print(f"\n--- Match {i+1} GAUCHE ---")
+                for bbox, text, prob in res_gauche:
+                    print(f"  '{text}' | prob: {prob:.2f}")
             
             # Séparer noms d'équipes et minutes
             noms_gauche = []
             minutes_gauche = []
             
             for bbox, text, prob in res_gauche:
-                if prob > 0.25:
+                if prob > 0.20:
                     text = text.strip()
-                    # Chercher des minutes: XX' ou XXX'
-                    mins = re.findall(r"(\d{1,3})['′`]", text)
+                    
+                    # Chercher des minutes: XX' ou XXX' (avec différents apostrophes)
+                    mins = re.findall(r"(\d{1,3})['′`´]", text)
                     if mins:
                         minutes_gauche.extend(mins)
-                    # Chercher des noms d'équipes (pas des chiffres seuls)
-                    elif len(text) > 2 and not re.match(r'^\d+$', text):
-                        noms_gauche.append(text)
+                        if debug:
+                            print(f"  Minute trouvée: {mins}")
+                    # Chercher des noms d'équipes (pas des chiffres seuls, pas "MT")
+                    elif len(text) > 2 and not re.match(r'^\d+$', text) and not re.match(r'^[Mm][Tt]', text):
+                        # Nettoyer le texte
+                        text = re.sub(r'^\d+\s*', '', text)  # Enlever les chiffres au début
+                        if len(text) > 2:
+                            noms_gauche.append(text)
             
             # Prendre le premier nom comme équipe domicile
             if noms_gauche:
-                equipe_dom = get_close_matches(noms_gauche[0], engine.teams_list, n=1, cutoff=0.4)
+                equipe_dom = get_close_matches(noms_gauche[0], engine.teams_list, n=1, cutoff=0.35)
                 equipe_dom = equipe_dom[0] if equipe_dom else noms_gauche[0]
+                if debug:
+                    print(f"  Équipe dom: {equipe_dom}")
             
             # Formater les buteurs
             if minutes_gauche:
                 buteurs_dom = ' '.join(f"{m}'" for m in minutes_gauche)
+                if debug:
+                    print(f"  Buteurs dom: {buteurs_dom}")
             
             # DROITE - Extérieur et buteurs
             droite_array = np.array(zone_droite)
             droite_pil = Image.fromarray(droite_array)
             enhancer_d = ImageEnhance.Contrast(droite_pil)
-            droite_contraste = np.array(enhancer_d.enhance(2.0))
+            droite_contraste = np.array(enhancer_d.enhance(2.5))
             
             res_droite = reader.readtext(droite_contraste, detail=1, paragraph=False)
+            
+            if debug:
+                print(f"\n--- Match {i+1} DROITE ---")
+                for bbox, text, prob in res_droite:
+                    print(f"  '{text}' | prob: {prob:.2f}")
             
             noms_droite = []
             minutes_droite = []
             
             for bbox, text, prob in res_droite:
-                if prob > 0.25:
+                if prob > 0.20:
                     text = text.strip()
-                    mins = re.findall(r"(\d{1,3})['′`]", text)
+                    
+                    mins = re.findall(r"(\d{1,3})['′`´]", text)
                     if mins:
                         minutes_droite.extend(mins)
-                    elif len(text) > 2 and not re.match(r'^\d+$', text):
-                        noms_droite.append(text)
+                        if debug:
+                            print(f"  Minute trouvée: {mins}")
+                    elif len(text) > 2 and not re.match(r'^\d+$', text) and not re.match(r'^[Mm][Tt]', text):
+                        text = re.sub(r'^\d+\s*', '', text)
+                        if len(text) > 2:
+                            noms_droite.append(text)
             
             if noms_droite:
-                equipe_ext = get_close_matches(noms_droite[0], engine.teams_list, n=1, cutoff=0.4)
+                equipe_ext = get_close_matches(noms_droite[0], engine.teams_list, n=1, cutoff=0.35)
                 equipe_ext = equipe_ext[0] if equipe_ext else noms_droite[0]
+                if debug:
+                    print(f"  Équipe ext: {equipe_ext}")
             
             if minutes_droite:
                 buteurs_ext = ' '.join(f"{m}'" for m in minutes_droite)
+                if debug:
+                    print(f"  Buteurs ext: {buteurs_ext}")
                 
         except Exception as e:
             if debug:
@@ -648,7 +688,6 @@ def ocr_resultats_bet261(image_bytes, debug=False):
         })
 
     return matches
-
     
 
 # ===================== HEADER & SAISON =====================
