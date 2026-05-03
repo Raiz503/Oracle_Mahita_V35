@@ -257,7 +257,8 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
         x, y, bw, bh = cv2.boundingRect(cnt)
         area = bw * bh
         aspect = bw / bh if bh > 0 else 0
-        if 500 < area < 10000 and 1.5 < aspect < 8.0 and bw > 30 and bh > 10:
+        # Accepter aussi les grands boutons (panier vert) mais les filtrer après
+        if 500 < area < 15000 and 1.0 < aspect < 8.0 and bw > 30 and bh > 10:
             boutons.append({
                 'x': x, 'y': y, 'w': bw, 'h': bh,
                 'cx': x + bw//2, 'cy': y + bh//2,
@@ -278,12 +279,12 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
         if not placed:
             lignes.append({'cy_mean': b['cy'], 'boutons': [b]})
 
-    # Ignorer header
-    min_y = int(h_img * 0.05)
-    lignes_valides = [l for l in lignes if l['cy_mean'] > min_y]
+    # Filtrer lignes avec >= 2 boutons (3 normaux ou 2 si panier masque le 3ème)
+    lignes_valides = [l for l in lignes if len(l['boutons']) >= 2]
 
-    # Accepter les lignes avec >= 2 boutons (dernier match avec panier)
-    lignes_valides = [l for l in lignes_valides if len(l['boutons']) >= 2]
+    # Ignorer header (réduit à 5%)
+    min_y = int(h_img * 0.05)
+    lignes_valides = [l for l in lignes_valides if l['cy_mean'] > min_y]
 
     # Pour les lignes avec 2 boutons, ajouter un 3ème bouton "fantôme"
     for ligne in lignes_valides:
@@ -309,15 +310,14 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
         return []
 
     matchs = []
-    equipes_utilisees = set()
 
     for i, ligne in enumerate(lignes_valides):
         y_center = int(ligne['cy_mean'])
         y_start = max(0, y_center - 60)
         y_end = min(h_img, y_center + 60)
 
-        # Zone noms (gauche)
-        ligne_full = img.crop((0, y_start, w_img//2 + 50, y_end))
+        # Zone noms (gauche) - élargie pour capturer plus de texte
+        ligne_full = img.crop((0, y_start, w_img//2 + 80, y_end))
 
         # Extraire cotes
         cotes_detectees = [None, None, None]
@@ -345,7 +345,6 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
                     if match_nb:
                         val = float(match_nb.group(1))
 
-                        # CORRECTION: valeur > 20 = erreur OCR
                         if val > 20.0:
                             corrections = []
                             for div in [10, 100]:
@@ -374,12 +373,19 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
             except:
                 pass
 
-        # Extraire noms d'équipes
+        # Extraire noms d'équipes - NOUVELLE LOGIQUE SANS VERROUILLAGE
         noms_detectes = []
         try:
-            res_noms = reader.readtext(np.array(ligne_full), detail=1, paragraph=False)
+            # Amélioration: OCR avec contraste renforcé sur la zone noms
+            ligne_full_array = np.array(ligne_full)
+            # Augmenter le contraste pour meilleure lecture
+            ligne_pil = Image.fromarray(ligne_full_array)
+            enhancer = ImageEnhance.Contrast(ligne_pil)
+            ligne_contraste = np.array(enhancer.enhance(2.0))
+            
+            res_noms = reader.readtext(ligne_contraste, detail=1, paragraph=False)
             for bbox, text, prob in res_noms:
-                if prob > 0.3 and len(text) > 2:
+                if prob > 0.25 and len(text) > 2:
                     try:
                         cy = (bbox[0][1] + bbox[2][1]) / 2
                         noms_detectes.append((cy, text))
@@ -389,9 +395,7 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
         except:
             pass
 
-        # Assigner équipes avec verrouillage
-        equipes_restantes = [t for t in engine.teams_list if t not in equipes_utilisees]
-
+        # Assigner équipes SANS verrouillage - chaque match est indépendant
         dom_default = ""
         ext_default = ""
 
@@ -399,31 +403,19 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
             nom_dom_ocr = noms_detectes[0][1]
             nom_ext_ocr = noms_detectes[1][1]
 
-            dom_match = get_close_matches(nom_dom_ocr, equipes_restantes, n=1, cutoff=0.5)
+            dom_match = get_close_matches(nom_dom_ocr, engine.teams_list, n=1, cutoff=0.4)
             if dom_match:
                 dom_default = dom_match[0]
-                equipes_utilisees.add(dom_default)
-                equipes_restantes.remove(dom_default)
 
-            ext_match = get_close_matches(nom_ext_ocr, equipes_restantes, n=1, cutoff=0.5)
+            ext_match = get_close_matches(nom_ext_ocr, engine.teams_list, n=1, cutoff=0.4)
             if ext_match:
                 ext_default = ext_match[0]
-                equipes_utilisees.add(ext_default)
-
-        if not dom_default and equipes_restantes and noms_detectes:
+        elif len(noms_detectes) == 1:
+            # Un seul nom trouvé, essayer de le matcher
             nom_brut = noms_detectes[0][1]
-            dom_match = get_close_matches(nom_brut, equipes_restantes, n=1, cutoff=0.4)
-            if dom_match:
-                dom_default = dom_match[0]
-                equipes_utilisees.add(dom_default)
-                equipes_restantes.remove(dom_default)
-
-        if not ext_default and equipes_restantes:
-            nom_brut = noms_detectes[1][1] if len(noms_detectes) > 1 else ""
-            ext_match = get_close_matches(nom_brut, equipes_restantes, n=1, cutoff=0.4)
-            if ext_match:
-                ext_default = ext_match[0]
-                equipes_utilisees.add(ext_default)
+            match = get_close_matches(nom_brut, engine.teams_list, n=1, cutoff=0.4)
+            if match:
+                dom_default = match[0]
 
         matchs.append({
             'index': i,
@@ -653,10 +645,11 @@ with tabs[1]:
 
             matchs_ocr = st.session_state['ocr_matchs']
 
-            # Vérification doublons
+            # Vérification doublons (uniquement pour avertir, pas bloquer)
             toutes_equipes = []
             for m in matchs_ocr:
-                toutes_equipes.extend([m['h'], m['a']])
+                if m['h']: toutes_equipes.append(m['h'])
+                if m['a']: toutes_equipes.append(m['a'])
 
             equipes_uniques = set(toutes_equipes)
             doublons = len(toutes_equipes) - len(equipes_uniques)
@@ -665,12 +658,12 @@ with tabs[1]:
                 st.warning(f"⚠️ {len(matchs_ocr)} matchs trouvés sur 10 attendus.")
 
             if doublons > 0:
-                st.warning(f"⚠️ {doublons} doublons d'équipes détectés. Vérifiez manuellement.")
+                st.warning(f"⚠️ {doublons} doublons d'équipes détectés. Corrigez ci-dessous.")
 
             if len(equipes_uniques) != 20:
                 manquantes = [t for t in engine.teams_list if t not in equipes_uniques]
                 if manquantes:
-                    st.warning(f"⚠️ Équipes manquantes : {', '.join(manquantes)}")
+                    st.info(f"ℹ️ Équipes non détectées : {', '.join(manquantes)}")
 
             # Afficher les matchs
             for i, match in enumerate(matchs_ocr):
@@ -688,28 +681,18 @@ with tabs[1]:
                         if is_deduit:
                             st.info("🧠 Certaines valeurs ont été déduites ou sont manquantes - vérifiez !")
 
-                        # Équipes disponibles (pas déjà utilisées ailleurs)
-                        equipes_dom = engine.teams_list.copy()
-                        equipes_ext = engine.teams_list.copy()
-
-                        for j, other in enumerate(matchs_ocr):
-                            if j != i:
-                                if other['h'] and other['h'] in equipes_dom:
-                                    equipes_dom.remove(other['h'])
-                                if other['a'] and other['a'] in equipes_ext:
-                                    equipes_ext.remove(other['a'])
-
+                        # Toutes les équipes disponibles pour chaque match (pas de filtrage)
                         equipe_dom = st.selectbox(
                             "Domicile",
-                            equipes_dom,
-                            index=equipes_dom.index(match['h']) if match['h'] in equipes_dom else 0,
+                            engine.teams_list,
+                            index=engine.teams_list.index(match['h']) if match['h'] in engine.teams_list else 0,
                             key=f"ocr_dom_{i}"
                         )
 
                         equipe_ext = st.selectbox(
                             "Extérieur",
-                            equipes_ext,
-                            index=equipes_ext.index(match['a']) if match['a'] in equipes_ext else 0,
+                            engine.teams_list,
+                            index=engine.teams_list.index(match['a']) if match['a'] in engine.teams_list else 0,
                             key=f"ocr_ext_{i}"
                         )
 
@@ -747,7 +730,7 @@ with tabs[1]:
                             'o': [cote_1, cote_x, cote_2]
                         }
 
-            # Validation
+            # Validation avec vérification stricte des doublons
             if st.button("🔥 Valider et importer", use_container_width=True):
                 if len(matchs_ocr) != 10:
                     st.error(f"❌ Il faut exactement 10 matchs !")
@@ -757,7 +740,11 @@ with tabs[1]:
                         toutes_equipes.extend([m['h'], m['a']])
 
                     if len(toutes_equipes) != len(set(toutes_equipes)):
-                        st.error("❌ Doublons d'équipes détectés ! Corrigez.")
+                        # Identifier les doublons pour aider la correction
+                        from collections import Counter
+                        counts = Counter(toutes_equipes)
+                        doublons_list = [eq for eq, c in counts.items() if c > 1]
+                        st.error(f"❌ Doublons d'équipes détectés : {', '.join(doublons_list)} ! Corrigez dans les matchs concernés.")
                     else:
                         jk = f"Journée {j_cal}"
                         if jk not in st.session_state['history'][s_active]:
