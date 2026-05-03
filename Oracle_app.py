@@ -231,8 +231,10 @@ class OracleEngine:
 engine = OracleEngine()
 
 # ===================== OCR CALENDRIER (NOUVEAU) =====================
+
 def ocr_calendrier_bet261(image_bytes, debug=False):
-    """OCR avancé pour calendrier Bet261 avec détection boutons verts et correction cotes."""
+    """OCR avancé pour calendrier Bet261 avec détection boutons verts et correction cotes.
+    VERSION CORRIGÉE - Détecte correctement les deux équipes par match."""
     img = Image.open(io.BytesIO(image_bytes))
     img_array = np.array(img)
     h_img, w_img = img_array.shape[:2]
@@ -264,6 +266,9 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
                 'cx': x + bw//2, 'cy': y + bh//2,
                 'area': area
             })
+
+    # === CORRECTION 1: Filtrer le bouton panier (coin bas droit, très grand) ===
+    boutons = [b for b in boutons if not (b['x'] > w_img * 0.75 and b['y'] > h_img * 0.80 and b['area'] > 5000)]
 
     # Trier et grouper par lignes
     boutons.sort(key=lambda b: (b['cy'], b['cx']))
@@ -316,8 +321,9 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
         y_start = max(0, y_center - 60)
         y_end = min(h_img, y_center + 60)
 
-        # Zone noms (gauche) - élargie pour capturer plus de texte
-        ligne_full = img.crop((0, y_start, w_img//2 + 80, y_end))
+        # === CORRECTION 2: Zone noms = TOUTE la largeur de l'image ===
+        # Pas seulement la moitié gauche, pour capturer domicile ET extérieur
+        ligne_full = img.crop((0, y_start, w_img, y_end))
 
         # Extraire cotes
         cotes_detectees = [None, None, None]
@@ -373,33 +379,48 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
             except:
                 pass
 
-        # Extraire noms d'équipes - NOUVELLE LOGIQUE SANS VERROUILLAGE
+        # === CORRECTION 3: Détection intelligente des deux noms d'équipes ===
         noms_detectes = []
         try:
-            # Amélioration: OCR avec contraste renforcé sur la zone noms
             ligne_full_array = np.array(ligne_full)
-            # Augmenter le contraste pour meilleure lecture
             ligne_pil = Image.fromarray(ligne_full_array)
             enhancer = ImageEnhance.Contrast(ligne_pil)
             ligne_contraste = np.array(enhancer.enhance(2.0))
-            
+
             res_noms = reader.readtext(ligne_contraste, detail=1, paragraph=False)
+
+            # Grouper les textes par position verticale (ligne haut vs ligne bas)
+            noms_par_ligne_verticale = {}
             for bbox, text, prob in res_noms:
                 if prob > 0.25 and len(text) > 2:
-                    try:
-                        cy = (bbox[0][1] + bbox[2][1]) / 2
-                        noms_detectes.append((cy, text))
-                    except:
-                        continue
-            noms_detectes.sort()
-        except:
+                    # Calculer le centre Y du texte
+                    cy = (bbox[0][1] + bbox[2][1]) / 2
+                    # Regrouper par position verticale (marge de 20px)
+                    ligne_key = round(cy / 20)
+                    if ligne_key not in noms_par_ligne_verticale:
+                        noms_par_ligne_verticale[ligne_key] = []
+                    noms_par_ligne_verticale[ligne_key].append((cy, text, prob, bbox))
+
+            # Prendre le meilleur nom de chaque ligne verticale
+            for key in sorted(noms_par_ligne_verticale.keys()):
+                # Trier par probabilité et prendre le meilleur
+                meilleur = max(noms_par_ligne_verticale[key], key=lambda x: x[2])
+                noms_detectes.append(meilleur)
+
+        except Exception as e:
+            if debug:
+                print(f"Erreur OCR noms: {e}")
             pass
 
-        # Assigner équipes SANS verrouillage - chaque match est indépendant
+        # === CORRECTION 4: Assigner équipes par position verticale ===
         dom_default = ""
         ext_default = ""
 
         if len(noms_detectes) >= 2:
+            # Trier par position Y (du haut vers le bas)
+            # Domicile = ligne du haut, Extérieur = ligne du bas
+            noms_detectes.sort(key=lambda x: x[0])
+
             nom_dom_ocr = noms_detectes[0][1]
             nom_ext_ocr = noms_detectes[1][1]
 
@@ -410,8 +431,9 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
             ext_match = get_close_matches(nom_ext_ocr, engine.teams_list, n=1, cutoff=0.4)
             if ext_match:
                 ext_default = ext_match[0]
+
         elif len(noms_detectes) == 1:
-            # Un seul nom trouvé, essayer de le matcher
+            # Un seul nom trouvé, essayer de le matcher comme domicile
             nom_brut = noms_detectes[0][1]
             match = get_close_matches(nom_brut, engine.teams_list, n=1, cutoff=0.4)
             if match:
