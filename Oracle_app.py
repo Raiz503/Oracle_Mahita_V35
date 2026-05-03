@@ -1,7 +1,7 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
 ║           ORACLE MAHITA V35.0 — IA INTÉGRÉE                 ║
-║           Cerveau I · OCR · Assistant IA Chat               ║
+║           OCR Bet261 · Apprentissage · Chat IA              ║
 ╚══════════════════════════════════════════════════════════════╝
 """
 
@@ -18,7 +18,11 @@ import io
 import math
 from typing import List, Dict
 
-# ── Import IA ────────────────────────────────────────────
+# ── NOUVEAUX IMPORTS POUR L'OCR ──
+from scipy.signal import find_peaks
+from scipy.ndimage import uniform_filter1d
+
+# ── Import IA ──
 try:
     from moteur_apprentissage import moteur_apprentissage
     from moteur_ia_chat import moteur_ia_chat
@@ -26,16 +30,16 @@ try:
 except ImportError:
     IA_DISPONIBLE = False
 
-# ── Import Cerveau I ─────────────────────────────────────
+# ── Import Cerveau I ──
 try:
     from moteur_cerveau1 import cerveau1 as oracle_brain
 except ImportError:
     oracle_brain = None
 
-# ── Configuration ────────────────────────────────────────
+# ── Configuration ──
 st.set_page_config(page_title="Oracle Mahita V35", layout="wide", page_icon="🔮")
 
-# ── CSS ──────────────────────────────────────────────────
+# ── CSS ──
 st.markdown("""
 <style>
 .main-header {
@@ -49,9 +53,6 @@ st.markdown("""
 .prono-safe { border-left: 5px solid #00FF00; padding: 14px; background: rgba(0,255,0,0.08); border-radius: 8px; margin: 10px 0; }
 .prono-risque { border-left: 5px solid #FFA500; padding: 14px; background: rgba(255,165,0,0.08); border-radius: 8px; margin: 10px 0; }
 .prono-fun { border-left: 5px solid #FF4B4B; padding: 14px; background: rgba(255,75,75,0.08); border-radius: 8px; margin: 10px 0; }
-.module-box { background: rgba(127,255,212,0.06); border: 1px solid #7FFFD4; border-radius: 10px; padding: 14px; margin: 10px 0; }
-.alerte-oracle { color: #FFD700; font-style: italic; }
-.alerte-danger { color: #FF4B4B; font-style: italic; }
 .next-day-box { text-align: center; color: #7FFFD4; font-weight: bold; font-size: 1.3em; padding: 12px;
                 background: rgba(127,255,212,0.12); border-radius: 10px; margin: 15px 0; }
 .chat-user { background: rgba(127,255,212,0.1); border-left: 3px solid #7FFFD4; 
@@ -172,7 +173,7 @@ class OracleEngine:
 
 engine = OracleEngine()
 
-# ===================== OCR RÉSULTATS =====================
+# ===================== OCR RÉSULTATS (ancien) =====================
 def preprocess_image_for_ocr(image_bytes):
     results = []
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
@@ -315,13 +316,13 @@ with tabs[0]:
     st.dataframe(standings.style.apply(style_classement, axis=1), use_container_width=True, hide_index=True)
     st.caption("🟢 Top 3 (Titre) · 🔴 Zone de relégation")
 
-# ===================== TAB 1 : CALENDRIER =====================
+# ===================== TAB 1 : CALENDRIER AVEC OCR BET261 =====================
 with tabs[1]:
     st.markdown("### 📅 Import du Calendrier")
     j_cal = st.number_input("Journée", 1, 50, next_j, key="j_cal_input")
     
     # ── Option OCR Bet261 ──
-    st.markdown("#### 📸 Option 1 : Import par OCR (Bet261)")
+    st.markdown("#### 📸 Import par OCR (Bet261)")
     
     uploaded_file = st.file_uploader(
         "📷 Capture d'écran Bet261", 
@@ -330,89 +331,89 @@ with tabs[1]:
     )
     
     if uploaded_file is not None:
-        # Charger l'image
+        # Charger l'image (PAS DE ROGNAGE)
         img = Image.open(io.BytesIO(uploaded_file.getvalue()))
         
-        # ═══ ÉTAPE 1 : ROGNAGE ═══
-        with st.expander("✂️ Étape 1 : Rogner l'image (optionnel)", expanded=True):
-            col_crop1, col_crop2 = st.columns([1, 1])
-            
-            with col_crop1:
-                st.markdown("**Ajustez le rognage :**")
-                crop_left = st.slider("Gauche (%)", 0, 50, 10, key="crop_left")
-                crop_right = st.slider("Droite (%)", 0, 50, 5, key="crop_right")
-                crop_top = st.slider("Haut (%)", 0, 30, 5, key="crop_top")  # 5% pour garder le haut
-                crop_bottom = st.slider("Bas (%)", 0, 50, 15, key="crop_bottom")
-            
-            with col_crop2:
-                # Appliquer le rognage
-                w, h = img.size
-                left_px = int(w * crop_left / 100)
-                top_px = int(h * crop_top / 100)
-                right_px = w - int(w * crop_right / 100)
-                bottom_px = h - int(h * crop_bottom / 100)
-                img_cropped = img.crop((left_px, top_px, right_px, bottom_px))
-                
-                st.image(img_cropped, caption="Aperçu rogné", use_container_width=True)
+        # Afficher l'image originale
+        st.image(img, caption="Image originale", use_container_width=True)
         
-        # ═══ ÉTAPE 2 : DÉTECTION AUTO ═══
-        if st.button("🔍 Étape 2 : Lancer la détection OCR", use_container_width=True):
-            with st.spinner("Analyse en cours... 30-60 secondes"):
+        if st.button("🔍 Lancer le scan OCR", use_container_width=True):
+            with st.spinner("Analyse en cours... Patientez 30-60 secondes"):
                 
-                # Détecter les zones vertes (boutons cotes)
-                img_array = np.array(img_cropped)
-                vert_mask = (img_array[:,:,1] > 130) & (img_array[:,:,0] < 120) & (img_array[:,:,2] < 120)
-                
-                # Détecter les lignes
-                vert_proj = vert_mask.sum(axis=1)
-                vert_smooth = uniform_filter1d(vert_proj.astype(float), size=20)
-                peaks, _ = find_peaks(vert_smooth, height=100, distance=80)
-                
-                if len(peaks) == 0:
-                    st.error("❌ Aucun bouton de cote détecté. Ajustez le rognage.")
-                else:
-                    st.success(f"✅ {len(peaks)} lignes détectées !")
-                    st.session_state['ocr_peaks'] = peaks
-                    st.session_state['ocr_img_cropped'] = img_cropped
-                    st.rerun()
+                try:
+                    # ═══ DÉTECTION AUTO DES ZONES VERTES ═══
+                    img_array = np.array(img)
+                    h_img, w_img = img_array.shape[:2]
+                    
+                    # Détecter les boutons verts (cotes)
+                    vert_mask = (img_array[:,:,1] > 130) & (img_array[:,:,0] < 120) & (img_array[:,:,2] < 120)
+                    
+                    # Projection verticale pour trouver les lignes
+                    vert_proj = vert_mask.sum(axis=1)
+                    vert_smooth = uniform_filter1d(vert_proj.astype(float), size=20)
+                    
+                    # Trouver les pics (lignes de matchs)
+                    peaks, _ = find_peaks(vert_smooth, height=100, distance=80)
+                    
+                    if len(peaks) == 0:
+                        st.error("❌ Aucun match détecté. Vérifiez que c'est bien une capture Bet261.")
+                    else:
+                        st.success(f"✅ {len(peaks)} lignes détectées !")
+                        
+                        # Stocker pour l'étape suivante
+                        st.session_state['ocr_peaks'] = peaks
+                        st.session_state['ocr_img'] = img
+                        st.rerun()
+                        
+                except Exception as e:
+                    st.error(f"❌ Erreur lors de l'analyse : {str(e)}")
+                    st.info("💡 Essayez avec une image plus nette.")
         
-        # ═══ ÉTAPE 3 : EXTRACTION ET VÉRIFICATION ═══
+        # ═══ ÉTAPE 2 : EXTRACTION ET VÉRIFICATION ═══
         if 'ocr_peaks' in st.session_state:
-            st.markdown("#### 📝 Étape 3 : Vérifier et corriger les matchs")
+            st.markdown("#### 📝 Vérifier et corriger les matchs")
             
-            img_cropped = st.session_state['ocr_img_cropped']
+            img = st.session_state['ocr_img']
             peaks = st.session_state['ocr_peaks']
-            h_img, w_img = np.array(img_cropped).shape[:2]
+            h_img, w_img = np.array(img).shape[:2]
             
-            # Ajouter peak au début si nécessaire
+            # Ajouter le début si le premier match est en haut
             all_peaks = [0] + list(peaks) if peaks[0] > 100 else list(peaks)
             
             matchs_ocr = []
-            equipes_detectees = []  # Pour la déduction du premier match
+            equipes_detectees = []
             
-            # ═══ TRAITER LES 9 DERNIERS MATCHS (visibles) ═══
-            for i, peak in enumerate(all_peaks[1:], start=1):  # Skip le premier pour l'instant
+            # Traiter les matchs visibles (sauter le premier pour l'instant)
+            for i, peak in enumerate(all_peaks[1:], start=1):
+                if i >= len(all_peaks):
+                    break
+                    
                 y_start = max(0, peak - 50)
-                y_end = min(h_img, peak + 80) if i == len(all_peaks)-1 else min(h_img, (peak + all_peaks[i+1])//2)
-                ligne_img = img_cropped.crop((0, y_start, w_img, y_end))
+                y_end = min(h_img, (peak + all_peaks[i+1])//2) if i+1 < len(all_peaks) else min(h_img, peak + 80)
                 
-                # Détecter boutons
+                ligne_img = img.crop((0, y_start, w_img, y_end))
+                
+                # Détecter les boutons de cotes dans cette ligne
                 ligne_array = np.array(ligne_img)
                 vert_mask_ligne = (ligne_array[:,:,1] > 130) & (ligne_array[:,:,0] < 120) & (ligne_array[:,:,2] < 120)
                 vert_proj_h = vert_mask_ligne.sum(axis=0)
+                
+                # Trouver les 3 boutons
                 peaks_h, _ = find_peaks(vert_proj_h, height=20, distance=w_img//6)
                 
+                # Garder les 3 plus grands
                 if len(peaks_h) > 3:
                     ph_sorted = sorted([(p, vert_proj_h[p]) for p in peaks_h], key=lambda x: x[1], reverse=True)
                     peaks_h = sorted([p[0] for p in ph_sorted[:3]])
                 
-                # Extraire cotes
+                # Extraire les cotes
                 cotes_detectees = [None, None, None]
                 for idx, bx in enumerate(peaks_h[:3]):
                     marge = 40
                     left = max(0, bx - marge)
                     right = min(w_img, bx + marge)
                     zone_cote = ligne_img.crop((left, 0, right, ligne_img.size[1]))
+                    
                     try:
                         res = reader.readtext(np.array(zone_cote), detail=0, paragraph=False)
                         if res:
@@ -423,9 +424,10 @@ with tabs[1]:
                     except:
                         pass
                 
-                # Extraire noms
-                fin_noms = max(0, peaks_h[0] - 20) if peaks_h else w_img//2
+                # Extraire les noms d'équipes
+                fin_noms = max(0, peaks_h[0] - 20) if len(peaks_h) > 0 else w_img//2
                 zone_noms = ligne_img.crop((0, 0, fin_noms, ligne_img.size[1]))
+                
                 noms_detectes = []
                 try:
                     res_noms = reader.readtext(np.array(zone_noms), detail=1, paragraph=False)
@@ -439,7 +441,7 @@ with tabs[1]:
                 except:
                     pass
                 
-                # Stocker les équipes pour déduction
+                # Correspondance floue
                 dom_default = noms_detectes[0][1] if len(noms_detectes) > 0 else ""
                 ext_default = noms_detectes[1][1] if len(noms_detectes) > 1 else ""
                 
@@ -449,9 +451,10 @@ with tabs[1]:
                 equipe_dom = dom_clean[0] if dom_clean else ""
                 equipe_ext = ext_clean[0] if ext_clean else ""
                 
-                # Ajouter aux équipes détectées
-                if equipe_dom: equipes_detectees.append(equipe_dom)
-                if equipe_ext: equipes_detectees.append(equipe_ext)
+                if equipe_dom:
+                    equipes_detectees.append(equipe_dom)
+                if equipe_ext:
+                    equipes_detectees.append(equipe_ext)
                 
                 matchs_ocr.append({
                     'index': i,
@@ -462,9 +465,8 @@ with tabs[1]:
                 })
             
             # ═══ DÉDUCTION DU PREMIER MATCH ═══
-            # Trouver l'équipe manquante parmi les 20
             equipe_manquante = None
-            if len(equipes_detectees) >= 18:  # Au moins 9 matchs complets détectés
+            if len(equipes_detectees) >= 18:
                 for team in engine.teams_list:
                     if team not in equipes_detectees:
                         equipe_manquante = team
@@ -476,18 +478,24 @@ with tabs[1]:
                 'h': equipe_manquante if equipe_manquante else "À vérifier",
                 'a': "Brighton",  # Visible sur la capture
                 'o': [None, None, None],
-                'ligne_img': img_cropped.crop((0, 0, w_img, all_peaks[1] if len(all_peaks) > 1 else 100)),
-                'deduction': True  # Marquer comme déduit
+                'ligne_img': img.crop((0, 0, w_img, all_peaks[1] if len(all_peaks) > 1 else 100)),
+                'deduction': True
             }
             matchs_ocr.insert(0, premier_match)
             
-            # ═══ AFFICHAGE INTERFACE ═══
-            st.success(f"🧠 **Déduction automatique** : L'équipe manquante est **{equipe_manquante}**")
-            st.caption("Vérifiez tous les matchs ci-dessous et corrigez si nécessaire")
+            # Afficher la déduction
+            if equipe_manquante:
+                st.success(f"🧠 **Déduction automatique** : L'équipe manquante est **{equipe_manquante}**")
+                st.caption("L'OCR a analysé les 9 matchs visibles et trouvé qu'il manque 1 équipe. Vérifiez ci-dessous.")
+            else:
+                st.warning("⚠️ Impossible de déduire automatiquement. Vérifiez manuellement.")
+            
+            # ═══ INTERFACE DE VÉRIFICATION ═══
+            matchs_finaux = []
             
             for i, match in enumerate(matchs_ocr):
                 is_deduit = match.get('deduction', False)
-                titre = f"⚽ Match {i+1}" + (" 🧠 (déduit automatiquement)" if is_deduit else "")
+                titre = f"⚽ Match {i+1}" + (" 🧠 (déduit auto)" if is_deduit else "")
                 
                 with st.expander(titre, expanded=is_deduit):
                     cols = st.columns([1, 2])
@@ -497,10 +505,8 @@ with tabs[1]:
                             st.image(match['ligne_img'], use_container_width=True)
                     
                     with cols[1]:
-                        # Équipe domicile
                         if is_deduit:
-                            st.markdown("🧠 **Domicile déduit automatiquement**")
-                            st.caption(f"Équipe manquante parmi les 20 : {match['h']}")
+                            st.info("🧠 **Domicile déduit automatiquement**")
                         
                         equipe_dom = st.selectbox(
                             "Domicile",
@@ -509,7 +515,6 @@ with tabs[1]:
                             key=f"ocr_dom_{i}"
                         )
                         
-                        # Équipe extérieur
                         equipe_ext = st.selectbox(
                             "Extérieur",
                             engine.teams_list,
@@ -517,49 +522,60 @@ with tabs[1]:
                             key=f"ocr_ext_{i}"
                         )
                         
-                        # Cotes
                         c1, c2, c3 = st.columns(3)
-                        cote_1 = c1.number_input("Cote 1", value=match['o'][0] or 1.5, min_value=1.0, step=0.01, key=f"ocr_c1_{i}")
-                        cote_x = c2.number_input("Cote X", value=match['o'][1] or 3.5, min_value=1.0, step=0.01, key=f"ocr_cx_{i}")
-                        cote_2 = c3.number_input("Cote 2", value=match['o'][2] or 4.0, min_value=1.0, step=0.01, key=f"ocr_c2_{i}")
+                        cote_1 = c1.number_input(
+                            "Cote 1", 
+                            value=match['o'][0] if match['o'][0] else 1.5,
+                            min_value=1.0, step=0.01,
+                            key=f"ocr_c1_{i}"
+                        )
+                        cote_x = c2.number_input(
+                            "Cote X", 
+                            value=match['o'][1] if match['o'][1] else 3.5,
+                            min_value=1.0, step=0.01,
+                            key=f"ocr_cx_{i}"
+                        )
+                        cote_2 = c3.number_input(
+                            "Cote 2", 
+                            value=match['o'][2] if match['o'][2] else 4.0,
+                            min_value=1.0, step=0.01,
+                            key=f"ocr_c2_{i}"
+                        )
                         
-                        # Mettre à jour dans la liste
-                        matchs_ocr[i] = {
+                        matchs_finaux.append({
                             'h': equipe_dom,
                             'a': equipe_ext,
                             'o': [cote_1, cote_x, cote_2]
-                        }
+                        })
             
-            # ═══ VALIDATION FINALE ═══
+            # Validation
             if st.button("🔥 Valider et importer le calendrier", use_container_width=True):
-                # Vérifier qu'on a bien 10 matchs
-                if len(matchs_ocr) != 10:
-                    st.error(f"❌ Il faut exactement 10 matchs, vous en avez {len(matchs_ocr)}")
+                if len(matchs_finaux) != 10:
+                    st.error(f"❌ Il faut 10 matchs, vous en avez {len(matchs_finaux)}")
                 else:
-                    # Vérifier qu'il n'y a pas de doublons d'équipes
+                    # Vérifier doublons
                     toutes_equipes = []
-                    for m in matchs_ocr:
+                    for m in matchs_finaux:
                         toutes_equipes.extend([m['h'], m['a']])
                     
                     if len(toutes_equipes) != len(set(toutes_equipes)):
-                        st.error("❌ Une équipe apparaît plusieurs fois ! Vérifiez les sélections.")
+                        st.error("❌ Une équipe apparaît plusieurs fois ! Corrigez.")
                     else:
-                        # Tout est bon, enregistrer
                         jk = f"Journée {j_cal}"
                         if jk not in st.session_state['history'][s_active]:
                             st.session_state['history'][s_active][jk] = {"cal": [], "res": [], "pro": []}
                         
-                        cal_final = [{'h': m['h'], 'a': m['a'], 'o': m['o']} for m in matchs_ocr]
-                        st.session_state['history'][s_active][jk]["cal"] = cal_final
-                        st.session_state['current_ready'] = cal_final
+                        st.session_state['history'][s_active][jk]["cal"] = matchs_finaux
+                        st.session_state['current_ready'] = matchs_finaux
                         st.session_state['current_j_num'] = j_cal
                         save_db(st.session_state['history'])
                         
                         # Nettoyer
-                        if 'ocr_peaks' in st.session_state: del st.session_state['ocr_peaks']
-                        if 'ocr_img_cropped' in st.session_state: del st.session_state['ocr_img_cropped']
+                        for key in ['ocr_peaks', 'ocr_img']:
+                            if key in st.session_state:
+                                del st.session_state[key]
                         
-                        custom_notify("✅ Calendrier importé avec succès ! Allez dans PRONOS", "#7FFFD4")
+                        custom_notify("✅ Calendrier importé ! Allez dans PRONOS", "#7FFFD4")
                         st.rerun()
     
     # ── Option 2 : Saisie manuelle ──
