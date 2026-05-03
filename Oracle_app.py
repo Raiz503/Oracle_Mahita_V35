@@ -394,7 +394,7 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
             res_noms = reader.readtext(zone_noms_contraste, detail=1, paragraph=False)
             
             if debug:
-                print(f"\n--- Match {i+1} ---")
+                print("\n" + f"--- Match {i+1} ---")
                 print(f"Zone noms trouvés: {len(res_noms)}")
             
             # Filtrer et regrouper par position Y
@@ -560,7 +560,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             lignes_centre.sort(key=lambda x: x[0])
 
             if debug:
-                print(f"\n--- Match {i+1} CENTRE ---")
+                print("\n" + f"--- Match {i+1} CENTRE ---")
                 for cy, text, prob in lignes_centre:
                     print(f"  Ligne Y={cy:.1f}: '{text}' | prob: {prob:.2f}")
 
@@ -605,7 +605,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             res_gauche = reader.readtext(gauche_contraste, detail=1, paragraph=False)
 
             if debug:
-                print(f"\n--- Match {i+1} GAUCHE ---")
+                print("\n" + f"--- Match {i+1} GAUCHE ---")
                 for bbox, text, prob in res_gauche:
                     print(f"  '{text}' | prob: {prob:.2f}")
 
@@ -656,7 +656,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             res_droite = reader.readtext(droite_contraste, detail=1, paragraph=False)
 
             if debug:
-                print(f"\n--- Match {i+1} DROITE ---")
+                print("\n" + f"--- Match {i+1} DROITE ---")
                 for bbox, text, prob in res_droite:
                     print(f"  '{text}' | prob: {prob:.2f}")
 
