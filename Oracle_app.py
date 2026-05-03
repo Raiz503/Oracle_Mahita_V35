@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
-║           ORACLE MAHITA V38 0 — IA INTÉGRÉE                 ║
+║           ORACLE MAHITA V37.0 — IA INTÉGRÉE                 ║
 ║           OCR Bet261 · Apprentissage · Chat IA              ║
 ╚══════════════════════════════════════════════════════════════╝
 """
@@ -531,10 +531,10 @@ def ocr_resultats_bet261(image_bytes, debug=False):
         # MT et buteurs sont sur la même bande sous le rectangle
         y_sub_start = rect_bot
         y_sub_end = min(h_img, rect_bot + 38)
-        # Buteurs dom: côté gauche (sous le nom dom)
-        zone_but_gauche = img.crop((0, y_sub_start, rect['x'] - 10, y_sub_end))
-        # Buteurs ext: côté droit (sous le nom ext)
-        zone_but_droite = img.crop((rect['x'] + rect['w'] + 10, y_sub_start, w_img, y_sub_end))
+        # Buteurs dom: côté gauche (sous le nom dom) — légèrement élargi
+        zone_but_gauche = img.crop((0, y_sub_start, rect['x'] - 5, y_sub_end))
+        # Buteurs ext: côté droit (sous le nom ext) — légèrement élargi
+        zone_but_droite = img.crop((rect['x'] + rect['w'] + 5, y_sub_start, w_img, y_sub_end))
         # MT: zone centrale sous le rect
         zone_mt = img.crop((rect['x'] - 20, y_sub_start, rect['x'] + rect['w'] + 20, y_sub_end))
 
@@ -675,9 +675,16 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             try:
                 arr = np.array(zone_img)
                 pil = Image.fromarray(arr)
-                # Agrandir x2 pour améliorer la lisibilité des petits chiffres
-                pil_big = pil.resize((pil.width * 2, pil.height * 2), Image.LANCZOS)
-                enhanced = np.array(ImageEnhance.Contrast(pil_big).enhance(3.0))
+
+                # Ajouter du padding blanc autour pour éviter que les chiffres
+                # aux bords soient ignorés par EasyOCR
+                pad = 20
+                pil_padded = Image.new("RGB", (pil.width + pad*2, pil.height + pad*2), (255, 255, 255))
+                pil_padded.paste(pil, (pad, pad))
+
+                # Agrandir x3 pour améliorer la lisibilité
+                pil_big = pil_padded.resize((pil_padded.width * 3, pil_padded.height * 3), Image.LANCZOS)
+                enhanced = np.array(ImageEnhance.Contrast(pil_big).enhance(2.5))
 
                 res = reader.readtext(enhanced, detail=1, paragraph=False)
 
