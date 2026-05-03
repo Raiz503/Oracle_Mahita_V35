@@ -464,18 +464,17 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
 
     return matchs
 
-# ===================== OCR RÉSULTATS (CORRIGÉ V8 - HYBRIDE) =====================
+# ===================== OCR RÉSULTATS (CORRIGÉ V9 - ZONES PRÉCISES) =====================
 def ocr_resultats_bet261(image_bytes, debug=False):
-    """OCR avancé pour résultats Bet261 - VERSION HYBRIDE V36+V37.
-    Détection des rectangles: V36 (HSV gris) - Plus fiable
-    Traitement des données: V37 (améliorations MT et buteurs)"""
+    """OCR avancé pour résultats Bet261 - VERSION V9.
+    Zones précises pour éviter la contamination entre matchs."""
     img = Image.open(io.BytesIO(image_bytes))
     img_array = np.array(img)
     h_img, w_img = img_array.shape[:2]
 
     import cv2
 
-    # === DÉTECTION V36: HSV + masque gris (plus fiable pour Bet261) ===
+    # === DÉTECTION: HSV + masque gris ===
     hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
     gray_mask = (hsv[:,:,1] < 50) & (hsv[:,:,2] > 40) & (hsv[:,:,2] < 180)
     gray_mask = gray_mask.astype(np.uint8)
@@ -505,14 +504,29 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 
     for i, rect in enumerate(rectangles):
         y_center = rect['cy']
-        y_start = max(0, y_center - 80)
-        y_end = min(h_img, y_center + 80)
+        # === ZONE RÉDUITE: ±45px pour éviter le chevauchement ===
+        y_start = max(0, y_center - 45)
+        y_end = min(h_img, y_center + 45)
 
-        # === ZONES V36 (précises, basées sur le rectangle détecté) ===
-        ligne_img = img.crop((0, y_start, w_img, y_end))
-        zone_gauche = ligne_img.crop((0, 0, w_img//2 - 20, ligne_img.size[1]))
+        # === ZONE CENTRE: score + MT (précise, autour du rectangle gris) ===
         zone_centre = img.crop((rect['x']-10, y_start, rect['x']+rect['w']+10, y_end))
-        zone_droite = ligne_img.crop((w_img//2 + 20, 0, w_img, ligne_img.size[1]))
+
+        # === ZONES LATÉRALES: uniquement pour les noms d'équipes (partie HAUTE) ===
+        # Les noms sont au-dessus du rectangle de score
+        y_nom_start = max(0, y_center - 45)
+        y_nom_end = y_center - 5  # Juste au-dessus du rectangle
+        zone_nom_gauche = img.crop((0, y_nom_start, w_img//2 - 20, y_nom_end))
+        zone_nom_droite = img.crop((w_img//2 + 20, y_nom_start, w_img, y_nom_end))
+
+        # === ZONES BUTEURS: partie BASSE de la ligne ===
+        # Les minutes sont sous le rectangle de score
+        y_but_start = y_center + 5
+        y_but_end = min(h_img, y_center + 45)
+        zone_but_gauche = img.crop((0, y_but_start, w_img//2 - 20, y_but_end))
+        zone_but_droite = img.crop((w_img//2 + 20, y_but_start, w_img, y_but_end))
+
+        # Image complète de la ligne pour l'affichage
+        ligne_img = img.crop((0, y_start, w_img, y_end))
 
         equipe_dom = ""
         equipe_ext = ""
@@ -521,7 +535,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
         buteurs_dom = ""
         buteurs_ext = ""
 
-        # === SCORE + MT (V36 simple + fallback V37) ===
+        # === SCORE + MT (zone centre) ===
         try:
             res_score = reader.readtext(np.array(zone_centre), detail=0, paragraph=False)
             if res_score:
@@ -536,129 +550,79 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                 match_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', texte_score, re.IGNORECASE)
                 if match_mt:
                     mt = f"{match_mt.group(1)}:{match_mt.group(2)}"
-
-                # Fallback V37: si pas de MT trouvé, chercher deux chiffres sous le score
-                if not mt:
-                    res_detail = reader.readtext(np.array(zone_centre), detail=1, paragraph=False)
-                    lignes_centre = []
-                    for bbox, text, prob in res_detail:
-                        if prob > 0.15:
-                            cy = (bbox[0][1] + bbox[2][1]) / 2
-                            lignes_centre.append((cy, text.strip(), prob))
-                    lignes_centre.sort(key=lambda x: x[0])
-
-                    # Première ligne = score (déjà traité), lignes suivantes = chercher MT
-                    for cy, text, prob in lignes_centre[1:]:
-                        match_mt2 = re.search(r'[Mm][Tt][^\d]*(\d+)\s*[:\-\.\s]+(\d+)', text)
-                        if match_mt2:
-                            mt = f"{match_mt2.group(1)}:{match_mt2.group(2)}"
-                            break
-                        # Fallback: juste deux chiffres
-                        if not mt:
-                            match_simple = re.search(r'^(\d+)\s*[:\-\.\s]+(\d+)$', text)
-                            if match_simple:
-                                mt = f"{match_simple.group(1)}:{match_simple.group(2)}"
-                                break
         except Exception as e:
             if debug:
                 print(f"Erreur centre match {i+1}: {e}")
             pass
 
-        # === ÉQUIPES + BUTEURS GAUCHE (V37 amélioré) ===
+        # === NOM ÉQUIPE DOMICILE (zone nom gauche - HAUT) ===
         try:
-            gauche_array = np.array(zone_gauche)
-            gauche_pil = Image.fromarray(gauche_array)
-            enhancer_g = ImageEnhance.Contrast(gauche_pil)
-            gauche_contraste = np.array(enhancer_g.enhance(2.5))
-
-            res_gauche = reader.readtext(gauche_contraste, detail=1, paragraph=False)
-
-            if debug:
-                print(f"\n--- Match {i+1} GAUCHE ---")
-                for bbox, text, prob in res_gauche:
-                    print(f"  '{text}' | prob: {prob:.2f}")
-
+            res_nom_g = reader.readtext(np.array(zone_nom_gauche), detail=1, paragraph=False)
             noms_gauche = []
-            minutes_gauche = []
+            for bbox, text, prob in res_nom_g:
+                if prob > 0.25 and len(text) > 2 and not re.match(r'^\d+$', text):
+                    noms_gauche.append(text.strip())
 
-            for bbox, text, prob in res_gauche:
-                if prob > 0.10:
-                    text = text.strip()
-
-                    # Minutes: XX' ou XX′
-                    mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
-                    if mins:
-                        minutes_gauche.extend(mins)
-                        if debug:
-                            print(f"  Minutes trouvées dans '{text}': {mins}")
-
-                    # Nom d'équipe
-                    elif len(text) > 2 and not re.match(r'^\d+$', text) and not re.match(r'^[Mm][Tt]', text):
-                        text_propre = re.sub(r'^\d+\s*', '', text)
-                        text_propre = re.sub(r"\d+\s*['′`´‛]\s*", '', text_propre)
-                        if len(text_propre) > 2:
-                            noms_gauche.append(text_propre)
-
-            # Dernier nom = équipe domicile
             if noms_gauche:
                 equipe_dom = get_close_matches(noms_gauche[-1], engine.teams_list, n=1, cutoff=0.35)
                 equipe_dom = equipe_dom[0] if equipe_dom else noms_gauche[-1]
-
-            if minutes_gauche:
-                buteurs_dom = ' '.join(f"{m}'" for m in minutes_gauche)
-                if debug:
-                    print(f"  Buteurs dom final: {buteurs_dom}")
-
-        except Exception as e:
-            if debug:
-                print(f"Erreur gauche match {i+1}: {e}")
+        except:
             pass
 
-        # === DROITE - Extérieur et buteurs (V37 amélioré) ===
+        # === NOM ÉQUIPE EXTÉRIEUR (zone nom droite - HAUT) ===
         try:
-            droite_array = np.array(zone_droite)
-            droite_pil = Image.fromarray(droite_array)
-            enhancer_d = ImageEnhance.Contrast(droite_pil)
-            droite_contraste = np.array(enhancer_d.enhance(2.5))
-
-            res_droite = reader.readtext(droite_contraste, detail=1, paragraph=False)
-
-            if debug:
-                print(f"\n--- Match {i+1} DROITE ---")
-                for bbox, text, prob in res_droite:
-                    print(f"  '{text}' | prob: {prob:.2f}")
-
+            res_nom_d = reader.readtext(np.array(zone_nom_droite), detail=1, paragraph=False)
             noms_droite = []
-            minutes_droite = []
-
-            for bbox, text, prob in res_droite:
-                if prob > 0.10:
-                    text = text.strip()
-
-                    mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
-                    if mins:
-                        minutes_droite.extend(mins)
-                        if debug:
-                            print(f"  Minutes trouvées dans '{text}': {mins}")
-
-                    elif len(text) > 2 and not re.match(r'^\d+$', text) and not re.match(r'^[Mm][Tt]', text):
-                        text_propre = re.sub(r'^\d+\s*', '', text)
-                        text_propre = re.sub(r"\d+\s*['′`´‛]\s*", '', text_propre)
-                        if len(text_propre) > 2:
-                            noms_droite.append(text_propre)
+            for bbox, text, prob in res_nom_d:
+                if prob > 0.25 and len(text) > 2 and not re.match(r'^\d+$', text):
+                    noms_droite.append(text.strip())
 
             if noms_droite:
                 equipe_ext = get_close_matches(noms_droite[-1], engine.teams_list, n=1, cutoff=0.35)
                 equipe_ext = equipe_ext[0] if equipe_ext else noms_droite[-1]
+        except:
+            pass
+
+        # === BUTEURS DOMICILE (zone but gauche - BAS) ===
+        try:
+            but_array = np.array(zone_but_gauche)
+            but_pil = Image.fromarray(but_array)
+            enhancer = ImageEnhance.Contrast(but_pil)
+            but_contraste = np.array(enhancer.enhance(2.5))
+
+            res_but_g = reader.readtext(but_contraste, detail=1, paragraph=False)
+            minutes_gauche = []
+            for bbox, text, prob in res_but_g:
+                if prob > 0.15:
+                    text = text.strip()
+                    mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
+                    if mins:
+                        minutes_gauche.extend(mins)
+
+            if minutes_gauche:
+                buteurs_dom = ' '.join(f"{m}'" for m in minutes_gauche)
+        except:
+            pass
+
+        # === BUTEURS EXTÉRIEUR (zone but droite - BAS) ===
+        try:
+            but_array = np.array(zone_but_droite)
+            but_pil = Image.fromarray(but_array)
+            enhancer = ImageEnhance.Contrast(but_pil)
+            but_contraste = np.array(enhancer.enhance(2.5))
+
+            res_but_d = reader.readtext(but_contraste, detail=1, paragraph=False)
+            minutes_droite = []
+            for bbox, text, prob in res_but_d:
+                if prob > 0.15:
+                    text = text.strip()
+                    mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
+                    if mins:
+                        minutes_droite.extend(mins)
 
             if minutes_droite:
                 buteurs_ext = ' '.join(f"{m}'" for m in minutes_droite)
-                if debug:
-                    print(f"  Buteurs ext final: {buteurs_ext}")
-
-        except Exception as e:
-            if debug:
-                print(f"Erreur droite match {i+1}: {e}")
+        except:
             pass
 
         matches.append({
