@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
-║           ORACLE MAHITA V36.0 — IA INTÉGRÉE                 ║
+║           ORACLE MAHITA V37.0 — IA INTÉGRÉE                 ║
 ║           OCR Bet261 · Apprentissage · Chat IA              ║
 ╚══════════════════════════════════════════════════════════════╝
 """
@@ -466,17 +466,17 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
 
 # ===================== OCR RÉSULTATS (CORRIGÉ V6) =====================
 def ocr_resultats_bet261(image_bytes, debug=False):
-    """OCR avancé pour résultats Bet261 - ZONE ÉTENDUE pour MT et buteurs."""
+    """OCR avancé pour résultats Bet261 - CORRECTIONS V7: MT et buteurs."""
     img = Image.open(io.BytesIO(image_bytes))
     img_array = np.array(img)
     h_img, w_img = img_array.shape[:2]
 
     import cv2
-    
+
     gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
     _, thresh = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY_INV)
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
+
     rectangles_score = []
     for cnt in contours:
         x, y, bw, bh = cv2.boundingRect(cnt)
@@ -490,9 +490,9 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                     'cx': cx, 'cy': y + bh // 2,
                     'area': area
                 })
-    
+
     rectangles_score.sort(key=lambda r: r['cy'])
-    
+
     # Filtrer doublons
     rectangles_filtres = []
     for rect in rectangles_score:
@@ -502,7 +502,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             dernier = rectangles_filtres[-1]
             if abs(rect['cy'] - dernier['cy']) > 30:
                 rectangles_filtres.append(rect)
-    
+
     rectangles_score = rectangles_filtres
     min_y = int(h_img * 0.12)
     max_y = int(h_img * 0.88)
@@ -516,164 +516,184 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 
     for i, rect in enumerate(rectangles_score):
         y_center = rect['cy']
-        
-        # === CORRECTION V6: Zone beaucoup plus grande vers le bas ===
-        # Le MT et les buteurs sont sous le score
-        y_start = max(0, y_center - 40)   # Moins vers le haut
-        y_end = min(h_img, y_center + 80)  # PLUS vers le bas pour capter MT et buteurs
-        
+
+        # === CORRECTION V7: Zone beaucoup plus grande vers le bas ===
+        y_start = max(0, y_center - 35)
+        y_end = min(h_img, y_center + 120)  # +120 au lieu de +80
+
         if i > 0:
             y_min_prev = matches[-1]['y_end'] if matches else 0
             y_start = max(y_start, y_min_prev + 2)
         if i < len(rectangles_score) - 1:
-            y_max_next = rectangles_score[i + 1]['cy'] - 40
+            y_max_next = rectangles_score[i + 1]['cy'] - 25
             y_end = min(y_end, y_max_next - 2)
-        
+
         zone_match = img.crop((0, y_start, w_img, y_end))
-        
-        # === CORRECTION V6: Zones plus larges pour capter tout ===
-        zone_gauche = img.crop((0, y_start, int(w_img * 0.42), y_end))
-        zone_centre = img.crop((int(w_img * 0.38), y_start, int(w_img * 0.62), y_end))  # Élargie
-        zone_droite = img.crop((int(w_img * 0.58), y_start, w_img, y_end))
-        
+
+        # === CORRECTION V7: Zones plus larges ===
+        zone_gauche = img.crop((0, y_start, int(w_img * 0.40), y_end))
+        zone_centre = img.crop((int(w_img * 0.35), y_start, int(w_img * 0.65), y_end))
+        zone_droite = img.crop((int(w_img * 0.60), y_start, w_img, y_end))
+
         equipe_dom = ""
         equipe_ext = ""
         score = ""
         mt = ""
         buteurs_dom = ""
         buteurs_ext = ""
-        
-        # === CORRECTION V6: OCR sur zone centre complète ===
+
+        # === CORRECTION V7: OCR centre avec detail=1 pour séparer lignes ===
         try:
             centre_array = np.array(zone_centre)
             centre_pil = Image.fromarray(centre_array)
             enhancer = ImageEnhance.Contrast(centre_pil)
             centre_contraste = np.array(enhancer.enhance(3.0))
-            
-            res_centre = reader.readtext(centre_contraste, detail=0, paragraph=False)
-            
-            if res_centre:
-                texte_centre = ' '.join(res_centre)
-                
-                if debug:
-                    print(f"\n--- Match {i+1} CENTRE ---")
-                    print(f"Texte: '{texte_centre}'")
-                
-                # Score final (premier X:Y trouvé)
-                match_score = re.search(r'(\d)\s*[:\\-]\s*(\d)', texte_centre)
+
+            res_centre = reader.readtext(centre_contraste, detail=1, paragraph=False)
+
+            # Trier par position Y pour traiter ligne par ligne
+            lignes_centre = []
+            for bbox, text, prob in res_centre:
+                if prob > 0.15:
+                    cy = (bbox[0][1] + bbox[2][1]) / 2
+                    lignes_centre.append((cy, text.strip(), prob))
+            lignes_centre.sort(key=lambda x: x[0])
+
+            if debug:
+                print(f"\n--- Match {i+1} CENTRE ---")
+                for cy, text, prob in lignes_centre:
+                    print(f"  Ligne Y={cy:.1f}: '{text}' | prob: {prob:.2f}")
+
+            # Première ligne = score final
+            if lignes_centre:
+                texte_premier = lignes_centre[0][1]
+                match_score = re.search(r'(\d+)\s*[:\\-\.\s]+(\d+)', texte_premier)
                 if match_score:
                     score = f"{match_score.group(1)}:{match_score.group(2)}"
-                
-                # === CORRECTION MT: Chercher "MT" puis chiffres ===
-                # Le MT est souvent sur une ligne séparée en dessous
-                # Format vu: "MT: 1:0", "MT:1:0", "MT 1:0"
-                match_mt = re.search(r'[Mm][Tt]\s*[:\\s]*(\d)\s*[:\\-\\.]\s*(\d)', texte_centre)
+
+            # Lignes suivantes = chercher MT
+            for cy, text, prob in lignes_centre[1:]:
+                # === CORRECTION V7: Regex MT plus permissif ===
+                match_mt = re.search(r'[Mm][Tt][^\d]*(\d+)\s*[:\\-\.\s]+(\d+)', text)
                 if match_mt:
                     mt = f"{match_mt.group(1)}:{match_mt.group(2)}"
                     if debug:
-                        print(f"MT trouvé: {mt}")
-                
-                # Si pas trouvé, chercher tout "MT" avec chiffres après
+                        print(f"  MT trouvé: {mt} dans '{text}'")
+                    break
+
+                # Fallback: juste deux chiffres sur ligne séparée sous le score
                 if not mt:
-                    match_mt2 = re.search(r'[Mm][Tt].*?(\d)\s*[:\\-]\s*(\d)', texte_centre)
-                    if match_mt2:
-                        mt = f"{match_mt2.group(1)}:{match_mt2.group(2)}"
+                    match_simple = re.search(r'^(\d+)\s*[:\\-\.\s]+(\d+)$', text)
+                    if match_simple:
+                        mt = f"{match_simple.group(1)}:{match_simple.group(2)}"
                         if debug:
-                            print(f"MT trouvé (pattern 2): {mt}")
-                        
+                            print(f"  MT fallback: {mt} dans '{text}'")
+                        break
+
         except Exception as e:
             if debug:
                 print(f"Erreur centre match {i+1}: {e}")
             pass
-        
-        # === CORRECTION V6: Zone gauche complète pour buteurs ===
+
+        # === CORRECTION V7: Zone gauche complète pour buteurs ===
         try:
             gauche_array = np.array(zone_gauche)
             gauche_pil = Image.fromarray(gauche_array)
             enhancer_g = ImageEnhance.Contrast(gauche_pil)
             gauche_contraste = np.array(enhancer_g.enhance(2.5))
-            
+
             res_gauche = reader.readtext(gauche_contraste, detail=1, paragraph=False)
-            
+
             if debug:
                 print(f"\n--- Match {i+1} GAUCHE ---")
                 for bbox, text, prob in res_gauche:
                     print(f"  '{text}' | prob: {prob:.2f}")
-            
+
             noms_gauche = []
             minutes_gauche = []
-            
+
             for bbox, text, prob in res_gauche:
-                if prob > 0.10:  # Seuil très bas pour capter les petites minutes
+                if prob > 0.10:
                     text = text.strip()
-                    
-                    # === CORRECTION BUTEURS: Capture toutes les minutes ===
-                    # Format: 24', 82', 19', etc. avec espace optionnel avant l'apostrophe
-                    mins = re.findall(r"(\d{1,3})\s*['′`´]", text)
+
+                    # === CORRECTION V7: Regex minutes global - toutes les occurrences ===
+                    mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
                     if mins:
                         minutes_gauche.extend(mins)
                         if debug:
-                            print(f"  Minute: {mins}")
+                            print(f"  Minutes trouvées dans '{text}': {mins}")
+
+                    # Nom d'équipe
                     elif len(text) > 2 and not re.match(r'^\d+$', text) and not re.match(r'^[Mm][Tt]', text):
                         text_propre = re.sub(r'^\d+\s*', '', text)
+                        text_propre = re.sub(r"\d+\s*['′`´‛]\s*", '', text_propre)
                         if len(text_propre) > 2:
                             noms_gauche.append(text_propre)
-            
+
             # Dernier nom = équipe domicile
             if noms_gauche:
                 equipe_dom = get_close_matches(noms_gauche[-1], engine.teams_list, n=1, cutoff=0.35)
                 equipe_dom = equipe_dom[0] if equipe_dom else noms_gauche[-1]
-            
-            # Toutes les minutes trouvées
+
+            # Toutes les minutes concaténées
             if minutes_gauche:
                 buteurs_dom = ' '.join(f"{m}'" for m in minutes_gauche)
                 if debug:
-                    print(f"  Buteurs dom: {buteurs_dom}")
-            
-            # DROITE - Extérieur et buteurs
+                    print(f"  Buteurs dom final: {buteurs_dom}")
+
+        except Exception as e:
+            if debug:
+                print(f"Erreur gauche match {i+1}: {e}")
+            pass
+
+        # === DROITE - Extérieur et buteurs ===
+        try:
             droite_array = np.array(zone_droite)
             droite_pil = Image.fromarray(droite_array)
             enhancer_d = ImageEnhance.Contrast(droite_pil)
             droite_contraste = np.array(enhancer_d.enhance(2.5))
-            
+
             res_droite = reader.readtext(droite_contraste, detail=1, paragraph=False)
-            
+
             if debug:
                 print(f"\n--- Match {i+1} DROITE ---")
                 for bbox, text, prob in res_droite:
                     print(f"  '{text}' | prob: {prob:.2f}")
-            
+
             noms_droite = []
             minutes_droite = []
-            
+
             for bbox, text, prob in res_droite:
                 if prob > 0.10:
                     text = text.strip()
-                    
-                    mins = re.findall(r"(\d{1,3})\s*['′`´]", text)
+
+                    # Même regex corrigée pour les minutes
+                    mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
                     if mins:
                         minutes_droite.extend(mins)
                         if debug:
-                            print(f"  Minute: {mins}")
+                            print(f"  Minutes trouvées dans '{text}': {mins}")
+
                     elif len(text) > 2 and not re.match(r'^\d+$', text) and not re.match(r'^[Mm][Tt]', text):
                         text_propre = re.sub(r'^\d+\s*', '', text)
+                        text_propre = re.sub(r"\d+\s*['′`´‛]\s*", '', text_propre)
                         if len(text_propre) > 2:
                             noms_droite.append(text_propre)
-            
+
             if noms_droite:
                 equipe_ext = get_close_matches(noms_droite[-1], engine.teams_list, n=1, cutoff=0.35)
                 equipe_ext = equipe_ext[0] if equipe_ext else noms_droite[-1]
-            
+
             if minutes_droite:
                 buteurs_ext = ' '.join(f"{m}'" for m in minutes_droite)
                 if debug:
-                    print(f"  Buteurs ext: {buteurs_ext}")
-                
+                    print(f"  Buteurs ext final: {buteurs_ext}")
+
         except Exception as e:
             if debug:
-                print(f"Erreur côtés match {i+1}: {e}")
+                print(f"Erreur droite match {i+1}: {e}")
             pass
-        
+
         matches.append({
             'h': equipe_dom,
             'a': equipe_ext,
@@ -686,32 +706,6 @@ def ocr_resultats_bet261(image_bytes, debug=False):
         })
 
     return matches
-            
-    
-
-# ===================== HEADER & SAISON =====================
-st.markdown(f"""
-<div class="main-header">
-    <div class="logo-container">
-        <div class="logo-svg">{LOGO_SVG}</div>
-        <div>
-            <h1 class="header-title">ORACLE MAHITA</h1>
-            <div class="header-subtitle">V36.0 — IA Intégrée · Apprentissage Actif</div>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-s_active = st.selectbox("Saison", list(st.session_state['history'].keys()), label_visibility="collapsed")
-st.session_state['s_active'] = s_active
-
-days = [int(re.search(r'\d+', k).group()) for k in st.session_state['history'][s_active].keys() 
-        if re.search(r'\d+', k) and st.session_state['history'][s_active][k].get("res")]
-next_j = max(days) + 1 if days else 1
-st.markdown(f'<div class="next-day-box">PROCHAINE JOURNÉE : J-{next_j}</div>', unsafe_allow_html=True)
-
-tabs = st.tabs(["🏆 CLASSEMENT", "📅 CALENDRIER", "🎯 PRONOS", "⚽ RÉSULTATS", 
-                "📚 HISTORIQUE", "⚙️ GESTION", "📊 PERFORMANCE", "🤖 ASSISTANT IA"])
 
 # ===================== TAB 0 : CLASSEMENT =====================
 with tabs[0]:
