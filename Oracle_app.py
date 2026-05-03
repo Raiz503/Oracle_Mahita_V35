@@ -5,7 +5,7 @@
 ╚══════════════════════════════════════════════════════════════╝
 """
 
-import streamlit as st
+import strstreamliteamlit as st
 import pandas as pd
 import easyocr
 import re
@@ -504,29 +504,39 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 
     for i, rect in enumerate(rectangles):
         y_center = rect['cy']
-        # === ZONE VERTICALE: ±55px pour capturer noms + score + MT + buteurs ===
-        y_start = max(0, y_center - 55)
-        y_end = min(h_img, y_center + 55)
+        rect_top = rect['y']
+        rect_bot = rect['y'] + rect['h']
 
-        # === ZONE CENTRE: score + MT (précise, autour du rectangle gris) ===
-        zone_centre = img.crop((rect['x']-15, y_start, rect['x']+rect['w']+15, y_end))
+        # === STRUCTURE RÉELLE BET261 RÉSULTATS ===
+        # Le rectangle gris contient le SCORE FINAL (ex: "1:0")
+        # Les NOMS d'équipes sont au niveau du rectangle, côté gauche et droite
+        # Sous le rectangle: buteurs gauche + "MT: X:X" + buteurs droite
 
-        # === ZONES NOMS D'ÉQUIPES: partie HAUTE (au-dessus du score) ===
-        # Les noms sont centrés verticalement au-dessus du rectangle
-        y_nom_start = max(0, y_center - 50)
-        y_nom_end = y_center - 8  # Juste au-dessus du rectangle gris
-        zone_nom_gauche = img.crop((0, y_nom_start, int(w_img * 0.42), y_nom_end))
-        zone_nom_droite = img.crop((int(w_img * 0.58), y_nom_start, w_img, y_nom_end))
-
-        # === ZONES BUTEURS: partie BASSE (sous le score/MT) ===
-        # Les minutes sont sous le rectangle, dans une zone étroite
-        y_but_start = y_center + 8
-        y_but_end = min(h_img, y_center + 50)
-        zone_but_gauche = img.crop((0, y_but_start, int(w_img * 0.42), y_but_end))
-        zone_but_droite = img.crop((int(w_img * 0.58), y_but_start, w_img, y_but_end))
-
-        # Image complète de la ligne pour l'affichage
+        # Zone complète de la ligne pour affichage
+        y_start = max(0, rect_top - 15)
+        y_end = min(h_img, rect_bot + 50)
         ligne_img = img.crop((0, y_start, w_img, y_end))
+
+        # === ZONE CENTRE: score UNIQUEMENT (intérieur du rectangle gris) ===
+        zone_centre = img.crop((rect['x'] - 5, rect_top, rect['x'] + rect['w'] + 5, rect_bot))
+
+        # === ZONES NOMS: au niveau exact du rectangle, côtés gauche et droite ===
+        # Légèrement plus large que le rect pour capturer le texte centré verticalement
+        y_nom_start = max(0, rect_top - 5)
+        y_nom_end = min(h_img, rect_bot + 5)
+        zone_nom_gauche = img.crop((0, y_nom_start, rect['x'] - 10, y_nom_end))
+        zone_nom_droite = img.crop((rect['x'] + rect['w'] + 10, y_nom_start, w_img, y_nom_end))
+
+        # === ZONES SOUS LE RECT: buteurs + MT ===
+        # MT et buteurs sont sur la même bande sous le rectangle
+        y_sub_start = rect_bot + 2
+        y_sub_end = min(h_img, rect_bot + 48)
+        # Buteurs dom: côté gauche (sous le nom dom)
+        zone_but_gauche = img.crop((0, y_sub_start, rect['x'] - 10, y_sub_end))
+        # Buteurs ext: côté droit (sous le nom ext)
+        zone_but_droite = img.crop((rect['x'] + rect['w'] + 10, y_sub_start, w_img, y_sub_end))
+        # MT: zone centrale sous le rect
+        zone_mt = img.crop((rect['x'] - 20, y_sub_start, rect['x'] + rect['w'] + 20, y_sub_end))
 
         equipe_dom = ""
         equipe_ext = ""
@@ -535,7 +545,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
         buteurs_dom = ""
         buteurs_ext = ""
 
-        # === SCORE + MT (zone centre avec detail=1 pour séparer lignes) ===
+        # === SCORE FINAL (zone centre = intérieur du rectangle gris) ===
         try:
             centre_array = np.array(zone_centre)
             centre_pil = Image.fromarray(centre_array)
@@ -544,48 +554,56 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 
             res_centre = reader.readtext(centre_contraste, detail=1, paragraph=False)
 
-            # Trier par position Y
-            lignes_centre = []
-            for bbox, text, prob in res_centre:
-                if prob > 0.15:
-                    cy = (bbox[0][1] + bbox[2][1]) / 2
-                    lignes_centre.append((cy, text.strip(), prob))
-            lignes_centre.sort(key=lambda x: x[0])
-
             if debug:
-                print(f"\n--- Match {i+1} CENTRE ---")
-                for cy, text, prob in lignes_centre:
-                    print(f"  Ligne Y={cy:.1f}: '{text}' | prob: {prob:.2f}")
+                print(f"\n--- Match {i+1} CENTRE (score) ---")
+                for bbox, text, prob in res_centre:
+                    cy = (bbox[0][1] + bbox[2][1]) / 2
+                    print(f"  Y={cy:.1f}: '{text}' | prob: {prob:.2f}")
 
-            # Première ligne = score final
-            if lignes_centre:
-                texte_premier = lignes_centre[0][1]
-                match_score = re.search(r'(\d{1,2})[:\-](\d{1,2})', texte_premier)
-                if match_score:
-                    score = f"{match_score.group(1)}:{match_score.group(2)}"
-
-            # Lignes suivantes = chercher MT
-            for cy, text, prob in lignes_centre[1:]:
-                # MT explicite
-                match_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', text, re.IGNORECASE)
-                if match_mt:
-                    mt = f"{match_mt.group(1)}:{match_mt.group(2)}"
-                    if debug:
-                        print(f"  MT trouvé: {mt} dans '{text}'")
-                    break
-
-                # Fallback: deux chiffres sur ligne séparée
-                if not mt:
-                    match_simple = re.search(r'^(\d{1,2})[:\-\.](\d{1,2})$', text)
-                    if match_simple:
-                        mt = f"{match_simple.group(1)}:{match_simple.group(2)}"
-                        if debug:
-                            print(f"  MT fallback: {mt} dans '{text}'")
+            # Chercher le score parmi tous les textes détectés
+            for bbox, text, prob in sorted(res_centre, key=lambda x: (x[0][0][1]+x[0][2][1])/2):
+                if prob > 0.10:
+                    match_score = re.search(r'(\d{1,2})[:\-](\d{1,2})', text.strip())
+                    if match_score:
+                        score = f"{match_score.group(1)}:{match_score.group(2)}"
                         break
 
         except Exception as e:
             if debug:
-                print(f"Erreur centre match {i+1}: {e}")
+                print(f"Erreur score match {i+1}: {e}")
+            pass
+
+        # === MT (zone sous le rectangle, partie centrale) ===
+        try:
+            mt_array = np.array(zone_mt)
+            mt_pil = Image.fromarray(mt_array)
+            enhancer = ImageEnhance.Contrast(mt_pil)
+            mt_contraste = np.array(enhancer.enhance(3.0))
+
+            res_mt = reader.readtext(mt_contraste, detail=1, paragraph=False)
+
+            if debug:
+                print(f"\n--- Match {i+1} MT ---")
+                for bbox, text, prob in res_mt:
+                    print(f"  '{text}' | prob: {prob:.2f}")
+
+            for bbox, text, prob in res_mt:
+                if prob > 0.10:
+                    # MT explicite
+                    match_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', text, re.IGNORECASE)
+                    if match_mt:
+                        mt = f"{match_mt.group(1)}:{match_mt.group(2)}"
+                        break
+                    # Fallback: score simple sans MT
+                    match_simple = re.search(r'(\d{1,2})[:\-\.](\d{1,2})', text)
+                    if match_simple and not mt:
+                        candidate = f"{match_simple.group(1)}:{match_simple.group(2)}"
+                        if candidate != score:  # Ne pas confondre avec le score final
+                            mt = candidate
+
+        except Exception as e:
+            if debug:
+                print(f"Erreur MT match {i+1}: {e}")
             pass
 
         # === NOM ÉQUIPE DOMICILE (zone nom gauche - HAUT) ===
