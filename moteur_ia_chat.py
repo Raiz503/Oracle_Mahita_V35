@@ -33,6 +33,7 @@ class MoteurIAChat:
         self.api_key = ""
         self.conversations = self._load_conversations()
         self.contexte_foot = {}
+        self.contexte_complet = None
         
         # Essaie de récupérer la clé API
         self._get_api_key()
@@ -83,13 +84,14 @@ class MoteurIAChat:
         with open(DB_CONVERSATIONS, "w", encoding="utf-8") as f:
             json.dump(self.conversations[-100:], f, indent=2, ensure_ascii=False)
     
-    def set_contexte(self, history: Dict, saison_active: str, standings, prochaine_journee: int):
+    def set_contexte(self, history: Dict, saison_active: str, standings, prochaine_journee: int, contexte_complet=None):
         self.contexte_foot = {
             "saison": saison_active,
             "standings": standings,
             "prochaine_journee": prochaine_journee,
             "history": history
         }
+        self.contexte_complet = contexte_complet  # NOUVEAU: contexte complet toutes données
     
     def est_connecte(self) -> bool:
         return self.client is not None
@@ -147,10 +149,20 @@ class MoteurIAChat:
         rapport = moteur_apprentissage.generer_rapport_patterns()
         ctx.append(f"\n{rapport[:800]}...")
         return "\n".join(ctx)
-    
-    def _discuter_groq(self, message: str, contexte: str, type_demande: str) -> Dict:
-        try:
-            system_prompt = f"""Tu es Oracle Mahita, expert en analyse footballistique et pronostics.
+
+    def _build_system_prompt(self, contexte: str) -> str:
+        if hasattr(self, 'contexte_complet') and self.contexte_complet:
+            return f"""Tu es l'Oracle, un assistant IA expert en analyse de football.
+Tu as accès à TOUTES les données suivantes de l'application Oracle Mahita :
+
+{self.contexte_complet}
+
+Réponds en français. Sois précis, utilise les données disponibles. 
+Donne des analyses basées sur les vrais chiffres ci-dessus.
+"""
+        
+        # Fallback sur l'ancien système si pas de contexte complet
+        return f"""Tu es Oracle Mahita, expert en analyse footballistique et pronostics.
 Tu analyses les données avec précision et donnes des prédictions chiffrées.
 Tu es direct, technique mais pédagogue.
 
@@ -162,6 +174,10 @@ RÈGLES :
 - Citer les patterns découverts quand pertinent
 - Si tu n'es pas sûr, le dire honnêtement
 - Répondre en français"""
+
+    def _discuter_groq(self, message: str, contexte: str, type_demande: str) -> Dict:
+        try:
+            system_prompt = self._build_system_prompt(contexte)
 
             chat_completion = self.client.chat.completions.create(
                 messages=[
