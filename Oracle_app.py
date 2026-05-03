@@ -464,76 +464,55 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
 
     return matchs
 
-# ===================== OCR RÉSULTATS (CORRIGÉ V6) =====================
+# ===================== OCR RÉSULTATS (CORRIGÉ V8 - HYBRIDE) =====================
 def ocr_resultats_bet261(image_bytes, debug=False):
-    """OCR avancé pour résultats Bet261 - CORRECTIONS V7: MT et buteurs."""
+    """OCR avancé pour résultats Bet261 - VERSION HYBRIDE V36+V37.
+    Détection des rectangles: V36 (HSV gris) - Plus fiable
+    Traitement des données: V37 (améliorations MT et buteurs)"""
     img = Image.open(io.BytesIO(image_bytes))
     img_array = np.array(img)
     h_img, w_img = img_array.shape[:2]
 
     import cv2
 
-    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-    _, thresh = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY_INV)
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # === DÉTECTION V36: HSV + masque gris (plus fiable pour Bet261) ===
+    hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+    gray_mask = (hsv[:,:,1] < 50) & (hsv[:,:,2] > 40) & (hsv[:,:,2] < 180)
+    gray_mask = gray_mask.astype(np.uint8)
 
-    rectangles_score = []
+    kernel = np.ones((5,5), np.uint8)
+    gray_mask = cv2.morphologyEx(gray_mask, cv2.MORPH_CLOSE, kernel)
+
+    contours, _ = cv2.findContours(gray_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    rectangles = []
     for cnt in contours:
         x, y, bw, bh = cv2.boundingRect(cnt)
         area = bw * bh
         aspect = bw / bh if bh > 0 else 0
-        if 400 < area < 12000 and 0.6 < aspect < 3.5 and bw > 25 and bh > 18:
-            cx = x + bw // 2
-            if w_img * 0.25 < cx < w_img * 0.75:
-                rectangles_score.append({
-                    'x': x, 'y': y, 'w': bw, 'h': bh,
-                    'cx': cx, 'cy': y + bh // 2,
-                    'area': area
-                })
+        if 1000 < area < 8000 and 0.8 < aspect < 2.5 and bw > 40 and bh > 25:
+            rectangles.append({'x': x, 'y': y, 'w': bw, 'h': bh, 'cx': x+bw//2, 'cy': y+bh//2})
 
-    rectangles_score.sort(key=lambda r: r['cy'])
+    rectangles.sort(key=lambda r: r['cy'])
+    min_y = int(h_img * 0.15)
+    rectangles = [r for r in rectangles if r['cy'] > min_y]
+    rectangles = rectangles[:10]
 
-    # Filtrer doublons
-    rectangles_filtres = []
-    for rect in rectangles_score:
-        if not rectangles_filtres:
-            rectangles_filtres.append(rect)
-        else:
-            dernier = rectangles_filtres[-1]
-            if abs(rect['cy'] - dernier['cy']) > 30:
-                rectangles_filtres.append(rect)
-
-    rectangles_score = rectangles_filtres
-    min_y = int(h_img * 0.12)
-    max_y = int(h_img * 0.88)
-    rectangles_score = [r for r in rectangles_score if min_y < r['cy'] < max_y]
-    rectangles_score = rectangles_score[:10]
-
-    if len(rectangles_score) == 0:
+    if len(rectangles) == 0:
         return []
 
     matches = []
 
-    for i, rect in enumerate(rectangles_score):
+    for i, rect in enumerate(rectangles):
         y_center = rect['cy']
+        y_start = max(0, y_center - 80)
+        y_end = min(h_img, y_center + 80)
 
-        # === CORRECTION V7: Zone beaucoup plus grande vers le bas ===
-        y_start = max(0, y_center - 35)
-        y_end = min(h_img, y_center + 120)  # +120 au lieu de +80
-
-        if i > 0:
-            y_min_prev = matches[-1]['y_end'] if matches else 0
-            y_start = max(y_start, y_min_prev + 2)
-        if i < len(rectangles_score) - 1:
-            y_max_next = rectangles_score[i + 1]['cy'] - 25
-            y_end = min(y_end, y_max_next - 2)
-
-        zone_match = img.crop((0, y_start, w_img, y_end))
-
-        # === CORRECTION V7: Zones plus larges ===
-        zone_gauche = img.crop((0, y_start, int(w_img * 0.40), y_end))
-        zone_centre = img.crop((int(w_img * 0.35), y_start, int(w_img * 0.65), y_end))
-        zone_droite = img.crop((int(w_img * 0.60), y_start, w_img, y_end))
+        # === ZONES V36 (précises, basées sur le rectangle détecté) ===
+        ligne_img = img.crop((0, y_start, w_img, y_end))
+        zone_gauche = ligne_img.crop((0, 0, w_img//2 - 20, ligne_img.size[1]))
+        zone_centre = img.crop((rect['x']-10, y_start, rect['x']+rect['w']+10, y_end))
+        zone_droite = ligne_img.crop((w_img//2 + 20, 0, w_img, ligne_img.size[1]))
 
         equipe_dom = ""
         equipe_ext = ""
@@ -542,60 +521,50 @@ def ocr_resultats_bet261(image_bytes, debug=False):
         buteurs_dom = ""
         buteurs_ext = ""
 
-        # === CORRECTION V7: OCR centre avec detail=1 pour séparer lignes ===
+        # === SCORE + MT (V36 simple + fallback V37) ===
         try:
-            centre_array = np.array(zone_centre)
-            centre_pil = Image.fromarray(centre_array)
-            enhancer = ImageEnhance.Contrast(centre_pil)
-            centre_contraste = np.array(enhancer.enhance(3.0))
+            res_score = reader.readtext(np.array(zone_centre), detail=0, paragraph=False)
+            if res_score:
+                texte_score = ' '.join(res_score)
 
-            res_centre = reader.readtext(centre_contraste, detail=1, paragraph=False)
-
-            # Trier par position Y pour traiter ligne par ligne
-            lignes_centre = []
-            for bbox, text, prob in res_centre:
-                if prob > 0.15:
-                    cy = (bbox[0][1] + bbox[2][1]) / 2
-                    lignes_centre.append((cy, text.strip(), prob))
-            lignes_centre.sort(key=lambda x: x[0])
-
-            if debug:
-                print(f"\n--- Match {i+1} CENTRE ---")
-                for cy, text, prob in lignes_centre:
-                    print(f"  Ligne Y={cy:.1f}: '{text}' | prob: {prob:.2f}")
-
-            # Première ligne = score final
-            if lignes_centre:
-                texte_premier = lignes_centre[0][1]
-                match_score = re.search(r'(\d+)\s*[:\\-\.\s]+(\d+)', texte_premier)
+                # Score final: X:Y ou X-Y
+                match_score = re.search(r'(\d{1,2})[:\-](\d{1,2})', texte_score)
                 if match_score:
                     score = f"{match_score.group(1)}:{match_score.group(2)}"
 
-            # Lignes suivantes = chercher MT
-            for cy, text, prob in lignes_centre[1:]:
-                # === CORRECTION V7: Regex MT plus permissif ===
-                match_mt = re.search(r'[Mm][Tt][^\d]*(\d+)\s*[:\\-\.\s]+(\d+)', text)
+                # MT: MT X:Y ou MT X-Y
+                match_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', texte_score, re.IGNORECASE)
                 if match_mt:
                     mt = f"{match_mt.group(1)}:{match_mt.group(2)}"
-                    if debug:
-                        print(f"  MT trouvé: {mt} dans '{text}'")
-                    break
 
-                # Fallback: juste deux chiffres sur ligne séparée sous le score
+                # Fallback V37: si pas de MT trouvé, chercher deux chiffres sous le score
                 if not mt:
-                    match_simple = re.search(r'^(\d+)\s*[:\\-\.\s]+(\d+)$', text)
-                    if match_simple:
-                        mt = f"{match_simple.group(1)}:{match_simple.group(2)}"
-                        if debug:
-                            print(f"  MT fallback: {mt} dans '{text}'")
-                        break
+                    res_detail = reader.readtext(np.array(zone_centre), detail=1, paragraph=False)
+                    lignes_centre = []
+                    for bbox, text, prob in res_detail:
+                        if prob > 0.15:
+                            cy = (bbox[0][1] + bbox[2][1]) / 2
+                            lignes_centre.append((cy, text.strip(), prob))
+                    lignes_centre.sort(key=lambda x: x[0])
 
+                    # Première ligne = score (déjà traité), lignes suivantes = chercher MT
+                    for cy, text, prob in lignes_centre[1:]:
+                        match_mt2 = re.search(r'[Mm][Tt][^\d]*(\d+)\s*[:\-\.\s]+(\d+)', text)
+                        if match_mt2:
+                            mt = f"{match_mt2.group(1)}:{match_mt2.group(2)}"
+                            break
+                        # Fallback: juste deux chiffres
+                        if not mt:
+                            match_simple = re.search(r'^(\d+)\s*[:\-\.\s]+(\d+)$', text)
+                            if match_simple:
+                                mt = f"{match_simple.group(1)}:{match_simple.group(2)}"
+                                break
         except Exception as e:
             if debug:
                 print(f"Erreur centre match {i+1}: {e}")
             pass
 
-        # === CORRECTION V7: Zone gauche complète pour buteurs ===
+        # === ÉQUIPES + BUTEURS GAUCHE (V37 amélioré) ===
         try:
             gauche_array = np.array(zone_gauche)
             gauche_pil = Image.fromarray(gauche_array)
@@ -616,7 +585,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                 if prob > 0.10:
                     text = text.strip()
 
-                    # === CORRECTION V7: Regex minutes global - toutes les occurrences ===
+                    # Minutes: XX' ou XX′
                     mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
                     if mins:
                         minutes_gauche.extend(mins)
@@ -635,7 +604,6 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                 equipe_dom = get_close_matches(noms_gauche[-1], engine.teams_list, n=1, cutoff=0.35)
                 equipe_dom = equipe_dom[0] if equipe_dom else noms_gauche[-1]
 
-            # Toutes les minutes concaténées
             if minutes_gauche:
                 buteurs_dom = ' '.join(f"{m}'" for m in minutes_gauche)
                 if debug:
@@ -646,7 +614,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                 print(f"Erreur gauche match {i+1}: {e}")
             pass
 
-        # === DROITE - Extérieur et buteurs ===
+        # === DROITE - Extérieur et buteurs (V37 amélioré) ===
         try:
             droite_array = np.array(zone_droite)
             droite_pil = Image.fromarray(droite_array)
@@ -667,7 +635,6 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                 if prob > 0.10:
                     text = text.strip()
 
-                    # Même regex corrigée pour les minutes
                     mins = re.findall(r"(\d{1,3})\s*['′`´‛]", text)
                     if mins:
                         minutes_droite.extend(mins)
@@ -701,8 +668,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             'mt': mt,
             'hm': buteurs_dom,
             'am': buteurs_ext,
-            'ligne_img': zone_match,
-            'y_end': y_end
+            'ligne_img': ligne_img
         })
 
     return matches
