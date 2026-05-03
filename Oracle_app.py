@@ -769,7 +769,7 @@ with tabs[1]:
         img = Image.open(io.BytesIO(uploaded_file.getvalue()))
         st.image(img, caption="Image originale", use_container_width=True)
 
-        if st.button("🔍 Lancer le scan OCR", use_container_width=True):
+        if st.button("🔍 Lancer le scan OCR", use_container_width=True, key="btn_ocr_cal"):
             with st.spinner("Analyse avancée en cours..."):
                 try:
                     matchs_ocr = ocr_calendrier_bet261(uploaded_file.getvalue())
@@ -877,7 +877,7 @@ with tabs[1]:
                         }
 
             # Validation avec vérification stricte des doublons
-            if st.button("🔥 Valider et importer", use_container_width=True):
+            if st.button("🔥 Valider et importer", use_container_width=True, key="btn_valider_cal"):
                 if len(matchs_ocr) != 10:
                     st.error(f"❌ Il faut exactement 10 matchs !")
                 else:
@@ -913,7 +913,7 @@ with tabs[1]:
     st.markdown("#### ✏️ Option 2 : Saisie manuelle")
 
     if 'tmp_cal' not in st.session_state:
-        if st.button("➕ Initialiser saisie manuelle (10 matchs)"):
+        if st.button("➕ Initialiser saisie manuelle (10 matchs)", key="btn_init_cal"):
             st.session_state['tmp_cal'] = [
                 {'h': engine.teams_list[i*2], 'a': engine.teams_list[i*2+1], 'o': [1.80, 3.50, 4.00]}
                 for i in range(10)
@@ -1261,7 +1261,7 @@ with tabs[3]:
         img = Image.open(io.BytesIO(f_res.getvalue()))
         st.image(img, caption="Image originale", use_container_width=True)
 
-        if st.button("🔍 Lancer le scan OCR", use_container_width=True):
+        if st.button("🔍 Lancer le scan OCR", use_container_width=True, key="btn_ocr_res"):
             with st.spinner("OCR avancé en cours..."):
                 try:
                     extracted = ocr_resultats_bet261(f_res.getvalue())
@@ -1367,7 +1367,7 @@ with tabs[3]:
                         })
 
             # Validation
-            if st.button("✅ Enregistrer les résultats", use_container_width=True):
+            if st.button("✅ Enregistrer les résultats", use_container_width=True, key="btn_valider_res"):
                 if len(final_res) != 10:
                     st.error(f"❌ Il faut exactement 10 matchs !")
                 else:
@@ -1414,7 +1414,7 @@ with tabs[3]:
     st.markdown("#### ✏️ Saisie manuelle")
 
     if 'tmp_res' not in st.session_state:
-        if st.button("➕ Initialiser saisie manuelle (10 matchs)"):
+        if st.button("➕ Initialiser saisie manuelle (10 matchs)", key="btn_init_res"):
             # Pré-remplir avec le calendrier si disponible
             if cal_ref and len(cal_ref) == 10:
                 st.session_state['tmp_res'] = [
@@ -1483,14 +1483,14 @@ with tabs[4]:
 with tabs[5]:
     st.markdown("### ⚙️ Gestion")
     ns = st.text_input("Nouvelle saison (ex: Saison 2027)")
-    if st.button("Créer Saison"):
+    if st.button("Créer Saison", key="btn_creer_saison"):
         if ns and ns not in st.session_state['history']:
             st.session_state['history'][ns] = {}
             save_db(st.session_state['history'])
             st.rerun()
 
     st.divider()
-    if st.button("📥 Exporter Backup"):
+    if st.button("📥 Exporter Backup", key="btn_export_backup"):
         st.download_button("Télécharger Backup", 
                            data=json.dumps(st.session_state['history'], indent=4, ensure_ascii=False),
                            file_name="oracle_backup.json", mime="application/json")
@@ -1700,14 +1700,14 @@ with tabs[7]:
             ])
             st.dataframe(poids_df, use_container_width=True, hide_index=True)
 
-            if st.button("🔄 Réinitialiser les poids"):
+            if st.button("🔄 Réinitialiser les poids", key="btn_reset_poids"):
                 moteur_apprentissage.poids = moteur_apprentissage._init_poids()
                 moteur_apprentissage.save()
                 custom_notify("Poids réinitialisés !", "#FFA500")
                 st.rerun()
 
 # ===================== Sauvegarde Globale =====================
-if st.button("💾 Sauvegarder tout maintenant"):
+if st.button("💾 Sauvegarder tout maintenant", key="btn_save_all"):
     save_db(st.session_state['history'])
     if IA_DISPONIBLE:
         moteur_apprentissage.save()
