@@ -2001,9 +2001,9 @@ with tabs[6]:
         else:
             st.info("Aucun pattern encore. Enregistrez des résultats.")
 
-# ===================== CHAT FLOTTANT AMÉLIORÉ (à placer avant Tab 7) =====================
+# ===================== CHAT FLOTTANT CORRIGÉ (Version Finale) =====================
 def render_floating_chat():
-    """Chat bulle flottante style moderne - Version stable"""
+    """Chat flottant - Commence fermé + bouton de fermeture fiable"""
     
     msgs = st.session_state.get('chat_messages', [])
     msgs_json = json.dumps(msgs, ensure_ascii=False)
@@ -2012,115 +2012,60 @@ def render_floating_chat():
     <style>
     #oracle-chat-bubble {{
         position: fixed;
-        bottom: 30px;
-        right: 30px;
+        bottom: 25px;
+        right: 25px;
         z-index: 9999;
     }}
     #chat-toggle-btn {{
-        width: 70px;
-        height: 70px;
+        width: 68px; height: 68px;
         border-radius: 50%;
         background: linear-gradient(135deg, #7FFFD4, #00b894);
-        border: none;
-        color: #111;
-        font-size: 34px;
-        cursor: pointer;
-        box-shadow: 0 8px 30px rgba(127, 255, 212, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
+        border: none; color: #111;
+        font-size: 32px; cursor: pointer;
+        box-shadow: 0 6px 25px rgba(127,255,212,0.6);
+        transition: all 0.3s;
     }}
-    #chat-toggle-btn:hover {{
-        transform: scale(1.1);
-        box-shadow: 0 10px 35px rgba(127, 255, 212, 0.7);
-    }}
+    #chat-toggle-btn:hover {{ transform: scale(1.08); }}
 
     #chat-window {{
         position: fixed;
-        bottom: 110px;
-        right: 30px;
+        bottom: 105px; right: 25px;
         width: 420px;
         height: 620px;
         background: #0F1626;
         border-radius: 20px;
         border: 2px solid #7FFFD4;
-        box-shadow: 0 15px 60px rgba(0, 0, 0, 0.85);
+        box-shadow: 0 15px 60px rgba(0,0,0,0.9);
         display: none;
         flex-direction: column;
         overflow: hidden;
         z-index: 10000;
     }}
-    #chat-window.open {{
-        display: flex;
-    }}
-
-    #chat-header {{
-        background: linear-gradient(135deg, #1a2338, #0f1626);
-        padding: 16px 20px;
-        border-bottom: 1px solid #7FFFD4;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }}
-
-    #chat-messages {{
-        flex: 1;
-        overflow-y: auto;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        background: #0a0f1c;
-    }}
-
-    #chat-input-area {{
-        padding: 15px;
-        background: #0F1626;
-        border-top: 1px solid #7FFFD4;
-    }}
-
-    #chat-input {{
-        width: 100%;
-        background: #1a2338;
-        border: 1px solid #7FFFD4;
-        border-radius: 25px;
-        padding: 14px 20px;
-        color: white;
-        font-size: 15.5px;
-    }}
-    #chat-input:focus {{
-        outline: none;
-        border-color: #7FFFD4;
-        box-shadow: 0 0 0 3px rgba(127,255,212,0.25);
-    }}
+    #chat-window.open {{ display: flex; }}
     </style>
 
     <div id="oracle-chat-bubble">
         <button id="chat-toggle-btn" onclick="toggleOracleChat()">🔮</button>
         
         <div id="chat-window">
-            <!-- Header -->
-            <div id="chat-header">
-                <span style="font-size: 32px;">🔮</span>
+            <div id="chat-header" style="background: linear-gradient(135deg, #1a2338, #0f1626); padding: 16px 20px; border-bottom: 1px solid #7FFFD4; display:flex; align-items:center; gap:12px;">
+                <span style="font-size:30px;">🔮</span>
                 <div style="flex:1;">
-                    <strong style="color:#7FFFD4; font-size:18px;">Oracle Mahita</strong><br>
-                    <small style="color:#00FF88;">● En ligne • Accès total aux données</small>
+                    <strong style="color:#7FFFD4;">Oracle Mahita IA</strong><br>
+                    <small style="color:#00FF88;">● En ligne</small>
                 </div>
-                <button onclick="toggleOracleChat()" 
-                        style="background:none; border:none; color:#aaa; font-size:28px; cursor:pointer; padding:0 8px;">
-                    ✕
-                </button>
+                <button onclick="toggleOracleChat()" style="background:none;border:none;color:#ccc;font-size:26px;cursor:pointer;">✕</button>
             </div>
             
-            <!-- Messages -->
-            <div id="chat-messages"></div>
+            <div id="chat-messages" style="flex:1; overflow-y:auto; padding:18px; background:#0a0f1c; display:flex; flex-direction:column; gap:12px;">
+                <!-- Messages chargés par JS -->
+            </div>
             
-            <!-- Input -->
-            <div id="chat-input-area">
+            <div style="padding:15px; background:#0F1626; border-top:1px solid #7FFFD4;">
                 <input type="text" id="chat-input" 
-                       placeholder="Posez-moi n'importe quelle question..."
-                       onkeypress="if(event.key === 'Enter') sendOracleMessage()">
+                       placeholder="Posez-moi n'importe quelle question..." 
+                       style="width:100%; background:#1a2338; border:1px solid #7FFFD4; border-radius:25px; padding:14px 18px; color:white;"
+                       onkeypress="if(event.key==='Enter') sendOracleMessage()">
             </div>
         </div>
     </div>
@@ -2141,27 +2086,19 @@ def render_floating_chat():
 
     function renderChatMessages() {{
         const area = document.getElementById('chat-messages');
-        const messages = {msgs_json};
+        if (!area) return;
         
         let html = `
             <div style="background:rgba(127,255,212,0.1); padding:14px; border-radius:12px; border-left:4px solid #7FFFD4;">
-                Bonjour ! Je suis l'Oracle Mahita.<br>
-                Posez-moi n'importe quelle question sur vos données.
+                Bonjour ! Posez-moi n'importe quelle question sur vos pronostics, classements ou résultats.
             </div>`;
-
+        
+        const messages = {msgs_json};
         messages.forEach(msg => {{
             if (msg.role === "user") {{
-                html += `
-                    <div style="align-self: flex-end; background: #1e2a4a; padding: 12px 16px; 
-                                border-radius: 18px 18px 4px 18px; max-width: 80%;">
-                        ${{msg.content}}
-                    </div>`;
+                html += `<div style="align-self:flex-end; background:#1e2a4a; padding:12px 16px; border-radius:18px 18px 4px 18px; max-width:80%;">${{msg.content}}</div>`;
             }} else {{
-                html += `
-                    <div style="align-self: flex-start; background: rgba(127,255,212,0.08); 
-                                padding: 12px 16px; border-radius: 18px 18px 18px 4px; max-width: 85%;">
-                        ${{msg.content.replace(/\\n/g, '<br>')}}
-                    </div>`;
+                html += `<div style="align-self:flex-start; background:rgba(127,255,212,0.08); padding:12px 16px; border-radius:18px 18px 18px 4px; max-width:85%;">${{msg.content.replace(/\\n/g, '<br>')}}</div>`;
             }}
         }});
         
@@ -2172,25 +2109,21 @@ def render_floating_chat():
     function sendOracleMessage() {{
         const input = document.getElementById('chat-input');
         const text = input.value.trim();
-        if (!text) return;
-        
-        // Envoi à Streamlit
-        const url = new URL(window.location.href);
-        url.searchParams.set('oracle_chat_input', encodeURIComponent(text));
-        window.location.href = url;
-        
-        input.value = '';
+        if (text) {{
+            const url = new URL(window.location.href);
+            url.searchParams.set('oracle_chat_input', encodeURIComponent(text));
+            window.location.href = url.toString();
+            input.value = '';
+        }}
     }}
 
-    // Fermer avec Echap
-    document.addEventListener('keydown', function(e) {{
-        if (e.key === "Escape" && chatOpen) {{
-            toggleOracleChat();
-        }}
+    // Important : Commence toujours fermé
+    document.addEventListener('DOMContentLoaded', function() {{
+        const win = document.getElementById('chat-window');
+        if (win) win.classList.remove('open');
     }});
     </script>
     """, unsafe_allow_html=True)
-
 # ===================== TAB 7 : ASSISTANT IA =====================
 with tabs[7]:
     st.markdown("""
