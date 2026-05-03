@@ -463,137 +463,137 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
         })
 
     return matchs
-# ===================== OCR RÉSULTATS (NOUVEAU) =====================
+
+# ===================== OCR RÉSULTATS (CORRIGÉ) =====================
 def ocr_resultats_bet261(image_bytes, debug=False):
-    """OCR avancé pour résultats Bet261 avec détection rectangles de score."""
+    """OCR avancé pour résultats Bet261 avec détection des scores et noms d'équipes."""
     img = Image.open(io.BytesIO(image_bytes))
     img_array = np.array(img)
     h_img, w_img = img_array.shape[:2]
 
     import cv2
-    hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-
-    # Détecter les rectangles de score (gris foncé)
-    # Gris = faible saturation, valeur moyenne-faible
-    gray_mask = (hsv[:,:,1] < 50) & (hsv[:,:,2] > 40) & (hsv[:,:,2] < 180)
-    gray_mask = gray_mask.astype(np.uint8)
-
-    kernel = np.ones((5,5), np.uint8)
-    gray_mask = cv2.morphologyEx(gray_mask, cv2.MORPH_CLOSE, kernel)
-
-    contours, _ = cv2.findContours(gray_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Filtrer les rectangles de score
-    rectangles = []
+    
+    # Convertir en niveaux de gris pour détection des lignes de match
+    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    
+    # Détecter les lignes horizontales séparant les matchs
+    # Les résultats Bet261 ont des lignes gris clair ou des séparateurs
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(blur, 50, 150)
+    
+    # Trouver les lignes horizontales
+    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (w_img // 2, 1))
+    horizontal_lines = cv2.morphologyEx(edges, cv2.MORPH_OPEN, horizontal_kernel)
+    
+    # Détecter les contours des lignes de match
+    contours, _ = cv2.findContours(horizontal_lines, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Filtrer et trier les lignes par Y
+    lignes_y = []
     for cnt in contours:
-        x, y, bw, bh = cv2.boundingRect(cnt)
-        area = bw * bh
-        aspect = bw / bh if bh > 0 else 0
-        # Score: carré/presque carré, taille moyenne, pas trop haut
-        if 1000 < area < 8000 and 0.8 < aspect < 2.5 and bw > 40 and bh > 25:
-            rectangles.append({'x': x, 'y': y, 'w': bw, 'h': bh, 'cx': x+bw//2, 'cy': y+bh//2})
-
-    # Trier par Y et filtrer le header
-    rectangles.sort(key=lambda r: r['cy'])
-    min_y = int(h_img * 0.15)
-    rectangles = [r for r in rectangles if r['cy'] > min_y]
-
-    # Limiter à 10
-    rectangles = rectangles[:10]
-
-    if len(rectangles) == 0:
+        x, y, w, h = cv2.boundingRect(cnt)
+        if w > w_img * 0.3 and h < 5:  # Ligne horizontale longue et fine
+            lignes_y.append(y)
+    
+    lignes_y = sorted(set(lignes_y))
+    
+    # Si pas de lignes détectées, utiliser une grille régulière
+    if len(lignes_y) < 2:
+        # Estimer la hauteur d'un match et diviser l'image
+        h_match_estime = h_img // 12  # Environ 10 matchs + header
+        lignes_y = [i * h_match_estime for i in range(12)]
+    
+    # Créer les zones de match
+    zones_match = []
+    for i in range(len(lignes_y) - 1):
+        y1 = lignes_y[i]
+        y2 = lignes_y[i + 1]
+        if y2 - y1 > 30:  # Zone assez grande
+            zones_match.append((y1, y2))
+    
+    # Limiter à 10 zones
+    zones_match = zones_match[:10]
+    
+    # Ignorer le header (première zone si trop haut)
+    min_y = int(h_img * 0.08)
+    zones_match = [z for z in zones_match if z[0] > min_y]
+    
+    if len(zones_match) == 0:
         return []
 
     matches = []
 
-    for i, rect in enumerate(rectangles):
-        y_center = rect['cy']
-        y_start = max(0, y_center - 80)
-        y_end = min(h_img, y_center + 80)
-
-        # Extraire toute la ligne
-        ligne_img = img.crop((0, y_start, w_img, y_end))
-        ligne_array = np.array(ligne_img)
-
-        # Définir les zones
-        zone_gauche = ligne_img.crop((0, 0, w_img//2 - 20, ligne_img.size[1]))
-        zone_centre = img.crop((rect['x']-10, y_start, rect['x']+rect['w']+10, y_end))
-        zone_droite = ligne_img.crop((w_img//2 + 20, 0, w_img, ligne_img.size[1]))
-
-        # OCR sur chaque zone
-        # 1. Score (centre)
+    for i, (y1, y2) in enumerate(zones_match):
+        # Zone du match
+        zone_match = img.crop((0, y1, w_img, y2))
+        zone_array = np.array(zone_match)
+        
+        # Améliorer le contraste
+        zone_pil = Image.fromarray(zone_array)
+        enhancer = ImageEnhance.Contrast(zone_pil)
+        zone_contraste = np.array(enhancer.enhance(2.0))
+        
+        # Zones gauche/droite pour les noms, centre pour le score
+        zone_gauche = img.crop((0, y1, int(w_img * 0.35), y2))
+        zone_centre = img.crop((int(w_img * 0.35), y1, int(w_img * 0.65), y2))
+        zone_droite = img.crop((int(w_img * 0.65), y1, w_img, y2))
+        
+        equipe_dom = ""
+        equipe_ext = ""
         score = ""
         mt = ""
+        
+        # 1. Détecter le score (centre)
         try:
-            res_score = reader.readtext(np.array(zone_centre), detail=0, paragraph=False)
-            if res_score:
-                texte_score = ' '.join(res_score)
+            res_centre = reader.readtext(np.array(zone_centre), detail=0, paragraph=False)
+            if res_centre:
+                texte_centre = ' '.join(res_centre)
                 # Chercher X:Y ou X-Y
-                match_score = re.search(r'(\d{1,2})[:\-](\d{1,2})', texte_score)
+                match_score = re.search(r'(\d{1,2})[:\-](\d{1,2})', texte_centre)
                 if match_score:
                     score = f"{match_score.group(1)}:{match_score.group(2)}"
                 # Chercher MT
-                match_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', texte_score, re.IGNORECASE)
+                match_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', texte_centre, re.IGNORECASE)
                 if match_mt:
                     mt = f"{match_mt.group(1)}:{match_mt.group(2)}"
         except:
             pass
-
-        # 2. Équipes et buteurs (gauche et droite)
-        equipe_dom = ""
-        equipe_ext = ""
-        buteurs_dom = ""
-        buteurs_ext = ""
-
+        
+        # 2. Détecter équipes (gauche et droite)
         try:
-            # Zone gauche
+            # Gauche = domicile
             res_gauche = reader.readtext(np.array(zone_gauche), detail=1, paragraph=False)
             noms_gauche = []
-            minutes_gauche = []
             for bbox, text, prob in res_gauche:
-                if prob > 0.3:
-                    # Chercher des minutes (XX')
-                    mins = re.findall(r"(\d{1,3})'", text)
-                    if mins:
-                        minutes_gauche.extend(mins)
-                    elif len(text) > 2:
-                        noms_gauche.append(text)
-
+                if prob > 0.3 and len(text) > 2:
+                    noms_gauche.append(text)
+            
             if noms_gauche:
                 equipe_dom = get_close_matches(noms_gauche[0], engine.teams_list, n=1, cutoff=0.4)
                 equipe_dom = equipe_dom[0] if equipe_dom else noms_gauche[0]
-            if minutes_gauche:
-                buteurs_dom = ' '.join(f"{m}'" for m in minutes_gauche)
-
-            # Zone droite
+            
+            # Droite = extérieur
             res_droite = reader.readtext(np.array(zone_droite), detail=1, paragraph=False)
             noms_droite = []
-            minutes_droite = []
             for bbox, text, prob in res_droite:
-                if prob > 0.3:
-                    mins = re.findall(r"(\d{1,3})'", text)
-                    if mins:
-                        minutes_droite.extend(mins)
-                    elif len(text) > 2:
-                        noms_droite.append(text)
-
+                if prob > 0.3 and len(text) > 2:
+                    noms_droite.append(text)
+            
             if noms_droite:
                 equipe_ext = get_close_matches(noms_droite[0], engine.teams_list, n=1, cutoff=0.4)
                 equipe_ext = equipe_ext[0] if equipe_ext else noms_droite[0]
-            if minutes_droite:
-                buteurs_ext = ' '.join(f"{m}'" for m in minutes_droite)
-
+                
         except:
             pass
-
+        
         matches.append({
             'h': equipe_dom,
             'a': equipe_ext,
             's': score,
             'mt': mt,
-            'hm': buteurs_dom,
-            'am': buteurs_ext,
-            'ligne_img': ligne_img
+            'hm': "",
+            'am': "",
+            'ligne_img': zone_match
         })
 
     return matches
@@ -1137,86 +1137,221 @@ with tabs[3]:
     st.markdown("### ⚽ Saisie des Résultats")
 
     j_res = st.number_input("Journée", 1, 50, 1, key="j_res_input")
-    f_res = st.file_uploader("📸 Capture Résultats Bet261", type=['jpg','png','jpeg'], key="res_upload")
+    
+    # ── Option OCR Bet261 ──
+    st.markdown("#### 📸 Import par OCR (Bet261)")
+    
+    f_res = st.file_uploader("📷 Capture d'écran Bet261", type=['jpg','png','jpeg'], key="res_upload")
 
     extracted = []
     jk = f"Journée {j_res}"
     cal_ref = st.session_state['history'][s_active].get(jk, {}).get("cal", [])
 
     if f_res:
-        debug = st.checkbox("🔍 Mode Debug OCR", value=False)
-        with st.spinner("OCR avancé en cours..."):
-            extracted = ocr_resultats_bet261(f_res.getvalue(), debug=debug)
+        img = Image.open(io.BytesIO(f_res.getvalue()))
+        st.image(img, caption="Image originale", use_container_width=True)
 
-        if extracted:
-            custom_notify(f"✅ {len(extracted)} matchs détectés", "#7FFFD4")
-        else:
-            st.warning("OCR faible. Complétez manuellement.")
+        if st.button("🔍 Lancer le scan OCR", use_container_width=True):
+            with st.spinner("OCR avancé en cours..."):
+                try:
+                    extracted = ocr_resultats_bet261(f_res.getvalue())
 
-    # Compléter avec le calendrier si manquant
-    if cal_ref and len(extracted) < len(cal_ref):
-        known = {(m.get('h'), m.get('a')) for m in extracted}
-        for cm in cal_ref:
-            if (cm['h'], cm['a']) not in known:
-                extracted.append({
-                    "h": cm['h'], "a": cm['a'],
-                    "s": "", "mt": "", "hm": "", "am": ""
+                    if len(extracted) == 0:
+                        st.error("❌ Aucun match détecté. Essayez la saisie manuelle.")
+                    else:
+                        st.success(f"✅ {len(extracted)} matchs détectés !")
+                        st.session_state['ocr_res_matchs'] = extracted
+                        st.session_state['ocr_res_img'] = img
+                        st.rerun()
+
+                except Exception as e:
+                    st.error(f"❌ Erreur : {str(e)}")
+
+        # ═══ ÉTAPE 2 : VÉRIFICATION ET CORRECTION ═══
+        if 'ocr_res_matchs' in st.session_state:
+            st.markdown("#### 📝 Vérifier et corriger les résultats")
+
+            extracted = st.session_state['ocr_res_matchs']
+
+            # Compléter avec le calendrier si manquant
+            if cal_ref and len(extracted) < len(cal_ref):
+                known = {(m.get('h'), m.get('a')) for m in extracted}
+                for cm in cal_ref:
+                    if (cm['h'], cm['a']) not in known:
+                        extracted.append({
+                            "h": cm['h'], "a": cm['a'],
+                            "s": "", "mt": "", "hm": "", "am": ""
+                        })
+
+            # Vérification
+            if len(extracted) != 10:
+                st.warning(f"⚠️ {len(extracted)} matchs trouvés sur 10 attendus.")
+
+            # Afficher les matchs avec aperçu agrandi
+            final_res = []
+            for i, m in enumerate(extracted):
+                is_deduit = not m.get('h') or not m.get('a') or not m.get('s')
+                titre = f"⚽ Match {i+1}" + (" 🧠 (à vérifier)" if is_deduit else "")
+
+                with st.expander(titre, expanded=(i==0 or is_deduit)):
+                    cols = st.columns([1, 2])
+
+                    with cols[0]:
+                        # Afficher l'image de la ligne détectée
+                        if 'ligne_img' in m and m['ligne_img']:
+                            st.image(m['ligne_img'], use_container_width=True)
+                        else:
+                            st.info("Aperçu non disponible")
+
+                    with cols[1]:
+                        if is_deduit:
+                            st.info("🧠 Certaines valeurs ont été déduites ou sont manquantes - vérifiez !")
+
+                        # Équipes
+                        equipe_dom = st.selectbox(
+                            "Domicile",
+                            engine.teams_list,
+                            index=engine.teams_list.index(m['h']) if m['h'] in engine.teams_list else 0,
+                            key=f"res_dom_{i}"
+                        )
+                        equipe_ext = st.selectbox(
+                            "Extérieur",
+                            engine.teams_list,
+                            index=engine.teams_list.index(m['a']) if m['a'] in engine.teams_list else 0,
+                            key=f"res_ext_{i}"
+                        )
+
+                        # Scores
+                        col_s1, col_s2 = st.columns(2)
+                        score = col_s1.text_input(
+                            "Score Final (format X:Y)",
+                            m.get('s', '0:0'),
+                            key=f"res_score_{i}"
+                        )
+                        mt_score = col_s2.text_input(
+                            "Mi-temps (format X:Y)",
+                            m.get('mt', ''),
+                            key=f"res_mt_{i}"
+                        )
+
+                        # Buteurs
+                        col_b1, col_b2 = st.columns(2)
+                        hm = col_b1.text_input(
+                            f"Buteurs {equipe_dom} (ex: 24' 82')",
+                            m.get('hm', ''),
+                            key=f"res_hm_{i}"
+                        )
+                        am = col_b2.text_input(
+                            f"Buteurs {equipe_ext} (ex: 41' 64')",
+                            m.get('am', ''),
+                            key=f"res_am_{i}"
+                        )
+
+                        final_res.append({
+                            "h": equipe_dom,
+                            "a": equipe_ext,
+                            "s": score,
+                            "mt": mt_score,
+                            "hm": hm,
+                            "am": am
+                        })
+
+            # Validation
+            if st.button("✅ Enregistrer les résultats", use_container_width=True):
+                if len(final_res) != 10:
+                    st.error(f"❌ Il faut exactement 10 matchs !")
+                else:
+                    if jk not in st.session_state['history'][s_active]:
+                        st.session_state['history'][s_active][jk] = {"cal": cal_ref, "res": [], "pro": []}
+
+                    st.session_state['history'][s_active][jk]["res"] = final_res
+                    save_db(st.session_state['history'])
+
+                    # ── Apprentissage IA ──
+                    if IA_DISPONIBLE:
+                        for i, m in enumerate(final_res):
+                            try:
+                                sh, sa = map(int, m['s'].replace('-', ':').split(':'))
+                                resultat = "1" if sh > sa else ("X" if sh == sa else "2")
+                                cotes = cal_ref[i].get('o', [2.0, 3.0, 3.0]) if cal_ref and i < len(cal_ref) else [2.0, 3.0, 3.0]
+
+                                moteur_apprentissage.analyser_pattern_cotes(cotes[0], cotes[1], cotes[2], resultat)
+                                moteur_apprentissage.analyser_pattern_equipe(
+                                    m['h'],
+                                    "V" if resultat=="1" else ("N" if resultat=="X" else "D"),
+                                    {"domicile": True}
+                                )
+                                moteur_apprentissage.analyser_pattern_equipe(
+                                    m['a'],
+                                    "V" if resultat=="2" else ("N" if resultat=="X" else "D"),
+                                    {"domicile": False}
+                                )
+                            except:
+                                pass
+                        moteur_apprentissage.save()
+                        custom_notify("🧠 IA : Patterns mis à jour !", "#7FFFD4")
+
+                    # Nettoyer session
+                    for key in ['ocr_res_matchs', 'ocr_res_img']:
+                        if key in st.session_state:
+                            del st.session_state[key]
+
+                    custom_notify("✅ Résultats enregistrés !", "#00FF00")
+                    st.rerun()
+
+    # ── Option 2 : Saisie manuelle ──
+    st.divider()
+    st.markdown("#### ✏️ Saisie manuelle")
+
+    if 'tmp_res' not in st.session_state:
+        if st.button("➕ Initialiser saisie manuelle (10 matchs)"):
+            # Pré-remplir avec le calendrier si disponible
+            if cal_ref and len(cal_ref) == 10:
+                st.session_state['tmp_res'] = [
+                    {"h": c['h'], "a": c['a'], "s": "0:0", "mt": "", "hm": "", "am": ""}
+                    for c in cal_ref
+                ]
+            else:
+                st.session_state['tmp_res'] = [
+                    {"h": engine.teams_list[i*2 % 20], "a": engine.teams_list[(i*2+1) % 20], 
+                     "s": "0:0", "mt": "", "hm": "", "am": ""}
+                    for i in range(10)
+                ]
+
+    if 'tmp_res' in st.session_state:
+        with st.form("form_resultats_manual"):
+            st.markdown("#### Vérifiez les résultats")
+            final_res_manual = []
+            for i, m in enumerate(st.session_state['tmp_res']):
+                st.markdown(f"**Match {i+1} : {m['h']} vs {m['a']}**")
+                
+                col1, col2 = st.columns(2)
+                score = col1.text_input("Score Final (X:Y)", m['s'], key=f"man_score_{i}")
+                mt = col2.text_input("Mi-temps (X:Y)", m['mt'], key=f"man_mt_{i}")
+                
+                col3, col4 = st.columns(2)
+                hm = col3.text_input(f"Buteurs {m['h']}", m['hm'], key=f"man_hm_{i}")
+                am = col4.text_input(f"Buteurs {m['a']}", m['am'], key=f"man_am_{i}")
+                
+                final_res_manual.append({
+                    "h": m['h'], "a": m['a'],
+                    "s": score, "mt": mt,
+                    "hm": hm, "am": am
                 })
-
-    with st.form("form_resultats"):
-        st.markdown("#### Correction des résultats")
-        final_res = []
-        for i, m in enumerate(extracted):
-            st.markdown(f"**Match {i+1} : {m.get('h','?')} vs {m.get('a','?')}**")
-
-            col1, col2 = st.columns([2, 1.5])
-            score = col1.text_input("Score Final (format X:Y)", m.get('s', '0:0'), key=f"score_{i}")
-            mt_score = col2.text_input("Mi-temps (format X:Y)", m.get('mt', ''), key=f"mt_{i}")
-
-            col3, col4 = st.columns(2)
-            hm = col3.text_input(f"Buteurs {m.get('h','Domicile')} (ex: 24' 82')", m.get('hm', ''), key=f"hm_{i}")
-            am = col4.text_input(f"Buteurs {m.get('a','Extérieur')} (ex: 41' 64')", m.get('am', ''), key=f"am_{i}")
-
-            final_res.append({
-                "h": m.get('h'), "a": m.get('a'),
-                "s": score, "mt": mt_score,
-                "hm": hm, "am": am
-            })
-            st.divider()
-
-        if st.form_submit_button("✅ Enregistrer Résultats"):
-            if jk not in st.session_state['history'][s_active]:
-                st.session_state['history'][s_active][jk] = {"cal": cal_ref, "res": [], "pro": []}
-
-            st.session_state['history'][s_active][jk]["res"] = final_res
-            save_db(st.session_state['history'])
-
-            # ── Apprentissage IA ──
-            if IA_DISPONIBLE:
-                for i, m in enumerate(final_res):
-                    try:
-                        sh, sa = map(int, m['s'].replace('-', ':').split(':'))
-                        resultat = "1" if sh > sa else ("X" if sh == sa else "2")
-                        cotes = cal_ref[i].get('o', [2.0, 3.0, 3.0]) if cal_ref and i < len(cal_ref) else [2.0, 3.0, 3.0]
-
-                        moteur_apprentissage.analyser_pattern_cotes(cotes[0], cotes[1], cotes[2], resultat)
-                        moteur_apprentissage.analyser_pattern_equipe(
-                            m['h'],
-                            "V" if resultat=="1" else ("N" if resultat=="X" else "D"),
-                            {"domicile": True}
-                        )
-                        moteur_apprentissage.analyser_pattern_equipe(
-                            m['a'],
-                            "V" if resultat=="2" else ("N" if resultat=="X" else "D"),
-                            {"domicile": False}
-                        )
-                    except:
-                        pass
-                moteur_apprentissage.save()
-                custom_notify("🧠 IA : Patterns mis à jour !", "#7FFFD4")
-
-            custom_notify("✅ Résultats enregistrés !", "#00FF00")
-            st.rerun()
+                st.divider()
+            
+            if st.form_submit_button("✅ Enregistrer Résultats"):
+                if jk not in st.session_state['history'][s_active]:
+                    st.session_state['history'][s_active][jk] = {"cal": cal_ref, "res": [], "pro": []}
+                
+                st.session_state['history'][s_active][jk]["res"] = final_res_manual
+                save_db(st.session_state['history'])
+                
+                if 'tmp_res' in st.session_state:
+                    del st.session_state['tmp_res']
+                
+                custom_notify("✅ Résultats enregistrés !", "#00FF00")
+                st.rerun()
 
 # ===================== TAB 4 : HISTORIQUE =====================
 with tabs[4]:
