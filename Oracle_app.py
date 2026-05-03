@@ -230,8 +230,7 @@ class OracleEngine:
 
 engine = OracleEngine()
 
-# ===================== OCR CALENDRIER (NOUVEAU) =====================
-
+# ===================== OCR CALENDRIER (CORRIGÉ) =====================
 def ocr_calendrier_bet261(image_bytes, debug=False):
     """OCR avancé pour calendrier Bet261 avec détection boutons verts et correction cotes.
     VERSION CORRIGÉE - Détecte correctement les deux équipes par match."""
@@ -259,7 +258,6 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
         x, y, bw, bh = cv2.boundingRect(cnt)
         area = bw * bh
         aspect = bw / bh if bh > 0 else 0
-        # Accepter aussi les grands boutons (panier vert) mais les filtrer après
         if 500 < area < 15000 and 1.0 < aspect < 8.0 and bw > 30 and bh > 10:
             boutons.append({
                 'x': x, 'y': y, 'w': bw, 'h': bh,
@@ -284,10 +282,10 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
         if not placed:
             lignes.append({'cy_mean': b['cy'], 'boutons': [b]})
 
-    # Filtrer lignes avec >= 2 boutons (3 normaux ou 2 si panier masque le 3ème)
+    # Filtrer lignes avec >= 2 boutons
     lignes_valides = [l for l in lignes if len(l['boutons']) >= 2]
 
-    # Ignorer header (réduit à 5%)
+    # Ignorer header
     min_y = int(h_img * 0.05)
     lignes_valides = [l for l in lignes_valides if l['cy_mean'] > min_y]
 
@@ -318,11 +316,12 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
 
     for i, ligne in enumerate(lignes_valides):
         y_center = int(ligne['cy_mean'])
-        y_start = max(0, y_center - 60)
-        y_end = min(h_img, y_center + 60)
-
-        # === CORRECTION 2: Zone noms = TOUTE la largeur de l'image ===
-        # Pas seulement la moitié gauche, pour capturer domicile ET extérieur
+        
+        # === CORRECTION V2: Zone plus grande pour capturer les deux noms ===
+        y_start = max(0, y_center - 80)
+        y_end = min(h_img, y_center + 80)
+        
+        # Zone noms: toute la largeur
         ligne_full = img.crop((0, y_start, w_img, y_end))
 
         # Extraire cotes
@@ -379,65 +378,81 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
             except:
                 pass
 
-        # === CORRECTION 3: Détection intelligente des deux noms d'équipes ===
+        # === CORRECTION V2: Détection des noms avec zone spécifique gauche ===
         noms_detectes = []
         try:
-            ligne_full_array = np.array(ligne_full)
-            ligne_pil = Image.fromarray(ligne_full_array)
-            enhancer = ImageEnhance.Contrast(ligne_pil)
-            ligne_contraste = np.array(enhancer.enhance(2.0))
-
-            res_noms = reader.readtext(ligne_contraste, detail=1, paragraph=False)
-
-            # Grouper les textes par position verticale (ligne haut vs ligne bas)
-            noms_par_ligne_verticale = {}
+            # Zone GAUCHE où sont les noms (pas les cotes)
+            zone_noms = img.crop((0, y_start, int(w_img * 0.45), y_end))
+            zone_noms_array = np.array(zone_noms)
+            
+            # Améliorer le contraste
+            zone_noms_pil = Image.fromarray(zone_noms_array)
+            enhancer = ImageEnhance.Contrast(zone_noms_pil)
+            zone_noms_contraste = np.array(enhancer.enhance(2.5))
+            
+            # OCR avec détail complet
+            res_noms = reader.readtext(zone_noms_contraste, detail=1, paragraph=False)
+            
+            if debug:
+                print(f"\n--- Match {i+1} ---")
+                print(f"Zone noms trouvés: {len(res_noms)}")
+            
+            # Filtrer et regrouper par position Y
+            texts_avec_y = []
             for bbox, text, prob in res_noms:
-                if prob > 0.25 and len(text) > 2:
-                    # Calculer le centre Y du texte
+                if prob > 0.20 and len(text) > 1:  # Seuil baissé à 0.20
                     cy = (bbox[0][1] + bbox[2][1]) / 2
-                    # Regrouper par position verticale (marge de 20px)
-                    ligne_key = round(cy / 20)
-                    if ligne_key not in noms_par_ligne_verticale:
-                        noms_par_ligne_verticale[ligne_key] = []
-                    noms_par_ligne_verticale[ligne_key].append((cy, text, prob, bbox))
-
-            # Prendre le meilleur nom de chaque ligne verticale
-            for key in sorted(noms_par_ligne_verticale.keys()):
-                # Trier par probabilité et prendre le meilleur
-                meilleur = max(noms_par_ligne_verticale[key], key=lambda x: x[2])
-                noms_detectes.append(meilleur)
+                    texts_avec_y.append((cy, text, prob))
+                    if debug:
+                        print(f"  Texte: '{text}' | Y: {cy:.1f} | Prob: {prob:.2f}")
+            
+            # Trier par position Y (du haut vers le bas)
+            texts_avec_y.sort(key=lambda x: x[0])
+            
+            # Prendre les 2 premiers noms distincts
+            noms_bruts = []
+            for cy, text, prob in texts_avec_y:
+                # Éviter les doublons très proches en Y
+                if not noms_bruts or abs(cy - noms_bruts[-1][0]) > 15:
+                    noms_bruts.append((cy, text, prob))
+                if len(noms_bruts) >= 2:
+                    break
+            
+            noms_detectes = noms_bruts
 
         except Exception as e:
             if debug:
-                print(f"Erreur OCR noms: {e}")
+                print(f"Erreur OCR noms match {i+1}: {e}")
             pass
 
-        # === CORRECTION 4: Assigner équipes par position verticale ===
+        # === Assigner équipes ===
         dom_default = ""
         ext_default = ""
 
         if len(noms_detectes) >= 2:
-            # Trier par position Y (du haut vers le bas)
-            # Domicile = ligne du haut, Extérieur = ligne du bas
-            noms_detectes.sort(key=lambda x: x[0])
-
+            # Premier nom = domicile (plus haut), Deuxième = extérieur (plus bas)
             nom_dom_ocr = noms_detectes[0][1]
             nom_ext_ocr = noms_detectes[1][1]
+            
+            if debug:
+                print(f"  DOM OCR: '{nom_dom_ocr}' | EXT OCR: '{nom_ext_ocr}'")
 
-            dom_match = get_close_matches(nom_dom_ocr, engine.teams_list, n=1, cutoff=0.4)
+            dom_match = get_close_matches(nom_dom_ocr, engine.teams_list, n=1, cutoff=0.35)
             if dom_match:
                 dom_default = dom_match[0]
 
-            ext_match = get_close_matches(nom_ext_ocr, engine.teams_list, n=1, cutoff=0.4)
+            ext_match = get_close_matches(nom_ext_ocr, engine.teams_list, n=1, cutoff=0.35)
             if ext_match:
                 ext_default = ext_match[0]
-
+                
         elif len(noms_detectes) == 1:
-            # Un seul nom trouvé, essayer de le matcher comme domicile
             nom_brut = noms_detectes[0][1]
-            match = get_close_matches(nom_brut, engine.teams_list, n=1, cutoff=0.4)
+            match = get_close_matches(nom_brut, engine.teams_list, n=1, cutoff=0.35)
             if match:
                 dom_default = match[0]
+
+        if debug:
+            print(f"  RESULTAT: DOM='{dom_default}' | EXT='{ext_default}'")
 
         matchs.append({
             'index': i,
@@ -448,7 +463,6 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
         })
 
     return matchs
-
 # ===================== OCR RÉSULTATS (NOUVEAU) =====================
 def ocr_resultats_bet261(image_bytes, debug=False):
     """OCR avancé pour résultats Bet261 avec détection rectangles de score."""
