@@ -74,32 +74,11 @@ st.markdown("""
 .next-day-box { text-align: center; color: #7FFFD4; font-weight: bold; font-size: 1.3em; padding: 12px;
                 background: rgba(127,255,212,0.12); border-radius: 10px; margin: 15px 0; }
 .chat-user { background: rgba(127,255,212,0.1); border-left: 3px solid #7FFFD4; 
-             padding: 10px 15px; margin: 5px 0 5px 40px; border-radius: 10px; }
+             padding: 10px 15px; margin: 5px 0 5px 20px; border-radius: 10px; color: #fff; }
 .chat-bot { background: rgba(255,255,255,0.05); border-left: 3px solid #00FF00; 
-            padding: 10px 15px; margin: 5px 40px 5px 0; border-radius: 10px; }
+            padding: 10px 15px; margin: 5px 20px 5px 0; border-radius: 10px; color: #ddd; }
 .chat-bot-offline { background: rgba(255,255,255,0.05); border-left: 3px solid #FFA500; 
-                    padding: 10px 15px; margin: 5px 40px 5px 0; border-radius: 10px; }
-
-/* ── CLASSES MSG CHAT (utilisées par la bulle flottante) ── */
-.msg-user {
-    align-self: flex-end;
-    background: linear-gradient(135deg, #0f3460, #1a4480);
-    color: #fff; padding: 10px 14px;
-    border-radius: 18px 18px 4px 18px;
-    max-width: 75%; font-size: 14px; line-height: 1.4;
-    word-break: break-word;
-}
-.msg-bot {
-    align-self: flex-start;
-    background: rgba(127,255,212,0.08);
-    border: 1px solid rgba(127,255,212,0.2);
-    color: #e0e0e0; padding: 10px 14px;
-    border-radius: 18px 18px 18px 4px;
-    max-width: 85%; font-size: 14px; line-height: 1.4;
-    word-break: break-word;
-}
-.msg-bot-header { color: #7FFFD4; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
-.msg-timestamp { color: #555; font-size: 10px; margin-top: 3px; text-align: right; }
+                    padding: 10px 15px; margin: 5px 20px 5px 0; border-radius: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1755,175 +1734,6 @@ with tabs[6]:
         else:
             st.info("Aucun pattern encore. Enregistrez des résultats.")
 
-# ===================== CHAT FLOTTANT CORRIGÉ (Version Finale) =====================
-def render_floating_chat():
-    """Chat flottant - Commence fermé + bouton envoi + compatible mobile"""
-    
-    msgs = st.session_state.get('chat_messages', [])
-    msgs_json = json.dumps(msgs, ensure_ascii=False)
-    
-    st.markdown(f"""
-    <style>
-    #oracle-chat-bubble {{
-        position: fixed;
-        bottom: 25px;
-        right: 25px;
-        z-index: 9999;
-    }}
-    #chat-toggle-btn {{
-        width: 68px; height: 68px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #7FFFD4, #00b894);
-        border: none; color: #111;
-        font-size: 32px; cursor: pointer;
-        box-shadow: 0 6px 25px rgba(127,255,212,0.6);
-        transition: all 0.3s;
-        display: flex; align-items: center; justify-content: center;
-    }}
-    #chat-toggle-btn:hover {{ transform: scale(1.08); }}
-
-    #chat-window {{
-        position: fixed;
-        bottom: 105px; right: 10px;
-        width: min(380px, calc(100vw - 20px));
-        height: min(560px, calc(100vh - 130px));
-        background: #0F1626;
-        border-radius: 20px;
-        border: 2px solid #7FFFD4;
-        box-shadow: 0 15px 60px rgba(0,0,0,0.9);
-        display: none;
-        flex-direction: column;
-        overflow: hidden;
-        z-index: 10000;
-    }}
-    #chat-window.open {{ display: flex !important; }}
-
-    #chat-input-row {{
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 15px;
-        background: #0F1626;
-        border-top: 1px solid rgba(127,255,212,0.4);
-    }}
-    #chat-input {{
-        flex: 1;
-        background: #1a2338;
-        border: 1px solid #7FFFD4;
-        border-radius: 25px;
-        padding: 12px 16px;
-        color: white;
-        font-size: 14px;
-        outline: none;
-        min-width: 0;
-    }}
-    #chat-input:focus {{ border-color: #00FF88; }}
-    #chat-send-btn {{
-        width: 44px; height: 44px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #7FFFD4, #00b894);
-        border: none;
-        color: #111;
-        font-size: 20px;
-        cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-        box-shadow: 0 2px 10px rgba(127,255,212,0.4);
-        transition: transform 0.15s;
-    }}
-    #chat-send-btn:hover {{ transform: scale(1.1); }}
-    #chat-send-btn:active {{ transform: scale(0.95); }}
-    </style>
-
-    <div id="oracle-chat-bubble">
-        <button id="chat-toggle-btn" onclick="toggleOracleChat()">🔮</button>
-        
-        <div id="chat-window">
-            <div style="background: linear-gradient(135deg, #1a2338, #0f1626); padding: 14px 18px; border-bottom: 1px solid #7FFFD4; display:flex; align-items:center; gap:10px; flex-shrink:0;">
-                <span style="font-size:26px;">🔮</span>
-                <div style="flex:1;">
-                    <strong style="color:#7FFFD4; font-size:15px;">Oracle Mahita IA</strong><br>
-                    <small style="color:#00FF88; font-size:12px;">● En ligne</small>
-                </div>
-                <button onclick="toggleOracleChat()" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">✕</button>
-            </div>
-            
-            <div id="chat-messages" style="flex:1; overflow-y:auto; padding:16px; background:#0a0f1c; display:flex; flex-direction:column; gap:10px;">
-                <!-- Messages chargés par JS -->
-            </div>
-            
-            <div id="chat-input-row">
-                <input type="text" id="chat-input" 
-                       placeholder="Posez votre question..." 
-                       onkeydown="if(event.key==='Enter'){{ event.preventDefault(); sendOracleMessage(); }}">
-                <button id="chat-send-btn" onclick="sendOracleMessage()" title="Envoyer">➤</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-    (function() {{
-        let chatOpen = false;
-
-        window.toggleOracleChat = function() {{
-            chatOpen = !chatOpen;
-            const win = document.getElementById('chat-window');
-            if (!win) return;
-            if (chatOpen) {{
-                win.classList.add('open');
-                renderChatMessages();
-                setTimeout(function() {{
-                    var inp = document.getElementById('chat-input');
-                    if (inp) inp.focus();
-                }}, 100);
-            }} else {{
-                win.classList.remove('open');
-            }}
-        }};
-
-        window.renderChatMessages = function() {{
-            const area = document.getElementById('chat-messages');
-            if (!area) return;
-            
-            let html = '<div style="background:rgba(127,255,212,0.1); padding:12px 14px; border-radius:12px; border-left:4px solid #7FFFD4; color:#ccc; font-size:14px;">Bonjour ! Posez-moi n\'importe quelle question sur vos pronostics, classements ou résultats.</div>';
-            
-            const messages = {msgs_json};
-            messages.forEach(function(msg) {{
-                if (msg.role === "user") {{
-                    html += '<div style="align-self:flex-end; background:#1e3a5f; color:#fff; padding:10px 14px; border-radius:18px 18px 4px 18px; max-width:78%; font-size:14px; word-break:break-word;">' + escapeHtml(msg.content) + '</div>';
-                }} else {{
-                    html += '<div style="align-self:flex-start; background:rgba(127,255,212,0.08); border:1px solid rgba(127,255,212,0.2); color:#ddd; padding:10px 14px; border-radius:18px 18px 18px 4px; max-width:85%; font-size:14px; word-break:break-word;">' + msg.content.replace(/\\n/g, '<br>') + '</div>';
-                }}
-            }});
-            
-            area.innerHTML = html;
-            area.scrollTop = area.scrollHeight;
-        }};
-
-        window.escapeHtml = function(text) {{
-            return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }};
-
-        window.sendOracleMessage = function() {{
-            const input = document.getElementById('chat-input');
-            if (!input) return;
-            const text = input.value.trim();
-            if (text) {{
-                const url = new URL(window.location.href);
-                url.searchParams.set('oracle_chat_input', encodeURIComponent(text));
-                input.value = '';
-                window.location.href = url.toString();
-            }}
-        }};
-
-        // S'assurer que la fenêtre est bien fermée au chargement
-        document.addEventListener('DOMContentLoaded', function() {{
-            const win = document.getElementById('chat-window');
-            if (win) win.classList.remove('open');
-        }});
-    }})();
-    </script>
-    """, unsafe_allow_html=True)
 # ===================== TAB 7 : ASSISTANT IA =====================
 with tabs[7]:
     st.markdown("""
@@ -1932,9 +1742,6 @@ with tabs[7]:
         <p style="color: #888; margin:8px 0 0 0;">Analyse intelligente • Contexte complet • Apprentissage continu</p>
     </div>
     """, unsafe_allow_html=True)
-
-    # Chat flottant
-    render_floating_chat()
 
     st.divider()
 
