@@ -926,7 +926,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 
     return matches
 
-# ===================== TAB 0 : CLASSEMENT =====================
+
 # ===================== HEADER & SAISON =====================
 st.markdown(f"""
 <div class="main-header">
@@ -1118,7 +1118,7 @@ def render_floating_chat():
 
 render_floating_chat()
 
-
+# ===================== TAB 0 : CLASSEMENT =====================
 with tabs[0]:
     st.markdown("### 🏆 Classement de la Saison")
     standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
@@ -2003,7 +2003,7 @@ with tabs[6]:
 
 # ===================== CHAT FLOTTANT CORRIGÉ (Version Finale) =====================
 def render_floating_chat():
-    """Chat flottant - Commence fermé + bouton de fermeture fiable"""
+    """Chat flottant - Commence fermé + bouton envoi + compatible mobile"""
     
     msgs = st.session_state.get('chat_messages', [])
     msgs_json = json.dumps(msgs, ensure_ascii=False)
@@ -2024,14 +2024,15 @@ def render_floating_chat():
         font-size: 32px; cursor: pointer;
         box-shadow: 0 6px 25px rgba(127,255,212,0.6);
         transition: all 0.3s;
+        display: flex; align-items: center; justify-content: center;
     }}
     #chat-toggle-btn:hover {{ transform: scale(1.08); }}
 
     #chat-window {{
         position: fixed;
-        bottom: 105px; right: 25px;
-        width: 420px;
-        height: 620px;
+        bottom: 105px; right: 10px;
+        width: min(380px, calc(100vw - 20px));
+        height: min(560px, calc(100vh - 130px));
         background: #0F1626;
         border-radius: 20px;
         border: 2px solid #7FFFD4;
@@ -2041,87 +2042,132 @@ def render_floating_chat():
         overflow: hidden;
         z-index: 10000;
     }}
-    #chat-window.open {{ display: flex; }}
+    #chat-window.open {{ display: flex !important; }}
+
+    #chat-input-row {{
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 15px;
+        background: #0F1626;
+        border-top: 1px solid rgba(127,255,212,0.4);
+    }}
+    #chat-input {{
+        flex: 1;
+        background: #1a2338;
+        border: 1px solid #7FFFD4;
+        border-radius: 25px;
+        padding: 12px 16px;
+        color: white;
+        font-size: 14px;
+        outline: none;
+        min-width: 0;
+    }}
+    #chat-input:focus {{ border-color: #00FF88; }}
+    #chat-send-btn {{
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7FFFD4, #00b894);
+        border: none;
+        color: #111;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 10px rgba(127,255,212,0.4);
+        transition: transform 0.15s;
+    }}
+    #chat-send-btn:hover {{ transform: scale(1.1); }}
+    #chat-send-btn:active {{ transform: scale(0.95); }}
     </style>
 
     <div id="oracle-chat-bubble">
         <button id="chat-toggle-btn" onclick="toggleOracleChat()">🔮</button>
         
         <div id="chat-window">
-            <div id="chat-header" style="background: linear-gradient(135deg, #1a2338, #0f1626); padding: 16px 20px; border-bottom: 1px solid #7FFFD4; display:flex; align-items:center; gap:12px;">
-                <span style="font-size:30px;">🔮</span>
+            <div style="background: linear-gradient(135deg, #1a2338, #0f1626); padding: 14px 18px; border-bottom: 1px solid #7FFFD4; display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                <span style="font-size:26px;">🔮</span>
                 <div style="flex:1;">
-                    <strong style="color:#7FFFD4;">Oracle Mahita IA</strong><br>
-                    <small style="color:#00FF88;">● En ligne</small>
+                    <strong style="color:#7FFFD4; font-size:15px;">Oracle Mahita IA</strong><br>
+                    <small style="color:#00FF88; font-size:12px;">● En ligne</small>
                 </div>
-                <button onclick="toggleOracleChat()" style="background:none;border:none;color:#ccc;font-size:26px;cursor:pointer;">✕</button>
+                <button onclick="toggleOracleChat()" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">✕</button>
             </div>
             
-            <div id="chat-messages" style="flex:1; overflow-y:auto; padding:18px; background:#0a0f1c; display:flex; flex-direction:column; gap:12px;">
+            <div id="chat-messages" style="flex:1; overflow-y:auto; padding:16px; background:#0a0f1c; display:flex; flex-direction:column; gap:10px;">
                 <!-- Messages chargés par JS -->
             </div>
             
-            <div style="padding:15px; background:#0F1626; border-top:1px solid #7FFFD4;">
+            <div id="chat-input-row">
                 <input type="text" id="chat-input" 
-                       placeholder="Posez-moi n'importe quelle question..." 
-                       style="width:100%; background:#1a2338; border:1px solid #7FFFD4; border-radius:25px; padding:14px 18px; color:white;"
-                       onkeypress="if(event.key==='Enter') sendOracleMessage()">
+                       placeholder="Posez votre question..." 
+                       onkeydown="if(event.key==='Enter'){{ event.preventDefault(); sendOracleMessage(); }}">
+                <button id="chat-send-btn" onclick="sendOracleMessage()" title="Envoyer">➤</button>
             </div>
         </div>
     </div>
 
     <script>
-    let chatOpen = false;
+    (function() {{
+        let chatOpen = false;
 
-    function toggleOracleChat() {{
-        chatOpen = !chatOpen;
-        const win = document.getElementById('chat-window');
-        if (chatOpen) {{
-            win.classList.add('open');
-            renderChatMessages();
-        }} else {{
-            win.classList.remove('open');
-        }}
-    }}
-
-    function renderChatMessages() {{
-        const area = document.getElementById('chat-messages');
-        if (!area) return;
-        
-        let html = `
-            <div style="background:rgba(127,255,212,0.1); padding:14px; border-radius:12px; border-left:4px solid #7FFFD4;">
-                Bonjour ! Posez-moi n'importe quelle question sur vos pronostics, classements ou résultats.
-            </div>`;
-        
-        const messages = {msgs_json};
-        messages.forEach(msg => {{
-            if (msg.role === "user") {{
-                html += `<div style="align-self:flex-end; background:#1e2a4a; padding:12px 16px; border-radius:18px 18px 4px 18px; max-width:80%;">${{msg.content}}</div>`;
+        window.toggleOracleChat = function() {{
+            chatOpen = !chatOpen;
+            const win = document.getElementById('chat-window');
+            if (!win) return;
+            if (chatOpen) {{
+                win.classList.add('open');
+                renderChatMessages();
+                setTimeout(function() {{
+                    var inp = document.getElementById('chat-input');
+                    if (inp) inp.focus();
+                }}, 100);
             }} else {{
-                html += `<div style="align-self:flex-start; background:rgba(127,255,212,0.08); padding:12px 16px; border-radius:18px 18px 18px 4px; max-width:85%;">${{msg.content.replace(/\\n/g, '<br>')}}</div>`;
+                win.classList.remove('open');
             }}
+        }};
+
+        window.renderChatMessages = function() {{
+            const area = document.getElementById('chat-messages');
+            if (!area) return;
+            
+            let html = '<div style="background:rgba(127,255,212,0.1); padding:12px 14px; border-radius:12px; border-left:4px solid #7FFFD4; color:#ccc; font-size:14px;">Bonjour ! Posez-moi n\'importe quelle question sur vos pronostics, classements ou résultats.</div>';
+            
+            const messages = {msgs_json};
+            messages.forEach(function(msg) {{
+                if (msg.role === "user") {{
+                    html += '<div style="align-self:flex-end; background:#1e3a5f; color:#fff; padding:10px 14px; border-radius:18px 18px 4px 18px; max-width:78%; font-size:14px; word-break:break-word;">' + escapeHtml(msg.content) + '</div>';
+                }} else {{
+                    html += '<div style="align-self:flex-start; background:rgba(127,255,212,0.08); border:1px solid rgba(127,255,212,0.2); color:#ddd; padding:10px 14px; border-radius:18px 18px 18px 4px; max-width:85%; font-size:14px; word-break:break-word;">' + msg.content.replace(/\\n/g, '<br>') + '</div>';
+                }}
+            }});
+            
+            area.innerHTML = html;
+            area.scrollTop = area.scrollHeight;
+        }};
+
+        window.escapeHtml = function(text) {{
+            return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }};
+
+        window.sendOracleMessage = function() {{
+            const input = document.getElementById('chat-input');
+            if (!input) return;
+            const text = input.value.trim();
+            if (text) {{
+                const url = new URL(window.location.href);
+                url.searchParams.set('oracle_chat_input', encodeURIComponent(text));
+                input.value = '';
+                window.location.href = url.toString();
+            }}
+        }};
+
+        // S'assurer que la fenêtre est bien fermée au chargement
+        document.addEventListener('DOMContentLoaded', function() {{
+            const win = document.getElementById('chat-window');
+            if (win) win.classList.remove('open');
         }});
-        
-        area.innerHTML = html;
-        area.scrollTop = area.scrollHeight;
-    }}
-
-    function sendOracleMessage() {{
-        const input = document.getElementById('chat-input');
-        const text = input.value.trim();
-        if (text) {{
-            const url = new URL(window.location.href);
-            url.searchParams.set('oracle_chat_input', encodeURIComponent(text));
-            window.location.href = url.toString();
-            input.value = '';
-        }}
-    }}
-
-    // Important : Commence toujours fermé
-    document.addEventListener('DOMContentLoaded', function() {{
-        const win = document.getElementById('chat-window');
-        if (win) win.classList.remove('open');
-    }});
+    }})();
     </script>
     """, unsafe_allow_html=True)
 # ===================== TAB 7 : ASSISTANT IA =====================
