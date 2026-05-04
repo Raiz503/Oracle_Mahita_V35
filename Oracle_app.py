@@ -80,65 +80,14 @@ st.markdown("""
 .chat-bot-offline { background: rgba(255,255,255,0.05); border-left: 3px solid #FFA500; 
                     padding: 10px 15px; margin: 5px 40px 5px 0; border-radius: 10px; }
 
-/* ── CHAT BULLE FLOTTANT STYLE MESSENGER ── */
-#oracle-chat-bubble {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 9999;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-#oracle-chat-toggle {
-    width: 60px; height: 60px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #7FFFD4, #00b894);
-    border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 20px rgba(127,255,212,0.5);
-    font-size: 28px;
-    transition: transform 0.2s;
-}
-#oracle-chat-toggle:hover { transform: scale(1.1); }
-#oracle-chat-window {
-    position: absolute;
-    bottom: 72px; right: 0;
-    width: 380px;
-    max-height: 520px;
-    background: #1a1a2e;
-    border-radius: 18px;
-    border: 1px solid rgba(127,255,212,0.3);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
-    display: flex; flex-direction: column;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    transform-origin: bottom right;
-}
-#oracle-chat-window.hidden {
-    opacity: 0; pointer-events: none; transform: scale(0.85);
-}
-#chat-header {
-    background: linear-gradient(135deg, #0f3460, #16213e);
-    padding: 14px 16px;
-    display: flex; align-items: center; gap: 10px;
-    border-bottom: 1px solid rgba(127,255,212,0.2);
-}
-#chat-header-title { color: #7FFFD4; font-weight: 700; font-size: 15px; flex: 1; }
-#chat-header-status { color: #00FF00; font-size: 12px; }
-#chat-close-btn {
-    background: none; border: none; color: #888; cursor: pointer;
-    font-size: 18px; padding: 0 4px;
-}
-#chat-messages {
-    flex: 1; overflow-y: auto; padding: 14px 12px;
-    display: flex; flex-direction: column; gap: 8px;
-    scrollbar-width: thin; scrollbar-color: #7FFFD4 transparent;
-}
+/* ── CLASSES MSG CHAT (utilisées par la bulle flottante) ── */
 .msg-user {
     align-self: flex-end;
     background: linear-gradient(135deg, #0f3460, #1a4480);
     color: #fff; padding: 10px 14px;
     border-radius: 18px 18px 4px 18px;
     max-width: 75%; font-size: 14px; line-height: 1.4;
+    word-break: break-word;
 }
 .msg-bot {
     align-self: flex-start;
@@ -147,38 +96,10 @@ st.markdown("""
     color: #e0e0e0; padding: 10px 14px;
     border-radius: 18px 18px 18px 4px;
     max-width: 85%; font-size: 14px; line-height: 1.4;
+    word-break: break-word;
 }
 .msg-bot-header { color: #7FFFD4; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
 .msg-timestamp { color: #555; font-size: 10px; margin-top: 3px; text-align: right; }
-#chat-input-area {
-    padding: 10px 12px;
-    border-top: 1px solid rgba(127,255,212,0.15);
-    display: flex; gap: 8px; align-items: center;
-    background: #16213e;
-}
-#chat-input-field {
-    flex: 1; background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(127,255,212,0.3);
-    border-radius: 22px; padding: 9px 14px;
-    color: #fff; font-size: 14px; outline: none;
-}
-#chat-input-field:focus { border-color: #7FFFD4; }
-#chat-send-btn {
-    background: linear-gradient(135deg, #7FFFD4, #00b894);
-    border: none; border-radius: 50%;
-    width: 38px; height: 38px; cursor: pointer;
-    color: #111; font-size: 16px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-}
-#chat-notif-badge {
-    position: absolute; top: -4px; right: -4px;
-    background: #FF4B4B; color: #fff;
-    border-radius: 50%; width: 18px; height: 18px;
-    font-size: 11px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    display: none;
-}
-.chat-typing { color: #7FFFD4; font-size: 12px; padding: 4px 8px; font-style: italic; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -950,173 +871,6 @@ st.markdown(f'<div class="next-day-box">PROCHAINE JOURNÉE : J-{next_j}</div>', 
 
 tabs = st.tabs(["🏆 CLASSEMENT", "📅 CALENDRIER", "🎯 PRONOS", "⚽ RÉSULTATS", 
                 "📚 HISTORIQUE", "⚙️ GESTION", "📊 PERFORMANCE", "🤖 ASSISTANT IA"])
-
-# ===================== CHAT BULLE FLOTTANT =====================
-def render_floating_chat():
-    """Rend le chat bulle flottant style Messenger avec accès à toutes les données."""
-    msgs_json = json.dumps(st.session_state.get('chat_messages', []), ensure_ascii=False)
-    
-    st.markdown(f"""
-    <div id="oracle-chat-bubble">
-        <span id="chat-notif-badge">!</span>
-        <button id="oracle-chat-toggle" onclick="toggleChat()" title="Assistant IA Oracle">🔮</button>
-        
-        <div id="oracle-chat-window" class="hidden">
-            <div id="chat-header">
-                <span style="font-size:20px;">🤖</span>
-                <div>
-                    <div id="chat-header-title">Oracle IA</div>
-                    <div id="chat-header-status">● En ligne · Accès complet aux données</div>
-                </div>
-                <button id="chat-close-btn" onclick="toggleChat()">✕</button>
-            </div>
-            
-            <div id="chat-messages" id="chat-scroll-area">
-                <div class="msg-bot">
-                    <div class="msg-bot-header">🔮 Oracle [Groq]</div>
-                    Bonjour ! Je suis l'Oracle, votre assistant IA. J'ai accès à toutes vos données : classements, résultats, pronostics et patterns. Posez-moi n'importe quelle question !
-                    <div class="msg-timestamp">Système</div>
-                </div>
-            </div>
-            
-            <div class="chat-typing" id="chat-typing" style="display:none;">Oracle réfléchit...</div>
-            
-            <div id="chat-input-area">
-                <input id="chat-input-field" type="text" 
-                    placeholder="Ex: Analyse Liverpool vs Chelsea..."
-                    onkeydown="if(event.key==='Enter') sendChatMessage()"/>
-                <button id="chat-send-btn" onclick="sendChatMessage()">➤</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-    // ── État du chat ──
-    let chatOpen = false;
-    let chatHistory = {msgs_json};
-    let isTyping = false;
-    
-    function toggleChat() {{
-        chatOpen = !chatOpen;
-        const win = document.getElementById('oracle-chat-window');
-        const badge = document.getElementById('chat-notif-badge');
-        if (chatOpen) {{
-            win.classList.remove('hidden');
-            badge.style.display = 'none';
-            setTimeout(() => scrollToBottom(), 100);
-            renderMessages();
-        }} else {{
-            win.classList.add('hidden');
-        }}
-    }}
-    
-    function scrollToBottom() {{
-        const area = document.getElementById('chat-messages');
-        if (area) area.scrollTop = area.scrollHeight;
-    }}
-    
-    function formatTime(ts) {{
-        if (!ts) return '';
-        const d = new Date(ts);
-        return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-    }}
-    
-    function renderMessages() {{
-        const area = document.getElementById('chat-messages');
-        if (!area) return;
-        area.innerHTML = `
-            <div class="msg-bot">
-                <div class="msg-bot-header">🔮 Oracle</div>
-                Bonjour ! J'ai accès à toutes vos données (classements, résultats, pronos, patterns). Posez-moi n'importe quelle question !
-                <div class="msg-timestamp">Système</div>
-            </div>`;
-        chatHistory.forEach(msg => {{
-            const ts = formatTime(msg.ts || null);
-            if (msg.role === 'user') {{
-                area.innerHTML += `<div class="msg-user">${{msg.content}}<div class="msg-timestamp">${{ts}}</div></div>`;
-            }} else {{
-                const src = msg.source === 'groq' ? '🧠 Groq' : '🤖 Offline';
-                area.innerHTML += `
-                    <div class="msg-bot">
-                        <div class="msg-bot-header">🔮 Oracle [${{src}}]</div>
-                        ${{msg.content.replace(/\\n/g, '<br>')}}
-                        <div class="msg-timestamp">${{ts}}</div>
-                    </div>`;
-            }}
-        }});
-        setTimeout(() => scrollToBottom(), 50);
-    }}
-    
-    function sendChatMessage() {{
-        if (isTyping) return;
-        const input = document.getElementById('chat-input-field');
-        const text = input.value.trim();
-        if (!text) return;
-        input.value = '';
-        
-        // Afficher msg user immédiatement
-        const area = document.getElementById('chat-messages');
-        const now = new Date().toISOString();
-        area.innerHTML += `<div class="msg-user">${{text}}<div class="msg-timestamp">${{formatTime(now)}}</div></div>`;
-        scrollToBottom();
-        
-        // Afficher typing
-        document.getElementById('chat-typing').style.display = 'block';
-        isTyping = true;
-        scrollToBottom();
-        
-        // Envoyer via URL param pour Streamlit
-        const encoded = encodeURIComponent(text);
-        const url = new URL(window.location.href);
-        url.searchParams.set('chat_input', encoded);
-        url.searchParams.set('chat_ts', Date.now());
-        
-        // Utiliser fetch vers le composant Streamlit custom
-        // On passe par window.parent pour streamlit component
-        window.parent.postMessage({{
-            type: 'streamlit:setComponentValue',
-            value: {{ chat_input: text, ts: Date.now() }}
-        }}, '*');
-        
-        // Fallback: stocker dans sessionStorage et reloader
-        sessionStorage.setItem('pending_chat', JSON.stringify({{text, ts: Date.now()}}));
-        
-        // Simuler délai puis recharger
-        setTimeout(() => {{
-            isTyping = false;
-            document.getElementById('chat-typing').style.display = 'none';
-        }}, 500);
-    }}
-    
-    // Initialiser si déjà des messages
-    if (chatHistory && chatHistory.length > 0) {{
-        const badge = document.getElementById('chat-notif-badge');
-        if (badge && !chatOpen) {{
-            badge.style.display = 'flex';
-            badge.textContent = chatHistory.length > 9 ? '9+' : chatHistory.length;
-        }}
-    }}
-    
-    // Écouter les messages entrants depuis Streamlit
-    window.addEventListener('message', function(e) {{
-        if (e.data && e.data.type === 'oracle_new_message') {{
-            chatHistory = e.data.messages;
-            if (chatOpen) renderMessages();
-            else {{
-                const badge = document.getElementById('chat-notif-badge');
-                if (badge) {{ badge.style.display = 'flex'; badge.textContent = '!'; }}
-            }}
-            isTyping = false;
-            document.getElementById('chat-typing').style.display = 'none';
-        }}
-    }});
-    
-    // Auto-render si ouvert
-    if (chatOpen) renderMessages();
-    </script>
-    """, unsafe_allow_html=True)
-
-render_floating_chat()
 
 # ===================== TAB 0 : CLASSEMENT =====================
 with tabs[0]:
