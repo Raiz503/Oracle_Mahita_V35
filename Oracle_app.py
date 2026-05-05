@@ -120,11 +120,6 @@ LOGO_SVG = """
 """
 
 # ===================== UTILITAIRES =====================
-def custom_notify(text: str, color: str = "#00FF00"):
-    st.markdown(f"""
-    <div style="padding:18px;border:3px solid {color};border-radius:12px;background:#0E1117;color:#FFF;
-    text-align:center;font-weight:900;box-shadow:0 0 25px {color};margin:15px 0;font-size:1.25em;">
-    {text}</div>""", unsafe_allow_html=True)
 
 def get_standings(season_data: dict, teams_list: list) -> pd.DataFrame:
     stats = {t: {"MJ":0,"V":0,"N":0,"D":0,"BP":0,"BC":0,"Diff":0,"Pts":0} for t in teams_list}
