@@ -74,11 +74,111 @@ st.markdown("""
 .next-day-box { text-align: center; color: #7FFFD4; font-weight: bold; font-size: 1.3em; padding: 12px;
                 background: rgba(127,255,212,0.12); border-radius: 10px; margin: 15px 0; }
 .chat-user { background: rgba(127,255,212,0.1); border-left: 3px solid #7FFFD4; 
-             padding: 10px 15px; margin: 5px 0 5px 20px; border-radius: 10px; color: #fff; }
+             padding: 10px 15px; margin: 5px 0 5px 40px; border-radius: 10px; }
 .chat-bot { background: rgba(255,255,255,0.05); border-left: 3px solid #00FF00; 
-            padding: 10px 15px; margin: 5px 20px 5px 0; border-radius: 10px; color: #ddd; }
+            padding: 10px 15px; margin: 5px 40px 5px 0; border-radius: 10px; }
 .chat-bot-offline { background: rgba(255,255,255,0.05); border-left: 3px solid #FFA500; 
-                    padding: 10px 15px; margin: 5px 20px 5px 0; border-radius: 10px; }
+                    padding: 10px 15px; margin: 5px 40px 5px 0; border-radius: 10px; }
+
+/* ── CHAT BULLE FLOTTANT STYLE MESSENGER ── */
+#oracle-chat-bubble {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+#oracle-chat-toggle {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7FFFD4, #00b894);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(127,255,212,0.5);
+    font-size: 28px;
+    transition: transform 0.2s;
+}
+#oracle-chat-toggle:hover { transform: scale(1.1); }
+#oracle-chat-window {
+    position: absolute;
+    bottom: 72px; right: 0;
+    width: 380px;
+    max-height: 520px;
+    background: #1a1a2e;
+    border-radius: 18px;
+    border: 1px solid rgba(127,255,212,0.3);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    transform-origin: bottom right;
+}
+#oracle-chat-window.hidden {
+    opacity: 0; pointer-events: none; transform: scale(0.85);
+}
+#chat-header {
+    background: linear-gradient(135deg, #0f3460, #16213e);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid rgba(127,255,212,0.2);
+}
+#chat-header-title { color: #7FFFD4; font-weight: 700; font-size: 15px; flex: 1; }
+#chat-header-status { color: #00FF00; font-size: 12px; }
+#chat-close-btn {
+    background: none; border: none; color: #888; cursor: pointer;
+    font-size: 18px; padding: 0 4px;
+}
+#chat-messages {
+    flex: 1; overflow-y: auto; padding: 14px 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    scrollbar-width: thin; scrollbar-color: #7FFFD4 transparent;
+}
+.msg-user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #0f3460, #1a4480);
+    color: #fff; padding: 10px 14px;
+    border-radius: 18px 18px 4px 18px;
+    max-width: 75%; font-size: 14px; line-height: 1.4;
+}
+.msg-bot {
+    align-self: flex-start;
+    background: rgba(127,255,212,0.08);
+    border: 1px solid rgba(127,255,212,0.2);
+    color: #e0e0e0; padding: 10px 14px;
+    border-radius: 18px 18px 18px 4px;
+    max-width: 85%; font-size: 14px; line-height: 1.4;
+}
+.msg-bot-header { color: #7FFFD4; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+.msg-timestamp { color: #555; font-size: 10px; margin-top: 3px; text-align: right; }
+#chat-input-area {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(127,255,212,0.15);
+    display: flex; gap: 8px; align-items: center;
+    background: #16213e;
+}
+#chat-input-field {
+    flex: 1; background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(127,255,212,0.3);
+    border-radius: 22px; padding: 9px 14px;
+    color: #fff; font-size: 14px; outline: none;
+}
+#chat-input-field:focus { border-color: #7FFFD4; }
+#chat-send-btn {
+    background: linear-gradient(135deg, #7FFFD4, #00b894);
+    border: none; border-radius: 50%;
+    width: 38px; height: 38px; cursor: pointer;
+    color: #111; font-size: 16px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+#chat-notif-badge {
+    position: absolute; top: -4px; right: -4px;
+    background: #FF4B4B; color: #fff;
+    border-radius: 50%; width: 18px; height: 18px;
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    display: none;
+}
+.chat-typing { color: #7FFFD4; font-size: 12px; padding: 4px 8px; font-style: italic; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -283,6 +383,40 @@ if 'history' not in st.session_state:
 # ── Charger l'historique chat persistant ──
 if 'chat_messages' not in st.session_state:
     st.session_state['chat_messages'] = load_chat_history()
+
+# ── Initialiser IA Apprentissage avec TOUT l'historique au 1er chargement ──
+if IA_DISPONIBLE and not st.session_state.get('_ia_history_loaded'):
+    try:
+        for saison, saison_data in st.session_state['history'].items():
+            journees = sorted(saison_data.keys(),
+                              key=lambda x: int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 0)
+            for jk in journees:
+                jdata = saison_data[jk]
+                cal_ia = jdata.get("cal", [])
+                res_ia = jdata.get("res", [])
+                for i, m in enumerate(res_ia):
+                    try:
+                        sh, sa = map(int, m['s'].replace('-', ':').split(':'))
+                        resultat = "1" if sh > sa else ("X" if sh == sa else "2")
+                        cotes = cal_ia[i].get('o', [2.0, 3.0, 3.0]) if cal_ia and i < len(cal_ia) else [2.0, 3.0, 3.0]
+                        moteur_apprentissage.analyser_pattern_cotes(cotes[0], cotes[1], cotes[2], resultat)
+                        moteur_apprentissage.analyser_pattern_equipe(
+                            m['h'],
+                            "V" if resultat == "1" else ("N" if resultat == "X" else "D"),
+                            {"domicile": True}
+                        )
+                        moteur_apprentissage.analyser_pattern_equipe(
+                            m['a'],
+                            "V" if resultat == "2" else ("N" if resultat == "X" else "D"),
+                            {"domicile": False}
+                        )
+                    except:
+                        pass
+        moteur_apprentissage.save()
+    except:
+        pass
+    finally:
+        st.session_state['_ia_history_loaded'] = True
 
 # ===================== OCR ENGINE =====================
 @st.cache_resource
@@ -851,6 +985,173 @@ st.markdown(f'<div class="next-day-box">PROCHAINE JOURNÉE : J-{next_j}</div>', 
 tabs = st.tabs(["🏆 CLASSEMENT", "📅 CALENDRIER", "🎯 PRONOS", "⚽ RÉSULTATS", 
                 "📚 HISTORIQUE", "⚙️ GESTION", "📊 PERFORMANCE", "🤖 ASSISTANT IA"])
 
+# ===================== CHAT BULLE FLOTTANT =====================
+def render_floating_chat():
+    """Rend le chat bulle flottant style Messenger avec accès à toutes les données."""
+    msgs_json = json.dumps(st.session_state.get('chat_messages', []), ensure_ascii=False)
+    
+    st.markdown(f"""
+    <div id="oracle-chat-bubble">
+        <span id="chat-notif-badge">!</span>
+        <button id="oracle-chat-toggle" onclick="toggleChat()" title="Assistant IA Oracle">🔮</button>
+        
+        <div id="oracle-chat-window" class="hidden">
+            <div id="chat-header">
+                <span style="font-size:20px;">🤖</span>
+                <div>
+                    <div id="chat-header-title">Oracle IA</div>
+                    <div id="chat-header-status">● En ligne · Accès complet aux données</div>
+                </div>
+                <button id="chat-close-btn" onclick="toggleChat()">✕</button>
+            </div>
+            
+            <div id="chat-messages" id="chat-scroll-area">
+                <div class="msg-bot">
+                    <div class="msg-bot-header">🔮 Oracle [Groq]</div>
+                    Bonjour ! Je suis l'Oracle, votre assistant IA. J'ai accès à toutes vos données : classements, résultats, pronostics et patterns. Posez-moi n'importe quelle question !
+                    <div class="msg-timestamp">Système</div>
+                </div>
+            </div>
+            
+            <div class="chat-typing" id="chat-typing" style="display:none;">Oracle réfléchit...</div>
+            
+            <div id="chat-input-area">
+                <input id="chat-input-field" type="text" 
+                    placeholder="Ex: Analyse Liverpool vs Chelsea..."
+                    onkeydown="if(event.key==='Enter') sendChatMessage()"/>
+                <button id="chat-send-btn" onclick="sendChatMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ── État du chat ──
+    let chatOpen = false;
+    let chatHistory = {msgs_json};
+    let isTyping = false;
+    
+    function toggleChat() {{
+        chatOpen = !chatOpen;
+        const win = document.getElementById('oracle-chat-window');
+        const badge = document.getElementById('chat-notif-badge');
+        if (chatOpen) {{
+            win.classList.remove('hidden');
+            badge.style.display = 'none';
+            setTimeout(() => scrollToBottom(), 100);
+            renderMessages();
+        }} else {{
+            win.classList.add('hidden');
+        }}
+    }}
+    
+    function scrollToBottom() {{
+        const area = document.getElementById('chat-messages');
+        if (area) area.scrollTop = area.scrollHeight;
+    }}
+    
+    function formatTime(ts) {{
+        if (!ts) return '';
+        const d = new Date(ts);
+        return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    }}
+    
+    function renderMessages() {{
+        const area = document.getElementById('chat-messages');
+        if (!area) return;
+        area.innerHTML = `
+            <div class="msg-bot">
+                <div class="msg-bot-header">🔮 Oracle</div>
+                Bonjour ! J'ai accès à toutes vos données (classements, résultats, pronos, patterns). Posez-moi n'importe quelle question !
+                <div class="msg-timestamp">Système</div>
+            </div>`;
+        chatHistory.forEach(msg => {{
+            const ts = formatTime(msg.ts || null);
+            if (msg.role === 'user') {{
+                area.innerHTML += `<div class="msg-user">${{msg.content}}<div class="msg-timestamp">${{ts}}</div></div>`;
+            }} else {{
+                const src = msg.source === 'groq' ? '🧠 Groq' : '🤖 Offline';
+                area.innerHTML += `
+                    <div class="msg-bot">
+                        <div class="msg-bot-header">🔮 Oracle [${{src}}]</div>
+                        ${{msg.content.replace(/\\n/g, '<br>')}}
+                        <div class="msg-timestamp">${{ts}}</div>
+                    </div>`;
+            }}
+        }});
+        setTimeout(() => scrollToBottom(), 50);
+    }}
+    
+    function sendChatMessage() {{
+        if (isTyping) return;
+        const input = document.getElementById('chat-input-field');
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        
+        // Afficher msg user immédiatement
+        const area = document.getElementById('chat-messages');
+        const now = new Date().toISOString();
+        area.innerHTML += `<div class="msg-user">${{text}}<div class="msg-timestamp">${{formatTime(now)}}</div></div>`;
+        scrollToBottom();
+        
+        // Afficher typing
+        document.getElementById('chat-typing').style.display = 'block';
+        isTyping = true;
+        scrollToBottom();
+        
+        // Envoyer via URL param pour Streamlit
+        const encoded = encodeURIComponent(text);
+        const url = new URL(window.location.href);
+        url.searchParams.set('chat_input', encoded);
+        url.searchParams.set('chat_ts', Date.now());
+        
+        // Utiliser fetch vers le composant Streamlit custom
+        // On passe par window.parent pour streamlit component
+        window.parent.postMessage({{
+            type: 'streamlit:setComponentValue',
+            value: {{ chat_input: text, ts: Date.now() }}
+        }}, '*');
+        
+        // Fallback: stocker dans sessionStorage et reloader
+        sessionStorage.setItem('pending_chat', JSON.stringify({{text, ts: Date.now()}}));
+        
+        // Simuler délai puis recharger
+        setTimeout(() => {{
+            isTyping = false;
+            document.getElementById('chat-typing').style.display = 'none';
+        }}, 500);
+    }}
+    
+    // Initialiser si déjà des messages
+    if (chatHistory && chatHistory.length > 0) {{
+        const badge = document.getElementById('chat-notif-badge');
+        if (badge && !chatOpen) {{
+            badge.style.display = 'flex';
+            badge.textContent = chatHistory.length > 9 ? '9+' : chatHistory.length;
+        }}
+    }}
+    
+    // Écouter les messages entrants depuis Streamlit
+    window.addEventListener('message', function(e) {{
+        if (e.data && e.data.type === 'oracle_new_message') {{
+            chatHistory = e.data.messages;
+            if (chatOpen) renderMessages();
+            else {{
+                const badge = document.getElementById('chat-notif-badge');
+                if (badge) {{ badge.style.display = 'flex'; badge.textContent = '!'; }}
+            }}
+            isTyping = false;
+            document.getElementById('chat-typing').style.display = 'none';
+        }}
+    }});
+    
+    // Auto-render si ouvert
+    if (chatOpen) renderMessages();
+    </script>
+    """, unsafe_allow_html=True)
+
+render_floating_chat()
+
 # ===================== TAB 0 : CLASSEMENT =====================
 with tabs[0]:
     st.markdown("### 🏆 Classement de la Saison")
@@ -1024,7 +1325,32 @@ with tabs[1]:
                             if key in st.session_state:
                                 del st.session_state[key]
 
-                        custom_notify("✅ Calendrier importé ! Allez dans PRONOS", "#7FFFD4")
+                        # Notification riche calendrier OCR
+                        n_matchs = len(matchs_ocr)
+                        equipes_str = ", ".join(f"{m['h']} vs {m['a']}" for m in matchs_ocr[:3])
+                        if n_matchs > 3: equipes_str += f" (+ {n_matchs-3} autres)"
+                        st.markdown(f"""
+                        <div style="padding:16px;border:2px solid #7FFFD4;border-radius:12px;
+                             background:rgba(127,255,212,0.07);margin:12px 0;">
+                          <div style="color:#7FFFD4;font-weight:800;font-size:1.1em;margin-bottom:8px;">
+                            ✅ Journée {j_cal} — Calendrier enregistré !
+                          </div>
+                          <div style="color:#ccc;font-size:13px;margin-bottom:6px;">
+                            📋 <b>{n_matchs} matchs</b> importés avec succès
+                          </div>
+                          <div style="color:#aaa;font-size:12px;margin-bottom:10px;">{equipes_str}</div>
+                          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <span style="background:rgba(127,255,212,0.15);color:#7FFFD4;
+                                  border-radius:6px;padding:4px 10px;font-size:12px;">
+                              🎯 Allez dans PRONOS pour analyser
+                            </span>
+                            <span style="background:rgba(127,255,212,0.15);color:#7FFFD4;
+                                  border-radius:6px;padding:4px 10px;font-size:12px;">
+                              🧠 IA prête à prédire
+                            </span>
+                          </div>
+                        </div>
+                        """, unsafe_allow_html=True)
                         st.rerun()
 
     # ── Option 2 : Saisie manuelle ──
@@ -1059,7 +1385,17 @@ with tabs[1]:
                 st.session_state['current_j_num'] = j_cal
                 save_db(st.session_state['history'])
                 if 'tmp_cal' in st.session_state: del st.session_state['tmp_cal']
-                custom_notify("✅ Calendrier enregistré ! Allez dans l'onglet PRONOS", "#7FFFD4")
+                n_matchs_m = len(final_c)
+                st.markdown(f"""
+                <div style="padding:16px;border:2px solid #7FFFD4;border-radius:12px;
+                     background:rgba(127,255,212,0.07);margin:12px 0;">
+                  <div style="color:#7FFFD4;font-weight:800;font-size:1.1em;margin-bottom:6px;">
+                    ✅ Journée {j_cal} — Calendrier enregistré !
+                  </div>
+                  <div style="color:#ccc;font-size:13px;">📋 <b>{n_matchs_m} matchs</b> saisis manuellement</div>
+                  <div style="color:#888;font-size:12px;margin-top:8px;">➡️ Rendez-vous dans l'onglet <b>PRONOS</b></div>
+                </div>
+                """, unsafe_allow_html=True)
                 st.rerun()
 
 # ===================== TAB 2 : PRONOS =====================
@@ -1525,7 +1861,46 @@ with tabs[3]:
                         if key in st.session_state:
                             del st.session_state[key]
 
-                    custom_notify("✅ Résultats enregistrés !", "#00FF00")
+                    # ── Notification riche résultats ──
+                    nb_1r = nb_xr = nb_2r = buts_r = 0
+                    victoires_dom, victoires_ext, nuls = [], [], []
+                    for r in final_res:
+                        try:
+                            sh, sa = map(int, r['s'].replace('-',':').split(':'))
+                            buts_r += sh + sa
+                            if sh > sa: nb_1r += 1; victoires_dom.append(r['h'])
+                            elif sh == sa: nb_xr += 1; nuls.append(f"{r['h']}-{r['a']}")
+                            else: nb_2r += 1; victoires_ext.append(r['a'])
+                        except: pass
+                    st.markdown(f"""
+                    <div style="padding:16px;border:2px solid #00FF00;border-radius:12px;
+                         background:rgba(0,255,0,0.05);margin:12px 0;">
+                      <div style="color:#00FF88;font-weight:800;font-size:1.1em;margin-bottom:10px;">
+                        ✅ Journée {j_res} — Résultats enregistrés !
+                      </div>
+                      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                        <div style="background:rgba(0,255,0,0.1);border-radius:8px;padding:8px 14px;text-align:center;">
+                          <div style="color:#00FF88;font-size:1.4em;font-weight:800;">{nb_1r}</div>
+                          <div style="color:#888;font-size:11px;">Victoires Dom.</div>
+                        </div>
+                        <div style="background:rgba(255,165,0,0.1);border-radius:8px;padding:8px 14px;text-align:center;">
+                          <div style="color:#FFA500;font-size:1.4em;font-weight:800;">{nb_xr}</div>
+                          <div style="color:#888;font-size:11px;">Nuls</div>
+                        </div>
+                        <div style="background:rgba(127,255,212,0.1);border-radius:8px;padding:8px 14px;text-align:center;">
+                          <div style="color:#7FFFD4;font-size:1.4em;font-weight:800;">{nb_2r}</div>
+                          <div style="color:#888;font-size:11px;">Victoires Ext.</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:8px 14px;text-align:center;">
+                          <div style="color:#fff;font-size:1.4em;font-weight:800;">{buts_r}</div>
+                          <div style="color:#888;font-size:11px;">Buts total</div>
+                        </div>
+                      </div>
+                      <div style="color:#aaa;font-size:12px;">
+                        🧠 IA Apprentissage mis à jour · 🏆 Classement recalculé
+                      </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     st.rerun()
 
     # ── Option 2 : Saisie manuelle ──
@@ -1575,28 +1950,180 @@ with tabs[3]:
                 
                 st.session_state['history'][s_active][jk]["res"] = final_res_manual
                 save_db(st.session_state['history'])
-                
+
+                # ── Apprentissage IA sur résultats manuels aussi ──
+                if IA_DISPONIBLE:
+                    cal_ref_m = st.session_state['history'][s_active].get(jk, {}).get("cal", [])
+                    for i, m in enumerate(final_res_manual):
+                        try:
+                            sh, sa = map(int, m['s'].replace('-', ':').split(':'))
+                            resultat = "1" if sh > sa else ("X" if sh == sa else "2")
+                            cotes = cal_ref_m[i].get('o', [2.0, 3.0, 3.0]) if cal_ref_m and i < len(cal_ref_m) else [2.0, 3.0, 3.0]
+                            moteur_apprentissage.analyser_pattern_cotes(cotes[0], cotes[1], cotes[2], resultat)
+                            moteur_apprentissage.analyser_pattern_equipe(
+                                m['h'], "V" if resultat=="1" else ("N" if resultat=="X" else "D"), {"domicile": True})
+                            moteur_apprentissage.analyser_pattern_equipe(
+                                m['a'], "V" if resultat=="2" else ("N" if resultat=="X" else "D"), {"domicile": False})
+                        except:
+                            pass
+                    moteur_apprentissage.save()
+
                 if 'tmp_res' in st.session_state:
                     del st.session_state['tmp_res']
                 
-                custom_notify("✅ Résultats enregistrés !", "#00FF00")
-                st.rerun()
+                # Notification résultats manuel
+            nb_1m = nb_xm = nb_2m = buts_m = 0
+            for r in final_res_manual:
+                try:
+                    sh, sa = map(int, r['s'].replace('-',':').split(':'))
+                    buts_m += sh + sa
+                    if sh > sa: nb_1m += 1
+                    elif sh == sa: nb_xm += 1
+                    else: nb_2m += 1
+                except: pass
+            st.markdown(f"""
+            <div style="padding:14px;border:2px solid #00FF00;border-radius:12px;
+                 background:rgba(0,255,0,0.05);margin:10px 0;">
+              <div style="color:#00FF88;font-weight:800;margin-bottom:8px;">
+                ✅ Journée {j_res} — Résultats enregistrés !
+              </div>
+              <div style="color:#ccc;font-size:13px;">
+                🏠 Dom: {nb_1m} · 🤝 Nul: {nb_xm} · ✈️ Ext: {nb_2m} · ⚽ Buts: {buts_m}
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.rerun()
 
 # ===================== TAB 4 : HISTORIQUE =====================
 with tabs[4]:
     st.markdown("### 📚 Historique des Journées")
-    sorted_j = sorted(st.session_state['history'][s_active].keys(), 
+
+    sorted_j = sorted(st.session_state['history'][s_active].keys(),
                       key=lambda x: int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 0)
+
     for jk in sorted_j:
-        with st.expander(f"📅 {jk}"):
-            d = st.session_state['history'][s_active][jk]
-            htabs = st.tabs(["Calendrier", "Pronos", "Résultats"])
+        d = st.session_state['history'][s_active][jk]
+        res_j = d.get("res", [])
+        cal_j = d.get("cal", [])
+        nb_res = len(res_j)
+        nb_cal = len(cal_j)
+
+        # Résumé rapide dans le titre de l'expander
+        label_exp = f"📅 {jk}"
+        if nb_res > 0:
+            label_exp += f"  ·  ✅ {nb_res} résultats"
+        elif nb_cal > 0:
+            label_exp += f"  ·  📋 {nb_cal} matchs calendrier"
+        else:
+            label_exp += "  ·  ⚪ Vide"
+
+        with st.expander(label_exp):
+            htabs = st.tabs(["📋 Calendrier & Cotes", "🎯 Pronos", "⚽ Résultats", "🏆 Classement"])
+
+            # ── Calendrier ──
             with htabs[0]:
-                st.dataframe(pd.DataFrame(d.get("cal", [])))
+                cal_data = d.get("cal", [])
+                if cal_data:
+                    rows = []
+                    for m in cal_data:
+                        o = m.get('o', ['-','-','-'])
+                        rows.append({
+                            "Domicile": m.get('h','?'),
+                            "Extérieur": m.get('a','?'),
+                            "Cote 1": o[0] if len(o)>0 else '-',
+                            "Cote X": o[1] if len(o)>1 else '-',
+                            "Cote 2": o[2] if len(o)>2 else '-',
+                        })
+                    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                else:
+                    st.info("Aucun calendrier enregistré pour cette journée.")
+
+            # ── Pronos ──
             with htabs[1]:
-                st.dataframe(pd.DataFrame(d.get("pro", [])))
+                pro_data = d.get("pro", [])
+                if pro_data:
+                    rows = []
+                    for p in pro_data:
+                        rows.append({
+                            "Match": p.get('m','?'),
+                            "Classe": p.get('classe','?'),
+                            "Score prédit": p.get('score','?'),
+                            "Confiance": f"{p.get('indice','?')}%",
+                        })
+                    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                else:
+                    st.info("Aucun pronostic enregistré.")
+
+            # ── Résultats ──
             with htabs[2]:
-                st.dataframe(pd.DataFrame(d.get("res", [])))
+                if res_j:
+                    rows = []
+                    for r in res_j:
+                        rows.append({
+                            "Domicile": r.get('h','?'),
+                            "Score": r.get('s','?'),
+                            "Extérieur": r.get('a','?'),
+                            "Mi-temps": r.get('mt',''),
+                            "Buteurs Dom.": r.get('hm',''),
+                            "Buteurs Ext.": r.get('am',''),
+                        })
+                    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                else:
+                    st.info("Aucun résultat enregistré pour cette journée.")
+
+            # ── Classement après cette journée ──
+            with htabs[3]:
+                # Recalculer le classement en ne prenant que les journées jusqu'à jk
+                j_num_courant = int(re.search(r'\d+', jk).group()) if re.search(r'\d+', jk) else 0
+                history_jusque_jk = {}
+                for jj in sorted_j:
+                    jj_num = int(re.search(r'\d+', jj).group()) if re.search(r'\d+', jj) else 0
+                    if jj_num <= j_num_courant:
+                        history_jusque_jk[jj] = st.session_state['history'][s_active][jj]
+
+                standings_jk = get_standings(history_jusque_jk, engine.teams_list)
+
+                if not standings_jk.empty and standings_jk['MJ'].sum() > 0:
+                    # Colorer selon rang
+                    def style_hist(row):
+                        rang = row['Rang']
+                        if rang <= 4:
+                            return ['background-color: rgba(0,255,0,0.12)'] * len(row)
+                        elif rang <= 6:
+                            return ['background-color: rgba(127,255,212,0.10)'] * len(row)
+                        elif rang >= 18:
+                            return ['background-color: rgba(255,75,75,0.10)'] * len(row)
+                        return [''] * len(row)
+
+                    st.markdown(f"**Classement après {jk}** *(équipes ayant joué uniquement)*")
+                    actives = standings_jk[standings_jk['MJ'] > 0]
+                    st.dataframe(
+                        actives.style.apply(style_hist, axis=1),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                    # Mini-stats journée
+                    if res_j:
+                        buts_total = 0
+                        nb_1 = nb_x = nb_2 = 0
+                        for r in res_j:
+                            try:
+                                sh, sa = map(int, r['s'].replace('-',':').split(':'))
+                                buts_total += sh + sa
+                                if sh > sa: nb_1 += 1
+                                elif sh == sa: nb_x += 1
+                                else: nb_2 += 1
+                            except: pass
+
+                        st.markdown("---")
+                        c1, c2, c3, c4 = st.columns(4)
+                        c1.metric("⚽ Buts", buts_total)
+                        c2.metric("🏠 Dom. gagne", nb_1)
+                        c3.metric("🤝 Nul", nb_x)
+                        c4.metric("✈️ Ext. gagne", nb_2)
+                else:
+                    st.info("Pas encore de résultats pour calculer le classement.")
 
 # ===================== TAB 5 : GESTION =====================
 with tabs[5]:
@@ -1734,6 +2261,175 @@ with tabs[6]:
         else:
             st.info("Aucun pattern encore. Enregistrez des résultats.")
 
+# ===================== CHAT FLOTTANT CORRIGÉ (Version Finale) =====================
+def render_floating_chat():
+    """Chat flottant - Commence fermé + bouton envoi + compatible mobile"""
+    
+    msgs = st.session_state.get('chat_messages', [])
+    msgs_json = json.dumps(msgs, ensure_ascii=False)
+    
+    st.markdown(f"""
+    <style>
+    #oracle-chat-bubble {{
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        z-index: 9999;
+    }}
+    #chat-toggle-btn {{
+        width: 68px; height: 68px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7FFFD4, #00b894);
+        border: none; color: #111;
+        font-size: 32px; cursor: pointer;
+        box-shadow: 0 6px 25px rgba(127,255,212,0.6);
+        transition: all 0.3s;
+        display: flex; align-items: center; justify-content: center;
+    }}
+    #chat-toggle-btn:hover {{ transform: scale(1.08); }}
+
+    #chat-window {{
+        position: fixed;
+        bottom: 105px; right: 10px;
+        width: min(380px, calc(100vw - 20px));
+        height: min(560px, calc(100vh - 130px));
+        background: #0F1626;
+        border-radius: 20px;
+        border: 2px solid #7FFFD4;
+        box-shadow: 0 15px 60px rgba(0,0,0,0.9);
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 10000;
+    }}
+    #chat-window.open {{ display: flex !important; }}
+
+    #chat-input-row {{
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 15px;
+        background: #0F1626;
+        border-top: 1px solid rgba(127,255,212,0.4);
+    }}
+    #chat-input {{
+        flex: 1;
+        background: #1a2338;
+        border: 1px solid #7FFFD4;
+        border-radius: 25px;
+        padding: 12px 16px;
+        color: white;
+        font-size: 14px;
+        outline: none;
+        min-width: 0;
+    }}
+    #chat-input:focus {{ border-color: #00FF88; }}
+    #chat-send-btn {{
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7FFFD4, #00b894);
+        border: none;
+        color: #111;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 10px rgba(127,255,212,0.4);
+        transition: transform 0.15s;
+    }}
+    #chat-send-btn:hover {{ transform: scale(1.1); }}
+    #chat-send-btn:active {{ transform: scale(0.95); }}
+    </style>
+
+    <div id="oracle-chat-bubble">
+        <button id="chat-toggle-btn" onclick="toggleOracleChat()">🔮</button>
+        
+        <div id="chat-window">
+            <div style="background: linear-gradient(135deg, #1a2338, #0f1626); padding: 14px 18px; border-bottom: 1px solid #7FFFD4; display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                <span style="font-size:26px;">🔮</span>
+                <div style="flex:1;">
+                    <strong style="color:#7FFFD4; font-size:15px;">Oracle Mahita IA</strong><br>
+                    <small style="color:#00FF88; font-size:12px;">● En ligne</small>
+                </div>
+                <button onclick="toggleOracleChat()" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">✕</button>
+            </div>
+            
+            <div id="chat-messages" style="flex:1; overflow-y:auto; padding:16px; background:#0a0f1c; display:flex; flex-direction:column; gap:10px;">
+                <!-- Messages chargés par JS -->
+            </div>
+            
+            <div id="chat-input-row">
+                <input type="text" id="chat-input" 
+                       placeholder="Posez votre question..." 
+                       onkeydown="if(event.key==='Enter'){{ event.preventDefault(); sendOracleMessage(); }}">
+                <button id="chat-send-btn" onclick="sendOracleMessage()" title="Envoyer">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {{
+        let chatOpen = false;
+
+        window.toggleOracleChat = function() {{
+            chatOpen = !chatOpen;
+            const win = document.getElementById('chat-window');
+            if (!win) return;
+            if (chatOpen) {{
+                win.classList.add('open');
+                renderChatMessages();
+                setTimeout(function() {{
+                    var inp = document.getElementById('chat-input');
+                    if (inp) inp.focus();
+                }}, 100);
+            }} else {{
+                win.classList.remove('open');
+            }}
+        }};
+
+        window.renderChatMessages = function() {{
+            const area = document.getElementById('chat-messages');
+            if (!area) return;
+            
+            let html = '<div style="background:rgba(127,255,212,0.1); padding:12px 14px; border-radius:12px; border-left:4px solid #7FFFD4; color:#ccc; font-size:14px;">Bonjour ! Posez-moi n\'importe quelle question sur vos pronostics, classements ou résultats.</div>';
+            
+            const messages = {msgs_json};
+            messages.forEach(function(msg) {{
+                if (msg.role === "user") {{
+                    html += '<div style="align-self:flex-end; background:#1e3a5f; color:#fff; padding:10px 14px; border-radius:18px 18px 4px 18px; max-width:78%; font-size:14px; word-break:break-word;">' + escapeHtml(msg.content) + '</div>';
+                }} else {{
+                    html += '<div style="align-self:flex-start; background:rgba(127,255,212,0.08); border:1px solid rgba(127,255,212,0.2); color:#ddd; padding:10px 14px; border-radius:18px 18px 18px 4px; max-width:85%; font-size:14px; word-break:break-word;">' + msg.content.replace(/\\n/g, '<br>') + '</div>';
+                }}
+            }});
+            
+            area.innerHTML = html;
+            area.scrollTop = area.scrollHeight;
+        }};
+
+        window.escapeHtml = function(text) {{
+            return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }};
+
+        window.sendOracleMessage = function() {{
+            const input = document.getElementById('chat-input');
+            if (!input) return;
+            const text = input.value.trim();
+            if (text) {{
+                const url = new URL(window.location.href);
+                url.searchParams.set('oracle_chat_input', encodeURIComponent(text));
+                input.value = '';
+                window.location.href = url.toString();
+            }}
+        }};
+
+        // S'assurer que la fenêtre est bien fermée au chargement
+        document.addEventListener('DOMContentLoaded', function() {{
+            const win = document.getElementById('chat-window');
+            if (win) win.classList.remove('open');
+        }});
+    }})();
+    </script>
+    """, unsafe_allow_html=True)
 # ===================== TAB 7 : ASSISTANT IA =====================
 with tabs[7]:
     st.markdown("""
@@ -1742,6 +2438,9 @@ with tabs[7]:
         <p style="color: #888; margin:8px 0 0 0;">Analyse intelligente • Contexte complet • Apprentissage continu</p>
     </div>
     """, unsafe_allow_html=True)
+
+    # Chat flottant
+    render_floating_chat()
 
     st.divider()
 
