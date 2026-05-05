@@ -2261,76 +2261,141 @@ with tabs[6]:
         else:
             st.info("Aucun pattern encore. Enregistrez des résultats.")
 
-# ===================== CHAT FLOTTANT CORRIGÉ (Version Finale) =====================
+# ===================== CHAT FLOTTANT V44 — Style Messenger =====================
 def render_floating_chat():
-    """Chat flottant - Commence fermé + bouton envoi + compatible mobile"""
+    """Chat flottant - Bouton rond + fenêtre avec bouton Réduire (—) et Fermer (✕)"""
     
     msgs = st.session_state.get('chat_messages', [])
     msgs_json = json.dumps(msgs, ensure_ascii=False)
     
     st.markdown(f"""
     <style>
-    #oracle-chat-bubble {{
-        position: fixed;
-        bottom: 25px;
-        right: 25px;
-        z-index: 9999;
-    }}
+    /* ── Bouton rond flottant ── */
     #chat-toggle-btn {{
-        width: 68px; height: 68px;
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 9999;
+        width: 64px; height: 64px;
         border-radius: 50%;
         background: linear-gradient(135deg, #7FFFD4, #00b894);
         border: none; color: #111;
-        font-size: 32px; cursor: pointer;
+        font-size: 30px; cursor: pointer;
         box-shadow: 0 6px 25px rgba(127,255,212,0.6);
-        transition: all 0.3s;
+        transition: transform 0.2s;
         display: flex; align-items: center; justify-content: center;
     }}
-    #chat-toggle-btn:hover {{ transform: scale(1.08); }}
+    #chat-toggle-btn:hover {{ transform: scale(1.1); }}
 
+    /* ── Fenêtre de chat ── */
     #chat-window {{
         position: fixed;
-        bottom: 105px; right: 10px;
-        width: min(380px, calc(100vw - 20px));
-        height: min(560px, calc(100vh - 130px));
+        bottom: 100px;
+        right: 16px;
+        width: min(370px, calc(100vw - 32px));
+        height: min(530px, calc(100vh - 130px));
         background: #0F1626;
-        border-radius: 20px;
-        border: 2px solid #7FFFD4;
-        box-shadow: 0 15px 60px rgba(0,0,0,0.9);
+        border-radius: 18px;
+        border: 1.5px solid rgba(127,255,212,0.5);
+        box-shadow: 0 12px 50px rgba(0,0,0,0.85);
         display: none;
         flex-direction: column;
         overflow: hidden;
         z-index: 10000;
+        transform-origin: bottom right;
+        transition: opacity 0.2s, transform 0.2s;
     }}
-    #chat-window.open {{ display: flex !important; }}
+    #chat-window.open {{
+        display: flex !important;
+        opacity: 1;
+        transform: scale(1);
+    }}
+    /* État réduit : on cache le corps mais garde le header visible */
+    #chat-window.minimized #chat-body {{
+        display: none !important;
+    }}
+    #chat-window.minimized {{
+        height: auto !important;
+        min-height: unset;
+    }}
 
+    /* ── Header ── */
+    #chat-header {{
+        background: linear-gradient(135deg, #1a2338, #0d1520);
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(127,255,212,0.3);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+        cursor: default;
+    }}
+    #chat-header-info {{ flex: 1; }}
+    #chat-header-title {{ color: #7FFFD4; font-weight: 700; font-size: 14px; line-height: 1.2; }}
+    #chat-header-status {{ color: #00FF88; font-size: 11px; }}
+
+    /* Boutons header ── */
+    .chat-ctrl-btn {{
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: #ccc;
+        cursor: pointer;
+        border-radius: 6px;
+        width: 28px; height: 28px;
+        font-size: 15px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.15s, color 0.15s;
+        flex-shrink: 0;
+    }}
+    .chat-ctrl-btn:hover {{ background: rgba(255,255,255,0.18); color: #fff; }}
+    #chat-close-btn:hover {{ background: rgba(255,75,75,0.35); color: #fff; border-color: #FF4B4B; }}
+
+    /* ── Corps (messages + input) ── */
+    #chat-body {{
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
+    }}
+    #chat-messages {{
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 12px;
+        background: #0a0f1c;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        scrollbar-width: thin;
+        scrollbar-color: #7FFFD4 transparent;
+    }}
     #chat-input-row {{
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 12px 15px;
+        padding: 10px 12px;
         background: #0F1626;
-        border-top: 1px solid rgba(127,255,212,0.4);
+        border-top: 1px solid rgba(127,255,212,0.3);
+        flex-shrink: 0;
     }}
     #chat-input {{
         flex: 1;
         background: #1a2338;
-        border: 1px solid #7FFFD4;
-        border-radius: 25px;
-        padding: 12px 16px;
-        color: white;
+        border: 1px solid rgba(127,255,212,0.5);
+        border-radius: 22px;
+        padding: 10px 15px;
+        color: #fff;
         font-size: 14px;
         outline: none;
         min-width: 0;
     }}
-    #chat-input:focus {{ border-color: #00FF88; }}
+    #chat-input:focus {{ border-color: #7FFFD4; box-shadow: 0 0 8px rgba(127,255,212,0.25); }}
     #chat-send-btn {{
-        width: 44px; height: 44px;
+        width: 42px; height: 42px;
         border-radius: 50%;
         background: linear-gradient(135deg, #7FFFD4, #00b894);
         border: none;
         color: #111;
-        font-size: 20px;
+        font-size: 18px;
         cursor: pointer;
         display: flex; align-items: center; justify-content: center;
         flex-shrink: 0;
@@ -2338,61 +2403,79 @@ def render_floating_chat():
         transition: transform 0.15s;
     }}
     #chat-send-btn:hover {{ transform: scale(1.1); }}
-    #chat-send-btn:active {{ transform: scale(0.95); }}
+    #chat-send-btn:active {{ transform: scale(0.93); }}
     </style>
 
-    <div id="oracle-chat-bubble">
-        <button id="chat-toggle-btn" onclick="toggleOracleChat()">🔮</button>
-        
-        <div id="chat-window">
-            <div style="background: linear-gradient(135deg, #1a2338, #0f1626); padding: 14px 18px; border-bottom: 1px solid #7FFFD4; display:flex; align-items:center; gap:10px; flex-shrink:0;">
-                <span style="font-size:26px;">🔮</span>
-                <div style="flex:1;">
-                    <strong style="color:#7FFFD4; font-size:15px;">Oracle Mahita IA</strong><br>
-                    <small style="color:#00FF88; font-size:12px;">● En ligne</small>
-                </div>
-                <button onclick="toggleOracleChat()" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">✕</button>
+    <!-- Bouton rond flottant -->
+    <button id="chat-toggle-btn" onclick="openOracleChat()" title="Ouvrir le chat Oracle">🔮</button>
+
+    <!-- Fenêtre de chat -->
+    <div id="chat-window">
+
+        <!-- Header style Messenger -->
+        <div id="chat-header">
+            <span style="font-size:24px; flex-shrink:0;">🔮</span>
+            <div id="chat-header-info">
+                <div id="chat-header-title">Oracle Mahita IA</div>
+                <div id="chat-header-status">● En ligne</div>
             </div>
-            
-            <div id="chat-messages" style="flex:1; overflow-y:auto; padding:16px; background:#0a0f1c; display:flex; flex-direction:column; gap:10px;">
-                <!-- Messages chargés par JS -->
-            </div>
-            
+            <!-- Bouton Réduire -->
+            <button class="chat-ctrl-btn" id="chat-minimize-btn" onclick="minimizeOracleChat()" title="Réduire">&#8212;</button>
+            <!-- Bouton Fermer -->
+            <button class="chat-ctrl-btn" id="chat-close-btn" onclick="closeOracleChat()" title="Fermer">&#10005;</button>
+        </div>
+
+        <!-- Corps (messages + input) -->
+        <div id="chat-body">
+            <div id="chat-messages"></div>
             <div id="chat-input-row">
-                <input type="text" id="chat-input" 
-                       placeholder="Posez votre question..." 
+                <input type="text" id="chat-input"
+                       placeholder="Posez votre question..."
                        onkeydown="if(event.key==='Enter'){{ event.preventDefault(); sendOracleMessage(); }}">
-                <button id="chat-send-btn" onclick="sendOracleMessage()" title="Envoyer">➤</button>
+                <button id="chat-send-btn" onclick="sendOracleMessage()" title="Envoyer">&#10148;</button>
             </div>
         </div>
     </div>
 
     <script>
     (function() {{
-        let chatOpen = false;
 
-        window.toggleOracleChat = function() {{
-            chatOpen = !chatOpen;
+        /* ── Ouvrir la fenêtre ── */
+        window.openOracleChat = function() {{
             const win = document.getElementById('chat-window');
+            const btn = document.getElementById('chat-toggle-btn');
             if (!win) return;
-            if (chatOpen) {{
-                win.classList.add('open');
-                renderChatMessages();
-                setTimeout(function() {{
-                    var inp = document.getElementById('chat-input');
-                    if (inp) inp.focus();
-                }}, 100);
-            }} else {{
-                win.classList.remove('open');
-            }}
+            win.classList.add('open');
+            win.classList.remove('minimized');
+            btn.style.display = 'none';          // cache le bouton rond
+            renderChatMessages();
+            setTimeout(function() {{
+                var inp = document.getElementById('chat-input');
+                if (inp) inp.focus();
+            }}, 120);
         }};
 
+        /* ── Réduire (— ) : garde le header, cache le corps ── */
+        window.minimizeOracleChat = function() {{
+            const win = document.getElementById('chat-window');
+            if (!win) return;
+            win.classList.toggle('minimized');
+        }};
+
+        /* ── Fermer (✕) : cache tout, réaffiche le bouton rond ── */
+        window.closeOracleChat = function() {{
+            const win = document.getElementById('chat-window');
+            const btn = document.getElementById('chat-toggle-btn');
+            if (!win) return;
+            win.classList.remove('open', 'minimized');
+            if (btn) btn.style.display = 'flex';  // réaffiche le bouton rond
+        }};
+
+        /* ── Rendu des messages ── */
         window.renderChatMessages = function() {{
             const area = document.getElementById('chat-messages');
             if (!area) return;
-            
             let html = '<div style="background:rgba(127,255,212,0.1); padding:12px 14px; border-radius:12px; border-left:4px solid #7FFFD4; color:#ccc; font-size:14px;">Bonjour ! Posez-moi n\'importe quelle question sur vos pronostics, classements ou résultats.</div>';
-            
             const messages = {msgs_json};
             messages.forEach(function(msg) {{
                 if (msg.role === "user") {{
@@ -2401,7 +2484,6 @@ def render_floating_chat():
                     html += '<div style="align-self:flex-start; background:rgba(127,255,212,0.08); border:1px solid rgba(127,255,212,0.2); color:#ddd; padding:10px 14px; border-radius:18px 18px 18px 4px; max-width:85%; font-size:14px; word-break:break-word;">' + msg.content.replace(/\\n/g, '<br>') + '</div>';
                 }}
             }});
-            
             area.innerHTML = html;
             area.scrollTop = area.scrollHeight;
         }};
@@ -2410,6 +2492,7 @@ def render_floating_chat():
             return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }};
 
+        /* ── Envoi du message ── */
         window.sendOracleMessage = function() {{
             const input = document.getElementById('chat-input');
             if (!input) return;
@@ -2422,11 +2505,14 @@ def render_floating_chat():
             }}
         }};
 
-        // S'assurer que la fenêtre est bien fermée au chargement
+        /* ── Au chargement : fenêtre fermée, bouton visible ── */
         document.addEventListener('DOMContentLoaded', function() {{
             const win = document.getElementById('chat-window');
-            if (win) win.classList.remove('open');
+            const btn = document.getElementById('chat-toggle-btn');
+            if (win) win.classList.remove('open', 'minimized');
+            if (btn) btn.style.display = 'flex';
         }});
+
     }})();
     </script>
     """, unsafe_allow_html=True)
