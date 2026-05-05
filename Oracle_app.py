@@ -80,6 +80,108 @@ st.markdown("""
 .chat-bot-offline { background: rgba(255,255,255,0.05); border-left: 3px solid #FFA500; 
                     padding: 10px 15px; margin: 5px 40px 5px 0; border-radius: 10px; }
 
+/* ── CHAT BULLE FLOTTANT STYLE MESSENGER ── */
+#oracle-chat-bubble {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+#oracle-chat-toggle {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7FFFD4, #00b894);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(127,255,212,0.5);
+    font-size: 28px;
+    transition: transform 0.2s;
+}
+#oracle-chat-toggle:hover { transform: scale(1.1); }
+#oracle-chat-window {
+    position: absolute;
+    bottom: 72px; right: 0;
+    width: 380px;
+    max-height: 520px;
+    background: #1a1a2e;
+    border-radius: 18px;
+    border: 1px solid rgba(127,255,212,0.3);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    transform-origin: bottom right;
+}
+#oracle-chat-window.hidden {
+    opacity: 0; pointer-events: none; transform: scale(0.85);
+}
+#chat-header {
+    background: linear-gradient(135deg, #0f3460, #16213e);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid rgba(127,255,212,0.2);
+}
+#chat-header-title { color: #7FFFD4; font-weight: 700; font-size: 15px; flex: 1; }
+#chat-header-status { color: #00FF00; font-size: 12px; }
+#chat-close-btn {
+    background: none; border: none; color: #888; cursor: pointer;
+    font-size: 18px; padding: 0 4px;
+}
+#chat-messages {
+    flex: 1; overflow-y: auto; padding: 14px 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    scrollbar-width: thin; scrollbar-color: #7FFFD4 transparent;
+}
+.msg-user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #0f3460, #1a4480);
+    color: #fff; padding: 10px 14px;
+    border-radius: 18px 18px 4px 18px;
+    max-width: 75%; font-size: 14px; line-height: 1.4;
+}
+.msg-bot {
+    align-self: flex-start;
+    background: rgba(127,255,212,0.08);
+    border: 1px solid rgba(127,255,212,0.2);
+    color: #e0e0e0; padding: 10px 14px;
+    border-radius: 18px 18px 18px 4px;
+    max-width: 85%; font-size: 14px; line-height: 1.4;
+}
+.msg-bot-header { color: #7FFFD4; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+.msg-timestamp { color: #555; font-size: 10px; margin-top: 3px; text-align: right; }
+#chat-input-area {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(127,255,212,0.15);
+    display: flex; gap: 8px; align-items: center;
+    background: #16213e;
+}
+#chat-input-field {
+    flex: 1; background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(127,255,212,0.3);
+    border-radius: 22px; padding: 9px 14px;
+    color: #fff; font-size: 14px; outline: none;
+}
+#chat-input-field:focus { border-color: #7FFFD4; }
+#chat-send-btn {
+    background: linear-gradient(135deg, #7FFFD4, #00b894);
+    border: none; border-radius: 50%;
+    width: 38px; height: 38px; cursor: pointer;
+    color: #111; font-size: 16px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+#chat-notif-badge {
+    position: absolute; top: -4px; right: -4px;
+    background: #FF4B4B; color: #fff;
+    border-radius: 50%; width: 18px; height: 18px;
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    display: none;
+}
+.chat-typing { color: #7FFFD4; font-size: 12px; padding: 4px 8px; font-style: italic; }
+</style>
+""", unsafe_allow_html=True)
+
 # ===================== LOGO SVG =====================
 LOGO_SVG = """
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -120,6 +222,11 @@ LOGO_SVG = """
 """
 
 # ===================== UTILITAIRES =====================
+def custom_notify(text: str, color: str = "#00FF00"):
+    st.markdown(f"""
+    <div style="padding:18px;border:3px solid {color};border-radius:12px;background:#0E1117;color:#FFF;
+    text-align:center;font-weight:900;box-shadow:0 0 25px {color};margin:15px 0;font-size:1.25em;">
+    {text}</div>""", unsafe_allow_html=True)
 
 def get_standings(season_data: dict, teams_list: list) -> pd.DataFrame:
     stats = {t: {"MJ":0,"V":0,"N":0,"D":0,"BP":0,"BC":0,"Diff":0,"Pts":0} for t in teams_list}
@@ -2202,495 +2309,265 @@ with tabs[6]:
             st.info("Aucun pattern encore. Enregistrez des résultats.")
 
 # ===================== CHAT FLOTTANT V44 — Style Messenger =====================
-    def render_floating_chat():
-    """Chat flottant Messenger - Fermé par défaut, design vert d'eau"""
+def render_floating_chat():
+    """Chat flottant - Bouton rond + fenêtre avec bouton Réduire (—) et Fermer (✕)"""
     
     msgs = st.session_state.get('chat_messages', [])
     msgs_json = json.dumps(msgs, ensure_ascii=False)
     
     st.markdown(f"""
     <style>
-    /* ── Bouton rond flottant (vert d'eau lumineux) ── */
+    /* ── Bouton rond flottant ── */
     #chat-toggle-btn {{
         position: fixed;
         bottom: 24px;
         right: 24px;
         z-index: 9999;
-        width: 60px; 
-        height: 60px;
+        width: 64px; height: 64px;
         border-radius: 50%;
         background: linear-gradient(135deg, #7FFFD4, #00b894);
-        border: 3px solid rgba(255,255,255,0.2);
-        color: #0E1117;
-        font-size: 28px;
-        cursor: pointer;
-        box-shadow: 0 6px 25px rgba(127,255,212,0.5), 0 0 15px rgba(127,255,212,0.3);
-        transition: all 0.3s ease;
-        display: flex; 
-        align-items: center; 
-        justify-content: center;
-        outline: none;
+        border: none; color: #111;
+        font-size: 30px; cursor: pointer;
+        box-shadow: 0 6px 25px rgba(127,255,212,0.6);
+        transition: transform 0.2s;
+        display: flex; align-items: center; justify-content: center;
     }}
-    #chat-toggle-btn:hover {{ 
-        transform: scale(1.15) rotate(5deg); 
-        box-shadow: 0 8px 35px rgba(127,255,212,0.7);
-    }}
-    #chat-toggle-btn:active {{ transform: scale(0.95); }}
-
-    /* Badge notification */
-    #chat-badge {{
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        background: #FF4B4B;
-        color: white;
-        border-radius: 50%;
-        width: 22px;
-        height: 22px;
-        font-size: 12px;
-        font-weight: 700;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        border: 2px solid #0E1117;
-    }}
+    #chat-toggle-btn:hover {{ transform: scale(1.1); }}
 
     /* ── Fenêtre de chat ── */
     #chat-window {{
         position: fixed;
-        bottom: 96px;
-        right: 24px;
-        width: 380px;
-        max-width: calc(100vw - 48px);
-        height: 520px;
-        max-height: calc(100vh - 140px);
-        background: #0E1117;
-        border-radius: 20px;
-        border: 2px solid #7FFFD4;
-        box-shadow: 0 15px 50px rgba(0,0,0,0.8), 0 0 30px rgba(127,255,212,0.15);
-        display: none;  /* ← CACHÉ PAR DÉFAUT */
+        bottom: 100px;
+        right: 16px;
+        width: min(370px, calc(100vw - 32px));
+        height: min(530px, calc(100vh - 130px));
+        background: #0F1626;
+        border-radius: 18px;
+        border: 1.5px solid rgba(127,255,212,0.5);
+        box-shadow: 0 12px 50px rgba(0,0,0,0.85);
+        display: none;
         flex-direction: column;
         overflow: hidden;
         z-index: 10000;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transform-origin: bottom right;
+        transition: opacity 0.2s, transform 0.2s;
     }}
     #chat-window.open {{
         display: flex !important;
-        animation: chatSlideIn 0.3s ease;
+        opacity: 1;
+        transform: scale(1);
     }}
-    @keyframes chatSlideIn {{
-        from {{ opacity: 0; transform: translateY(20px) scale(0.95); }}
-        to {{ opacity: 1; transform: translateY(0) scale(1); }}
+    /* État réduit : on cache le corps mais garde le header visible */
+    #chat-window.minimized #chat-body {{
+        display: none !important;
+    }}
+    #chat-window.minimized {{
+        height: auto !important;
+        min-height: unset;
     }}
 
-    /* ── Header style Messenger ── */
+    /* ── Header ── */
     #chat-header {{
-        background: linear-gradient(135deg, #0d2b25, #1a4d3a);
-        padding: 14px 16px;
-        border-bottom: 2px solid #7FFFD4;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-shrink: 0;
-    }}
-    #chat-avatar {{
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #7FFFD4, #00b894);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-        border: 2px solid rgba(127,255,212,0.5);
-        flex-shrink: 0;
-    }}
-    #chat-header-info {{ flex: 1; }}
-    #chat-header-title {{ 
-        color: #7FFFD4; 
-        font-weight: 700; 
-        font-size: 15px; 
-        margin-bottom: 2px;
-    }}
-    #chat-header-status {{ 
-        color: #00FF88; 
-        font-size: 11px; 
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }}
-    #chat-header-status::before {{
-        content: '';
-        width: 8px;
-        height: 8px;
-        background: #00FF88;
-        border-radius: 50%;
-        display: inline-block;
-        box-shadow: 0 0 8px #00FF88;
-    }}
-
-    /* Boutons contrôle header */
-    .chat-ctrl-btn {{
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(127,255,212,0.3);
-        color: #7FFFD4;
-        cursor: pointer;
-        border-radius: 8px;
-        width: 32px; 
-        height: 32px;
-        font-size: 14px;
-        display: flex; 
-        align-items: center; 
-        justify-content: center;
-        transition: all 0.2s;
-        flex-shrink: 0;
-    }}
-    .chat-ctrl-btn:hover {{ 
-        background: rgba(127,255,212,0.2); 
-        color: #fff;
-        border-color: #7FFFD4;
-    }}
-    #chat-close-btn:hover {{ 
-        background: rgba(255,75,75,0.3); 
-        color: #FF4B4B;
-        border-color: #FF4B4B;
-    }}
-
-    /* ── Zone messages ── */
-    #chat-messages {{
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px 14px;
-        background: #0a0f1c;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        scrollbar-width: thin;
-        scrollbar-color: #7FFFD4 transparent;
-    }}
-    #chat-messages::-webkit-scrollbar {{ width: 6px; }}
-    #chat-messages::-webkit-scrollbar-thumb {{ 
-        background: #7FFFD4; 
-        border-radius: 3px; 
-    }}
-
-    /* Bulle message système/welcome */
-    .msg-welcome {{
-        align-self: center;
-        background: rgba(127,255,212,0.1);
-        border: 1px solid rgba(127,255,212,0.3);
-        color: #7FFFD4;
-        padding: 12px 16px;
-        border-radius: 16px;
-        font-size: 13px;
-        text-align: center;
-        max-width: 90%;
-        margin-bottom: 8px;
-    }}
-
-    /* Bulle utilisateur (style Messenger droite) */
-    .msg-user {{
-        align-self: flex-end;
-        background: linear-gradient(135deg, #0f3460, #1a4480);
-        color: #fff;
-        padding: 10px 14px;
-        border-radius: 18px 18px 4px 18px;
-        max-width: 78%;
-        font-size: 14px;
-        line-height: 1.4;
-        word-break: break-word;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }}
-    .msg-user-time {{
-        color: #888;
-        font-size: 10px;
-        text-align: right;
-        margin-top: 4px;
-    }}
-
-    /* Bulle Oracle (style Messenger gauche) */
-    .msg-bot {{
-        align-self: flex-start;
-        background: rgba(127,255,212,0.08);
-        border: 1px solid rgba(127,255,212,0.25);
-        color: #e8e8e8;
-        padding: 10px 14px;
-        border-radius: 18px 18px 18px 4px;
-        max-width: 85%;
-        font-size: 14px;
-        line-height: 1.4;
-        word-break: break-word;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }}
-    .msg-bot-header {{
-        color: #7FFFD4;
-        font-weight: 600;
-        font-size: 12px;
-        margin-bottom: 4px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }}
-    .msg-bot-time {{
-        color: #666;
-        font-size: 10px;
-        text-align: right;
-        margin-top: 4px;
-    }}
-
-    /* Typing indicator */
-    .msg-typing {{
-        align-self: flex-start;
-        color: #7FFFD4;
-        font-size: 13px;
-        font-style: italic;
-        padding: 8px 12px;
-        display: none;
-    }}
-    .msg-typing.active {{ display: flex; }}
-    .typing-dots::after {{
-        content: '...';
-        animation: typingDots 1.5s infinite;
-    }}
-    @keyframes typingDots {{
-        0%, 20% {{ content: '.'; }}
-        40% {{ content: '..'; }}
-        60%, 100% {{ content: '...'; }}
-    }}
-
-    /* ── Zone input ── */
-    #chat-input-area {{
+        background: linear-gradient(135deg, #1a2338, #0d1520);
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(127,255,212,0.3);
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 12px 14px;
+        flex-shrink: 0;
+        cursor: default;
+    }}
+    #chat-header-info {{ flex: 1; }}
+    #chat-header-title {{ color: #7FFFD4; font-weight: 700; font-size: 14px; line-height: 1.2; }}
+    #chat-header-status {{ color: #00FF88; font-size: 11px; }}
+
+    /* Boutons header ── */
+    .chat-ctrl-btn {{
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: #ccc;
+        cursor: pointer;
+        border-radius: 6px;
+        width: 28px; height: 28px;
+        font-size: 15px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.15s, color 0.15s;
+        flex-shrink: 0;
+    }}
+    .chat-ctrl-btn:hover {{ background: rgba(255,255,255,0.18); color: #fff; }}
+    #chat-close-btn:hover {{ background: rgba(255,75,75,0.35); color: #fff; border-color: #FF4B4B; }}
+
+    /* ── Corps (messages + input) ── */
+    #chat-body {{
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
+    }}
+    #chat-messages {{
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 12px;
+        background: #0a0f1c;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        scrollbar-width: thin;
+        scrollbar-color: #7FFFD4 transparent;
+    }}
+    #chat-input-row {{
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
         background: #0F1626;
-        border-top: 1px solid rgba(127,255,212,0.2);
+        border-top: 1px solid rgba(127,255,212,0.3);
         flex-shrink: 0;
     }}
     #chat-input {{
         flex: 1;
         background: #1a2338;
-        border: 1.5px solid rgba(127,255,212,0.4);
-        border-radius: 24px;
-        padding: 11px 16px;
+        border: 1px solid rgba(127,255,212,0.5);
+        border-radius: 22px;
+        padding: 10px 15px;
         color: #fff;
         font-size: 14px;
         outline: none;
-        transition: all 0.2s;
+        min-width: 0;
     }}
-    #chat-input:focus {{ 
-        border-color: #7FFFD4; 
-        box-shadow: 0 0 12px rgba(127,255,212,0.2);
-        background: #1e2d42;
-    }}
-    #chat-input::placeholder {{ color: #666; }}
+    #chat-input:focus {{ border-color: #7FFFD4; box-shadow: 0 0 8px rgba(127,255,212,0.25); }}
     #chat-send-btn {{
-        width: 44px; 
-        height: 44px;
+        width: 42px; height: 42px;
         border-radius: 50%;
         background: linear-gradient(135deg, #7FFFD4, #00b894);
         border: none;
-        color: #0E1117;
+        color: #111;
         font-size: 18px;
         cursor: pointer;
-        display: flex; 
-        align-items: center; 
-        justify-content: center;
+        display: flex; align-items: center; justify-content: center;
         flex-shrink: 0;
-        box-shadow: 0 3px 12px rgba(127,255,212,0.4);
-        transition: all 0.2s;
+        box-shadow: 0 2px 10px rgba(127,255,212,0.4);
+        transition: transform 0.15s;
     }}
-    #chat-send-btn:hover {{ 
-        transform: scale(1.1); 
-        box-shadow: 0 5px 20px rgba(127,255,212,0.6);
-    }}
-    #chat-send-btn:active {{ transform: scale(0.92); }}
+    #chat-send-btn:hover {{ transform: scale(1.1); }}
+    #chat-send-btn:active {{ transform: scale(0.93); }}
     </style>
 
     <!-- Bouton rond flottant -->
-    <button id="chat-toggle-btn" onclick="toggleOracleChat()" title="Discuter avec l'Oracle">
-        <span style="filter: drop-shadow(0 0 4px rgba(0,0,0,0.3));">🔮</span>
-        <span id="chat-badge">!</span>
-    </button>
+    <button id="chat-toggle-btn" onclick="openOracleChat()" title="Ouvrir le chat Oracle">🔮</button>
 
-    <!-- Fenêtre de chat -->
-    <div id="chat-window">
-        <!-- Header -->
+    <!-- Fenêtre de chat — style inline display:none = jamais visible avant JS -->
+    <div id="chat-window" style="display:none; position:fixed; bottom:100px; right:16px; width:min(370px, calc(100vw - 32px)); height:min(530px, calc(100vh - 130px)); background:#0F1626; border-radius:18px; border:1.5px solid rgba(127,255,212,0.5); box-shadow:0 12px 50px rgba(0,0,0,0.85); flex-direction:column; overflow:hidden; z-index:10000;">
+
+        <!-- Header style Messenger -->
         <div id="chat-header">
-            <div id="chat-avatar">🤖</div>
+            <span style="font-size:24px; flex-shrink:0;">🔮</span>
             <div id="chat-header-info">
-                <div id="chat-header-title">Oracle Mahita</div>
-                <div id="chat-header-status">En ligne</div>
+                <div id="chat-header-title">Oracle Mahita IA</div>
+                <div id="chat-header-status">● En ligne</div>
             </div>
-            <button class="chat-ctrl-btn" onclick="minimizeOracleChat()" title="Réduire">—</button>
-            <button class="chat-ctrl-btn" id="chat-close-btn" onclick="closeOracleChat()" title="Fermer">✕</button>
+            <!-- Bouton Réduire -->
+            <button class="chat-ctrl-btn" id="chat-minimize-btn" onclick="minimizeOracleChat()" title="Réduire">&#8212;</button>
+            <!-- Bouton Fermer -->
+            <button class="chat-ctrl-btn" id="chat-close-btn" onclick="closeOracleChat()" title="Fermer">&#10005;</button>
         </div>
 
-        <!-- Messages -->
-        <div id="chat-messages">
-            <div class="msg-welcome">
-                👋 Bonjour ! Je suis l'Oracle. Posez-moi vos questions sur les pronostics, classements ou analyses de matchs.
+        <!-- Corps (messages + input) -->
+        <div id="chat-body">
+            <div id="chat-messages"></div>
+            <div id="chat-input-row">
+                <input type="text" id="chat-input"
+                       placeholder="Posez votre question..."
+                       onkeydown="if(event.key==='Enter'){{ event.preventDefault(); sendOracleMessage(); }}">
+                <button id="chat-send-btn" onclick="sendOracleMessage()" title="Envoyer">&#10148;</button>
             </div>
-        </div>
-
-        <!-- Typing -->
-        <div class="msg-typing" id="chat-typing">
-            <span class="typing-dots">Oracle réfléchit</span>
-        </div>
-
-        <!-- Input -->
-        <div id="chat-input-area">
-            <input type="text" id="chat-input" placeholder="Écrivez votre message..."
-                   onkeydown="if(event.key==='Enter'){{ sendOracleMessage(); }}">
-            <button id="chat-send-btn" onclick="sendOracleMessage()" title="Envoyer">➤</button>
         </div>
     </div>
 
     <script>
     (function() {{
-        const STORAGE_KEY = 'oracle_chat_open';
-        
-        /* ── Ouvrir/Fermer (toggle) ── */
-        window.toggleOracleChat = function() {{
-            const win = document.getElementById('chat-window');
-            const btn = document.getElementById('chat-toggle-btn');
-            if (!win || !btn) return;
-            
-            if (win.style.display === 'flex') {{
-                closeOracleChat();
-            }} else {{
-                openOracleChat();
-            }}
-        }};
 
+        /* ── Ouvrir la fenêtre ── */
         window.openOracleChat = function() {{
             const win = document.getElementById('chat-window');
             const btn = document.getElementById('chat-toggle-btn');
             if (!win) return;
-            
             win.style.display = 'flex';
-            win.classList.add('open');
+            win.classList.remove('minimized');
             if (btn) btn.style.display = 'none';
-            
-            // Sauvegarder état
-            try {{ sessionStorage.setItem(STORAGE_KEY, 'open'); }} catch(e) {{}}
-            
             renderChatMessages();
-            setTimeout(() => {{
-                const inp = document.getElementById('chat-input');
+            setTimeout(function() {{
+                var inp = document.getElementById('chat-input');
                 if (inp) inp.focus();
-            }}, 150);
+            }}, 120);
         }};
 
+        /* ── Réduire (— ) : garde le header, cache le corps ── */
+        window.minimizeOracleChat = function() {{
+            const win = document.getElementById('chat-window');
+            if (!win) return;
+            win.classList.toggle('minimized');
+        }};
+
+        /* ── Fermer (✕) : cache tout, réaffiche le bouton rond ── */
         window.closeOracleChat = function() {{
             const win = document.getElementById('chat-window');
             const btn = document.getElementById('chat-toggle-btn');
             if (!win) return;
-            
             win.style.display = 'none';
-            win.classList.remove('open');
+            win.classList.remove('minimized');
             if (btn) btn.style.display = 'flex';
-            
-            try {{ sessionStorage.removeItem(STORAGE_KEY); }} catch(e) {{}}
         }};
 
-        window.minimizeOracleChat = function() {{
-            // Réduire = fermer mais garder le contexte (même comportement que fermer pour Streamlit)
-            closeOracleChat();
-        }};
-
-        /* ── Rendu messages ── */
+        /* ── Rendu des messages ── */
         window.renderChatMessages = function() {{
             const area = document.getElementById('chat-messages');
             if (!area) return;
-            
-            // Garder le welcome message
-            let html = '<div class="msg-welcome">👋 Bonjour ! Je suis l\'Oracle. Posez-moi vos questions sur les pronostics, classements ou analyses de matchs.</div>';
-            
+            let html = '<div style="background:rgba(127,255,212,0.1); padding:12px 14px; border-radius:12px; border-left:4px solid #7FFFD4; color:#ccc; font-size:14px;">Bonjour ! Posez-moi n\'importe quelle question sur vos pronostics, classements ou résultats.</div>';
             const messages = {msgs_json};
             messages.forEach(function(msg) {{
-                const time = msg.ts ? new Date(msg.ts).toLocaleTimeString('fr-FR', {{hour:'2-digit', minute:'2-digit'}}) : '';
-                
-                if (msg.role === 'user') {{
-                    html += '<div class="msg-user">' + escapeHtml(msg.content) + 
-                            '<div class="msg-user-time">' + time + '</div></div>';
+                if (msg.role === "user") {{
+                    html += '<div style="align-self:flex-end; background:#1e3a5f; color:#fff; padding:10px 14px; border-radius:18px 18px 4px 18px; max-width:78%; font-size:14px; word-break:break-word;">' + escapeHtml(msg.content) + '</div>';
                 }} else {{
-                    const source = msg.source === 'groq' ? '🧠 Groq' : '🤖 Offline';
-                    html += '<div class="msg-bot">' +
-                            '<div class="msg-bot-header">🔮 Oracle [' + source + ']</div>' +
-                            msg.content.replace(/\\n/g, '<br>') +
-                            '<div class="msg-bot-time">' + time + '</div></div>';
+                    html += '<div style="align-self:flex-start; background:rgba(127,255,212,0.08); border:1px solid rgba(127,255,212,0.2); color:#ddd; padding:10px 14px; border-radius:18px 18px 18px 4px; max-width:85%; font-size:14px; word-break:break-word;">' + msg.content.replace(/\\n/g, '<br>') + '</div>';
                 }}
             }});
-            
             area.innerHTML = html;
             area.scrollTop = area.scrollHeight;
         }};
 
         window.escapeHtml = function(text) {{
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }};
 
-        /* ── Envoi message ── */
+        /* ── Envoi du message ── */
         window.sendOracleMessage = function() {{
             const input = document.getElementById('chat-input');
             if (!input) return;
-            
             const text = input.value.trim();
-            if (!text) return;
-            
-            // Vider input
-            input.value = '';
-            
-            // Montrer typing
-            const typing = document.getElementById('chat-typing');
-            if (typing) typing.classList.add('active');
-            
-            // Scroll bottom
-            const area = document.getElementById('chat-messages');
-            if (area) area.scrollTop = area.scrollHeight;
-            
-            // Navigation avec paramètre pour Streamlit
-            const url = new URL(window.location.href);
-            url.searchParams.set('oracle_chat_input', encodeURIComponent(text));
-            url.searchParams.set('oracle_chat_ts', Date.now());
-            window.location.href = url.toString();
+            if (text) {{
+                const url = new URL(window.location.href);
+                url.searchParams.set('oracle_chat_input', encodeURIComponent(text));
+                input.value = '';
+                window.location.href = url.toString();
+            }}
         }};
 
-        /* ── Initialisation : TOUJOURS fermé au chargement ── */
-        function initChat() {{
+        /* ── Au chargement : fenêtre fermée, bouton visible ── */
+        /* (display:none est déjà dans le style inline, double sécurité ici) */
+        (function ensureHidden() {{
             const win = document.getElementById('chat-window');
             const btn = document.getElementById('chat-toggle-btn');
-            
-            if (win) {{
-                win.style.display = 'none';
-                win.classList.remove('open');
-            }}
-            if (btn) {{
-                btn.style.display = 'flex';
-            }}
-            
-            // Vérifier si on doit rouvrir (après envoi message)
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('oracle_chat_input')) {{
-                // On revient d'un envoi, rouvrir le chat
-                setTimeout(() => openOracleChat(), 100);
-                // Nettoyer l'URL
-                urlParams.delete('oracle_chat_input');
-                urlParams.delete('oracle_chat_ts');
-                const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-                window.history.replaceState({{}}, '', newUrl);
-            }}
-        }}
+            if (win) {{ win.style.display = 'none'; win.classList.remove('minimized'); }}
+            if (btn) btn.style.display = 'flex';
+        }})();
+        document.addEventListener('DOMContentLoaded', function() {{
+            const win = document.getElementById('chat-window');
+            const btn = document.getElementById('chat-toggle-btn');
+            if (win) {{ win.style.display = 'none'; win.classList.remove('minimized'); }}
+            if (btn) btn.style.display = 'flex';
+        }});
 
-        // Exécuter immédiatement et au DOM ready
-        initChat();
-        if (document.readyState === 'loading') {{
-            document.addEventListener('DOMContentLoaded', initChat);
-        }}
     }})();
     </script>
     """, unsafe_allow_html=True)
