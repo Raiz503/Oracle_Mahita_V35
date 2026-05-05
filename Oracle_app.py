@@ -80,105 +80,6 @@ st.markdown("""
 .chat-bot-offline { background: rgba(255,255,255,0.05); border-left: 3px solid #FFA500; 
                     padding: 10px 15px; margin: 5px 40px 5px 0; border-radius: 10px; }
 
-/* ── CHAT BULLE FLOTTANT STYLE MESSENGER ── */
-#oracle-chat-bubble {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 9999;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-#oracle-chat-toggle {
-    width: 60px; height: 60px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #7FFFD4, #00b894);
-    border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 20px rgba(127,255,212,0.5);
-    font-size: 28px;
-    transition: transform 0.2s;
-}
-#oracle-chat-toggle:hover { transform: scale(1.1); }
-#oracle-chat-window {
-    position: absolute;
-    bottom: 72px; right: 0;
-    width: 380px;
-    max-height: 520px;
-    background: #1a1a2e;
-    border-radius: 18px;
-    border: 1px solid rgba(127,255,212,0.3);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
-    display: flex; flex-direction: column;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    transform-origin: bottom right;
-}
-#oracle-chat-window.hidden {
-    opacity: 0; pointer-events: none; transform: scale(0.85);
-}
-#chat-header {
-    background: linear-gradient(135deg, #0f3460, #16213e);
-    padding: 14px 16px;
-    display: flex; align-items: center; gap: 10px;
-    border-bottom: 1px solid rgba(127,255,212,0.2);
-}
-#chat-header-title { color: #7FFFD4; font-weight: 700; font-size: 15px; flex: 1; }
-#chat-header-status { color: #00FF00; font-size: 12px; }
-#chat-close-btn {
-    background: none; border: none; color: #888; cursor: pointer;
-    font-size: 18px; padding: 0 4px;
-}
-#chat-messages {
-    flex: 1; overflow-y: auto; padding: 14px 12px;
-    display: flex; flex-direction: column; gap: 8px;
-    scrollbar-width: thin; scrollbar-color: #7FFFD4 transparent;
-}
-.msg-user {
-    align-self: flex-end;
-    background: linear-gradient(135deg, #0f3460, #1a4480);
-    color: #fff; padding: 10px 14px;
-    border-radius: 18px 18px 4px 18px;
-    max-width: 75%; font-size: 14px; line-height: 1.4;
-}
-.msg-bot {
-    align-self: flex-start;
-    background: rgba(127,255,212,0.08);
-    border: 1px solid rgba(127,255,212,0.2);
-    color: #e0e0e0; padding: 10px 14px;
-    border-radius: 18px 18px 18px 4px;
-    max-width: 85%; font-size: 14px; line-height: 1.4;
-}
-.msg-bot-header { color: #7FFFD4; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
-.msg-timestamp { color: #555; font-size: 10px; margin-top: 3px; text-align: right; }
-#chat-input-area {
-    padding: 10px 12px;
-    border-top: 1px solid rgba(127,255,212,0.15);
-    display: flex; gap: 8px; align-items: center;
-    background: #16213e;
-}
-#chat-input-field {
-    flex: 1; background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(127,255,212,0.3);
-    border-radius: 22px; padding: 9px 14px;
-    color: #fff; font-size: 14px; outline: none;
-}
-#chat-input-field:focus { border-color: #7FFFD4; }
-#chat-send-btn {
-    background: linear-gradient(135deg, #7FFFD4, #00b894);
-    border: none; border-radius: 50%;
-    width: 38px; height: 38px; cursor: pointer;
-    color: #111; font-size: 16px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-}
-#chat-notif-badge {
-    position: absolute; top: -4px; right: -4px;
-    background: #FF4B4B; color: #fff;
-    border-radius: 50%; width: 18px; height: 18px;
-    font-size: 11px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    display: none;
-}
-.chat-typing { color: #7FFFD4; font-size: 12px; padding: 4px 8px; font-style: italic; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -984,9 +885,6 @@ st.markdown(f'<div class="next-day-box">PROCHAINE JOURNÉE : J-{next_j}</div>', 
 
 tabs = st.tabs(["🏆 CLASSEMENT", "📅 CALENDRIER", "🎯 PRONOS", "⚽ RÉSULTATS", 
                 "📚 HISTORIQUE", "⚙️ GESTION", "📊 PERFORMANCE", "🤖 ASSISTANT IA"])
-
-# ===================== CHAT BULLE FLOTTANT =====================
-
 
 # ===================== TAB 0 : CLASSEMENT =====================
 with tabs[0]:
@@ -2308,587 +2206,216 @@ with tabs[6]:
         else:
             st.info("Aucun pattern encore. Enregistrez des résultats.")
 
-# ===================== CHAT FLOTTANT V44 — Style Messenger =====================
-def render_floating_chat():
-    """Chat flottant - Bouton rond + fenêtre avec bouton Réduire (—) et Fermer (✕)"""
-    
-    msgs = st.session_state.get('chat_messages', [])
-    msgs_json = json.dumps(msgs, ensure_ascii=False)
-    
-    st.markdown(f"""
-    <style>
-    /* ── Bouton rond flottant ── */
-    #chat-toggle-btn {{
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        z-index: 9999;
-        width: 64px; height: 64px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #7FFFD4, #00b894);
-        border: none; color: #111;
-        font-size: 30px; cursor: pointer;
-        box-shadow: 0 6px 25px rgba(127,255,212,0.6);
-        transition: transform 0.2s;
-        display: flex; align-items: center; justify-content: center;
-    }}
-    #chat-toggle-btn:hover {{ transform: scale(1.1); }}
+# ===================== TAB 7 : ASSISTANT IA — CHAT MESSENGER =====================
+import streamlit.components.v1 as components
+import datetime as _dt
 
-    /* ── Fenêtre de chat ── */
-    #chat-window {{
-        position: fixed;
-        bottom: 100px;
-        right: 16px;
-        width: min(370px, calc(100vw - 32px));
-        height: min(530px, calc(100vh - 130px));
-        background: #0F1626;
-        border-radius: 18px;
-        border: 1.5px solid rgba(127,255,212,0.5);
-        box-shadow: 0 12px 50px rgba(0,0,0,0.85);
-        display: none;
-        flex-direction: column;
-        overflow: hidden;
-        z-index: 10000;
-        transform-origin: bottom right;
-        transition: opacity 0.2s, transform 0.2s;
-    }}
-    #chat-window.open {{
-        display: flex !important;
-        opacity: 1;
-        transform: scale(1);
-    }}
-    /* État réduit : on cache le corps mais garde le header visible */
-    #chat-window.minimized #chat-body {{
-        display: none !important;
-    }}
-    #chat-window.minimized {{
-        height: auto !important;
-        min-height: unset;
-    }}
-
-    /* ── Header ── */
-    #chat-header {{
-        background: linear-gradient(135deg, #1a2338, #0d1520);
-        padding: 12px 14px;
-        border-bottom: 1px solid rgba(127,255,212,0.3);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-shrink: 0;
-        cursor: default;
-    }}
-    #chat-header-info {{ flex: 1; }}
-    #chat-header-title {{ color: #7FFFD4; font-weight: 700; font-size: 14px; line-height: 1.2; }}
-    #chat-header-status {{ color: #00FF88; font-size: 11px; }}
-
-    /* Boutons header ── */
-    .chat-ctrl-btn {{
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.15);
-        color: #ccc;
-        cursor: pointer;
-        border-radius: 6px;
-        width: 28px; height: 28px;
-        font-size: 15px; font-weight: 700;
-        display: flex; align-items: center; justify-content: center;
-        transition: background 0.15s, color 0.15s;
-        flex-shrink: 0;
-    }}
-    .chat-ctrl-btn:hover {{ background: rgba(255,255,255,0.18); color: #fff; }}
-    #chat-close-btn:hover {{ background: rgba(255,75,75,0.35); color: #fff; border-color: #FF4B4B; }}
-
-    /* ── Corps (messages + input) ── */
-    #chat-body {{
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        overflow: hidden;
-    }}
-    #chat-messages {{
-        flex: 1;
-        overflow-y: auto;
-        padding: 14px 12px;
-        background: #0a0f1c;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        scrollbar-width: thin;
-        scrollbar-color: #7FFFD4 transparent;
-    }}
-    #chat-input-row {{
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 12px;
-        background: #0F1626;
-        border-top: 1px solid rgba(127,255,212,0.3);
-        flex-shrink: 0;
-    }}
-    #chat-input {{
-        flex: 1;
-        background: #1a2338;
-        border: 1px solid rgba(127,255,212,0.5);
-        border-radius: 22px;
-        padding: 10px 15px;
-        color: #fff;
-        font-size: 14px;
-        outline: none;
-        min-width: 0;
-    }}
-    #chat-input:focus {{ border-color: #7FFFD4; box-shadow: 0 0 8px rgba(127,255,212,0.25); }}
-    #chat-send-btn {{
-        width: 42px; height: 42px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #7FFFD4, #00b894);
-        border: none;
-        color: #111;
-        font-size: 18px;
-        cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-        box-shadow: 0 2px 10px rgba(127,255,212,0.4);
-        transition: transform 0.15s;
-    }}
-    #chat-send-btn:hover {{ transform: scale(1.1); }}
-    #chat-send-btn:active {{ transform: scale(0.93); }}
-    </style>
-
-    <!-- Bouton rond flottant -->
-    <button id="chat-toggle-btn" onclick="openOracleChat()" title="Ouvrir le chat Oracle">🔮</button>
-
-    <!-- Fenêtre de chat — style inline display:none = jamais visible avant JS -->
-    <div id="chat-window" style="display:none; position:fixed; bottom:100px; right:16px; width:min(370px, calc(100vw - 32px)); height:min(530px, calc(100vh - 130px)); background:#0F1626; border-radius:18px; border:1.5px solid rgba(127,255,212,0.5); box-shadow:0 12px 50px rgba(0,0,0,0.85); flex-direction:column; overflow:hidden; z-index:10000;">
-
-        <!-- Header style Messenger -->
-        <div id="chat-header">
-            <span style="font-size:24px; flex-shrink:0;">🔮</span>
-            <div id="chat-header-info">
-                <div id="chat-header-title">Oracle Mahita IA</div>
-                <div id="chat-header-status">● En ligne</div>
-            </div>
-            <!-- Bouton Réduire -->
-            <button class="chat-ctrl-btn" id="chat-minimize-btn" onclick="minimizeOracleChat()" title="Réduire">&#8212;</button>
-            <!-- Bouton Fermer -->
-            <button class="chat-ctrl-btn" id="chat-close-btn" onclick="closeOracleChat()" title="Fermer">&#10005;</button>
-        </div>
-
-        <!-- Corps (messages + input) -->
-        <div id="chat-body">
-            <div id="chat-messages"></div>
-            <div id="chat-input-row">
-                <input type="text" id="chat-input"
-                       placeholder="Posez votre question..."
-                       onkeydown="if(event.key==='Enter'){{ event.preventDefault(); sendOracleMessage(); }}">
-                <button id="chat-send-btn" onclick="sendOracleMessage()" title="Envoyer">&#10148;</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-    (function() {{
-
-        /* ── Ouvrir la fenêtre ── */
-        window.openOracleChat = function() {{
-            const win = document.getElementById('chat-window');
-            const btn = document.getElementById('chat-toggle-btn');
-            if (!win) return;
-            win.style.display = 'flex';
-            win.classList.remove('minimized');
-            if (btn) btn.style.display = 'none';
-            renderChatMessages();
-            setTimeout(function() {{
-                var inp = document.getElementById('chat-input');
-                if (inp) inp.focus();
-            }}, 120);
-        }};
-
-        /* ── Réduire (— ) : garde le header, cache le corps ── */
-        window.minimizeOracleChat = function() {{
-            const win = document.getElementById('chat-window');
-            if (!win) return;
-            win.classList.toggle('minimized');
-        }};
-
-        /* ── Fermer (✕) : cache tout, réaffiche le bouton rond ── */
-        window.closeOracleChat = function() {{
-            const win = document.getElementById('chat-window');
-            const btn = document.getElementById('chat-toggle-btn');
-            if (!win) return;
-            win.style.display = 'none';
-            win.classList.remove('minimized');
-            if (btn) btn.style.display = 'flex';
-        }};
-
-        /* ── Rendu des messages ── */
-        window.renderChatMessages = function() {{
-            const area = document.getElementById('chat-messages');
-            if (!area) return;
-            let html = '<div style="background:rgba(127,255,212,0.1); padding:12px 14px; border-radius:12px; border-left:4px solid #7FFFD4; color:#ccc; font-size:14px;">Bonjour ! Posez-moi n\'importe quelle question sur vos pronostics, classements ou résultats.</div>';
-            const messages = {msgs_json};
-            messages.forEach(function(msg) {{
-                if (msg.role === "user") {{
-                    html += '<div style="align-self:flex-end; background:#1e3a5f; color:#fff; padding:10px 14px; border-radius:18px 18px 4px 18px; max-width:78%; font-size:14px; word-break:break-word;">' + escapeHtml(msg.content) + '</div>';
-                }} else {{
-                    html += '<div style="align-self:flex-start; background:rgba(127,255,212,0.08); border:1px solid rgba(127,255,212,0.2); color:#ddd; padding:10px 14px; border-radius:18px 18px 18px 4px; max-width:85%; font-size:14px; word-break:break-word;">' + msg.content.replace(/\\n/g, '<br>') + '</div>';
-                }}
-            }});
-            area.innerHTML = html;
-            area.scrollTop = area.scrollHeight;
-        }};
-
-        window.escapeHtml = function(text) {{
-            return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }};
-
-        /* ── Envoi du message ── */
-        window.sendOracleMessage = function() {{
-            const input = document.getElementById('chat-input');
-            if (!input) return;
-            const text = input.value.trim();
-            if (text) {{
-                const url = new URL(window.location.href);
-                url.searchParams.set('oracle_chat_input', encodeURIComponent(text));
-                input.value = '';
-                window.location.href = url.toString();
-            }}
-        }};
-
-        /* ── Au chargement : fenêtre fermée, bouton visible ── */
-        /* (display:none est déjà dans le style inline, double sécurité ici) */
-        (function ensureHidden() {{
-            const win = document.getElementById('chat-window');
-            const btn = document.getElementById('chat-toggle-btn');
-            if (win) {{ win.style.display = 'none'; win.classList.remove('minimized'); }}
-            if (btn) btn.style.display = 'flex';
-        }})();
-        document.addEventListener('DOMContentLoaded', function() {{
-            const win = document.getElementById('chat-window');
-            const btn = document.getElementById('chat-toggle-btn');
-            if (win) {{ win.style.display = 'none'; win.classList.remove('minimized'); }}
-            if (btn) btn.style.display = 'flex';
-        }});
-
-    }})();
-    </script>
-    """, unsafe_allow_html=True)
-# ===================== TAB 7 : ASSISTANT IA =====================
 with tabs[7]:
+    # ── Traitement message AVANT le rendu ──
+    if st.session_state.get('_pending_chat_input'):
+        user_q = st.session_state.pop('_pending_chat_input')
+        ts_now = _dt.datetime.now().isoformat()
+        st.session_state.chat_messages.append({"role": "user", "content": user_q, "ts": ts_now})
+        try:
+            if IA_DISPONIBLE:
+                standings_ctx = get_standings(st.session_state['history'][s_active], engine.teams_list)
+                full_ctx = build_full_context(st.session_state['history'], s_active, standings_ctx, next_j)
+                if hasattr(moteur_ia_chat, 'set_contexte'):
+                    moteur_ia_chat.set_contexte(
+                        history=st.session_state['history'],
+                        saison_active=s_active,
+                        standings=standings_ctx,
+                        prochaine_journee=next_j,
+                        contexte_complet=full_ctx
+                    )
+            with st.spinner("🔮 L'Oracle réfléchit..."):
+                rep = moteur_ia_chat.discuter(user_q)
+        except Exception as ex:
+            rep = {"texte": f"Erreur : {ex}", "source": "offline"}
+        st.session_state.chat_messages.append({
+            "role": "assistant",
+            "content": rep.get("texte", "Pas de réponse."),
+            "source": rep.get("source", "offline"),
+            "ts": _dt.datetime.now().isoformat()
+        })
+        save_chat_history(st.session_state.chat_messages)
+        st.rerun()
+
     st.markdown("""
-    <div class="main-header" style="padding: 20px; margin-bottom: 18px; text-align:center;">
-        <h2 style="color: #7FFFD4; margin:0;">🤖 Oracle IA Assistant</h2>
-        <p style="color: #888; margin:8px 0 0 0;">Analyse intelligente • Contexte complet • Apprentissage continu</p>
+    <div style="text-align:center;padding:14px 0 4px 0;">
+        <span style="font-size:2em;">🔮</span>
+        <h2 style="color:#7FFFD4;margin:4px 0 2px 0;font-size:1.3em;">Oracle IA — Assistant</h2>
+        <p style="color:#666;margin:0;font-size:0.8em;">Cliquez sur le bouton 🔮 ci-dessous pour ouvrir le chat</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Floating chat (conserve la fonction existante)
-    render_floating_chat()
-    st.divider()
-
-    # Groq / status area (identique à avant)
-    st.markdown("### 🔑 Configuration Groq")
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        api_key_input = st.text_input(
-            "Clé API Groq",
-            value=getattr(moteur_ia_chat, 'api_key', '') if IA_DISPONIBLE else '',
-            type="password",
-            placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxx"
-        )
-    with col2:
-        if st.button("🔗 Connecter", use_container_width=True):
-            if api_key_input:
-                os.environ["GROQ_API_KEY"] = api_key_input
-                if IA_DISPONIBLE:
+    with st.expander("🔑 Configuration Groq API", expanded=False):
+        c1, c2 = st.columns([3,1])
+        with c1:
+            api_key_input = st.text_input("Clé API", value=getattr(moteur_ia_chat,'api_key',''),
+                                          type="password", placeholder="gsk_xxx...")
+        with c2:
+            if st.button("🔗 Connecter", use_container_width=True):
+                if api_key_input:
+                    os.environ["GROQ_API_KEY"] = api_key_input
                     moteur_ia_chat.api_key = api_key_input
                     try:
                         from groq import Groq
                         moteur_ia_chat.client = Groq(api_key=api_key_input)
-                        custom_notify("✅ Groq connecté avec succès !", "#00FF00")
+                        st.success("✅ Groq connecté !")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Erreur : {e}")
-                else:
-                    st.info("Module IA non disponible en environnement actuel.")
+        cs1, cs2, cs3 = st.columns(3)
+        cs1.success("🟢 Groq" if getattr(moteur_ia_chat,'est_connecte',lambda:False)() else "🟡 Offline")
+        _stats2 = moteur_apprentissage.get_stats_apprentissage() if IA_DISPONIBLE else {"total":0}
+        cs2.metric("Matchs appris", _stats2.get("total", 0))
+        _tr2 = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
+        cs3.metric("Résultats", _tr2)
 
-    stat1, stat2, stat3 = st.columns(3)
-    with stat1:
-        if IA_DISPONIBLE and getattr(moteur_ia_chat, 'est_connecte', lambda: False)():
-            st.success("🟢 Groq Connecté")
-        else:
-            st.warning("🟡 Mode Offline")
-    with stat2:
-        stats_ia = moteur_apprentissage.get_stats_apprentissage() if IA_DISPONIBLE else {"total": 0}
-        st.metric("Matchs appris", stats_ia.get("total", 0))
-    with stat3:
-        total_res = sum(len(jd.get("res", [])) for sd in st.session_state['history'].values() for jd in sd.values())
-        st.metric("Résultats enregistrés", total_res)
+    st.markdown("---")
 
-    st.divider()
+    msgs_chat = st.session_state.get('chat_messages', [])
+    msgs_json_chat = json.dumps(msgs_chat, ensure_ascii=False)
 
-    # ---------------- Chat area: fixed height container + sticky input ----------------
-    # Ensure chat history is loaded
-    if "chat_messages" not in st.session_state:
-        st.session_state.chat_messages = load_chat_history()
-
-    # Provide messages JSON for client-side rendering
-    messages_json_safe = json.dumps(st.session_state.get('chat_messages', []), ensure_ascii=False).replace("'", "\\'")
-    st.markdown(f"""
-    <style>
-    /* Chat container fixed height and style */
-    .chat-container {{
-        position: relative;
-        height: 600px;
-        border-radius: 14px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        border: 1px solid rgba(127,255,212,0.12);
-        background: #0a0f1c;
+    CHAT_HTML = f"""<!DOCTYPE html>
+<html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0;}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:transparent;min-height:70px;display:flex;justify-content:flex-end;align-items:flex-end;padding:4px;}}
+#fab{{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);border:none;cursor:pointer;font-size:28px;box-shadow:0 4px 20px rgba(127,255,212,0.6);transition:transform .2s;position:relative;z-index:5;display:flex;align-items:center;justify-content:center;}}
+#fab:active{{transform:scale(.92);}}
+#badge{{position:absolute;top:0;right:0;background:#FF4B4B;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;border:2px solid #0a0f1c;padding:0 3px;}}
+#win{{display:none;flex-direction:column;position:fixed;bottom:80px;right:12px;width:min(370px,calc(100vw - 24px));height:min(560px,calc(100vh - 110px));background:#fff;border-radius:20px;box-shadow:0 12px 50px rgba(0,0,0,0.35);overflow:hidden;z-index:9999;}}
+#win.open{{display:flex !important;animation:pop .22s ease;}}
+@keyframes pop{{from{{opacity:0;transform:translateY(16px) scale(.97)}}to{{opacity:1;transform:none}}}}
+#hd{{background:#FFD966;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}}
+#hd-av{{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.15);}}
+#hd-info{{flex:1;}}
+#hd-name{{color:#1a1a2e;font-weight:800;font-size:15px;}}
+#hd-sub{{color:#555;font-size:11px;margin-top:1px;}}
+#close{{background:none;border:none;color:#333;font-size:24px;cursor:pointer;line-height:1;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;}}
+#msgs{{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:10px;background:#F0F2F5;scrollbar-width:none;}}
+#msgs::-webkit-scrollbar{{display:none;}}
+.welcome{{background:#e8f4fd;border-radius:14px;padding:12px 14px;color:#555;font-size:13px;text-align:center;border:1px solid #c9e6f7;}}
+.bw-u{{display:flex;justify-content:flex-end;align-items:flex-end;}}
+.bu-u{{background:#FFD966;color:#1a1a2e;padding:10px 14px;border-radius:20px 20px 4px 20px;max-width:78%;font-size:14px;line-height:1.45;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,0.12);}}
+.bw-b{{display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;}}
+.av-b{{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;margin-bottom:2px;}}
+.bu-b{{background:#fff;color:#1a1a2e;padding:10px 14px;border-radius:20px 20px 20px 4px;max-width:82%;font-size:14px;line-height:1.45;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,0.1);}}
+.src-lbl{{font-size:10px;color:#00b894;font-weight:700;margin-bottom:3px;}}
+.ts{{font-size:10px;color:#aaa;margin-top:4px;text-align:right;}}
+.bu-b .ts{{text-align:left;}}
+.typing{{display:flex;gap:4px;align-items:center;padding:4px 2px;}}
+.typing span{{width:8px;height:8px;border-radius:50%;background:#00b894;opacity:.4;animation:bounce 1.1s infinite;}}
+.typing span:nth-child(2){{animation-delay:.18s;}}
+.typing span:nth-child(3){{animation-delay:.36s;}}
+@keyframes bounce{{0%,80%,100%{{transform:scale(.7);opacity:.3}}40%{{transform:scale(1.1);opacity:1}}}}
+#bar{{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border-top:1px solid #e5e7eb;flex-shrink:0;}}
+#inp{{flex:1;min-width:0;background:#F0F2F5;border:none;border-radius:22px;padding:11px 16px;font-size:14px;color:#1a1a2e;outline:none;}}
+#inp::placeholder{{color:#aaa;}}
+#snd-btn{{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;color:#1a1a2e;box-shadow:0 2px 8px rgba(0,185,148,.4);transition:transform .15s;flex-shrink:0;}}
+#snd-btn:active{{transform:scale(.9);}}
+</style>
+</head>
+<body>
+<button id="fab" onclick="togWin()">🔮<span id="badge"></span></button>
+<div id="win">
+  <div id="hd">
+    <div id="hd-av">🔮</div>
+    <div id="hd-info"><div id="hd-name">Oracle Mahita IA</div><div id="hd-sub">● En ligne · Assistant pronostics</div></div>
+    <button id="close" onclick="togWin()">✕</button>
+  </div>
+  <div id="msgs"><div class="welcome">🔮 Bonjour ! Posez-moi n'importe quelle question sur vos pronostics, classements ou résultats.</div></div>
+  <div id="bar">
+    <input id="inp" type="text" placeholder="Écrivez votre message..." autocomplete="off">
+    <button id="snd-btn" onclick="doSend()">&#10148;</button>
+  </div>
+</div>
+<script>
+const MSGS={msgs_json_chat};
+let isOpen=false;
+function esc(t){{return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}}
+function fmt(ts){{try{{const d=new Date(ts);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}}catch(e){{return'';}}}}
+function renderAll(){{
+  const a=document.getElementById('msgs');
+  let h='<div class="welcome">🔮 Bonjour ! Posez-moi n\'importe quelle question.</div>';
+  MSGS.forEach(function(m){{
+    const t=fmt(m.ts||'');
+    if(m.role==='user'){{
+      h+='<div class="bw-u"><div class="bu-u">'+esc(m.content)+'<div class="ts">'+t+'</div></div></div>';
+    }}else{{
+      const src=m.source==='groq'?'🧠 Groq':'🤖 Offline';
+      h+='<div class="bw-b"><div class="av-b">🔮</div><div class="bu-b"><div class="src-lbl">'+src+'</div>'+esc(m.content).replace(/\n/g,'<br>')+'<div class="ts">'+t+'</div></div></div>';
     }}
-    .chat-messages-box {{
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px;
-        display:flex;
-        flex-direction:column;
-        gap:10px;
-        scrollbar-width: thin;
-        scrollbar-color: #7FFFD4 rgba(127,255,212,0.06);
-    }}
-    .bubble-user {{
-        align-self: flex-end;
-        background: linear-gradient(135deg, #0f3460, #1a4480);
-        color: #fff;
-        padding: 10px 14px;
-        border-radius: 16px 16px 4px 16px;
-        max-width: 80%;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-        word-break: break-word;
-        font-size:13px;
-    }}
-    .bubble-bot {{
-        align-self: flex-start;
-        display:flex;
-        gap:8px;
-        max-width: 85%;
-    }}
-    .bubble-bot .content {{
-        background: rgba(127,255,212,0.08);
-        border: 1px solid rgba(127,255,212,0.12);
-        padding: 10px 14px;
-        border-radius: 16px 16px 16px 4px;
-        color: #e8f7f0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-        font-size:13px;
-        word-break: break-word;
-    }}
-    .bot-avatar {{
-        width:32px; height:32px; border-radius:50%;
-        background: linear-gradient(135deg,#7FFFD4,#00b894);
-        display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
-    }}
-    .msg-ts {{
-        font-size:11px; color:#7a8a92; margin-top:4px;
-    }}
-    .chat-input-zone {{
-        padding:10px;
-        background:#0F1626;
-        border-top:1px solid rgba(127,255,212,0.06);
-        display:flex; gap:8px; align-items:center;
-    }}
-    .chat-input-field {{
-        flex:1;
-        border-radius:22px;
-        padding:10px 14px;
-        background:#1a2338;
-        border:1px solid rgba(127,255,212,0.06);
-        color:#fff;
-        outline:none;
-    }}
-    .chat-send-btn {{
-        width:40px; height:40px; border-radius:50%;
-        background:linear-gradient(135deg,#7FFFD4,#00b894);
-        border:none; cursor:pointer; color:#111; font-weight:700;
-    }}
-    @media (max-width:600px){{
-        .chat-container{{height:440px;}}
-    }}
-    </style>
+  }});
+  a.innerHTML=h;a.scrollTop=a.scrollHeight;
+}}
+function togWin(){{
+  isOpen=!isOpen;
+  const w=document.getElementById('win');
+  const b=document.getElementById('badge');
+  if(isOpen){{w.classList.add('open');b.style.display='none';renderAll();setTimeout(function(){{document.getElementById('inp').focus();}},150);}}
+  else{{w.classList.remove('open');}}
+}}
+function doSend(){{
+  const inp=document.getElementById('inp');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';
+  const a=document.getElementById('msgs');
+  a.innerHTML+='<div class="bw-u"><div class="bu-u">'+esc(text)+'</div></div>';
+  a.innerHTML+='<div id="typ-row" class="bw-b"><div class="av-b">🔮</div><div class="bu-b"><div class="typing"><span></span><span></span><span></span></div></div></div>';
+  a.scrollTop=a.scrollHeight;
+  window.parent.postMessage({{type:'oracle_msg',text:text}},'*');
+}}
+document.getElementById('inp').addEventListener('keydown',function(e){{if(e.key==='Enter'){{e.preventDefault();doSend();}}  }});
+if(MSGS.length>0){{const b=document.getElementById('badge');b.style.display='flex';b.textContent=MSGS.length>9?'9+':MSGS.length;}}
+</script>
+</body></html>"""
 
-    <div class="chat-container" id="chat-container">
-      <div id="chat-messages-display" class="chat-messages-box"></div>
-      <div class="chat-input-zone">
-         <input id="chat-input-new" class="chat-input-field" placeholder="Posez votre question à l'Oracle..." />
-         <button id="chat-send-btn-new" class="chat-send-btn">➤</button>
-      </div>
-    </div>
+    components.html(CHAT_HTML, height=80, scrolling=False)
 
-    <script>
-    (function(){{
-        const messages = JSON.parse('{messages_json_safe}');
+    st.markdown("---")
 
-        function escapeHtml(text){{
-            if(!text) return '';
-            return text
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/\"/g, '&quot;')
-              .replace(/'/g, '&#039;');
-        }}
+    st.markdown("<p style='color:#7FFFD4;font-size:13px;margin-bottom:4px;'>💬 Envoyer un message à Oracle :</p>", unsafe_allow_html=True)
 
-        function renderMessages() {{
-            const box = document.getElementById('chat-messages-display');
-            if(!box) return;
-            let html = '';
-            if(messages.length === 0){{
-                html = '<div style=\"text-align:center;color:#88a0a6;padding:30px;\">🔮 Bienvenue — posez votre question</div>';
-            }} else {{
-                messages.forEach(m => {{
-                    const ts = m.ts ? new Date(m.ts).toLocaleTimeString('fr-FR', {{hour:'2-digit', minute:'2-digit'}}) : '';
-                    if(m.role === 'user') {{
-                        html += `<div class="bubble-user">${{escapeHtml(m.content)}}</div><div class="msg-ts" style="align-self:flex-end;padding-right:6px;">${{ts}}</div>`;
-                    }} else {{
-                        html += `<div class="bubble-bot"><div class="bot-avatar">🔮</div><div><div class="content">${{escapeHtml(m.content)}}</div><div class="msg-ts">${{ts}}</div></div></div>`;
-                    }}
-                }});
-            }}
-            box.innerHTML = html;
-            box.scrollTop = box.scrollHeight;
-        }}
+    with st.form("chat_form_v47", clear_on_submit=True):
+        user_input = st.text_input("msg", placeholder="Ex: Quelle équipe est la plus en forme ?",
+                                   label_visibility="collapsed")
+        cs1, cs2, cs3 = st.columns([3,1,1])
+        with cs1: submit_chat = st.form_submit_button("📤 Envoyer", use_container_width=True)
+        with cs2: clear_chat  = st.form_submit_button("🗑️ Effacer", use_container_width=True)
+        with cs3: ctx_chat    = st.form_submit_button("📋 Contexte", use_container_width=True)
 
-        function sendMessage() {{
-            const input = document.getElementById('chat-input-new');
-            if(!input) return;
-            const txt = input.value.trim();
-            if(!txt) return;
-            // send via query param so Streamlit can pick it up
-            const url = new URL(window.location.href);
-            url.searchParams.set('oracle_chat_new_msg', encodeURIComponent(txt));
-            window.location.href = url.toString();
-        }}
+    if clear_chat:
+        st.session_state.chat_messages = []
+        save_chat_history([])
+        st.rerun()
 
-        document.getElementById('chat-send-btn-new').addEventListener('click', sendMessage);
-        document.getElementById('chat-input-new').addEventListener('keydown', function(e){{
-            if(e.key === 'Enter' && !e.shiftKey) {{
-                e.preventDefault(); sendMessage();
-            }}
-        }});
+    if ctx_chat:
+        try:
+            _st2 = get_standings(st.session_state['history'][s_active], engine.teams_list)
+            _ctx2 = build_full_context(st.session_state['history'], s_active, _st2, next_j)
+            st.text_area("Contexte transmis à l'IA", _ctx2, height=200)
+        except Exception as ex:
+            st.error(f"Erreur : {ex}")
 
-        document.addEventListener('DOMContentLoaded', renderMessages);
-        renderMessages();
-    }})();
-    </script>
-    """, unsafe_allow_html=True)
+    if submit_chat and user_input.strip():
+        st.session_state['_pending_chat_input'] = user_input.strip()
+        st.rerun()
 
-    # ---------------- Server-side handling of new message (query param) ----------------
-    # If front-end has added oracle_chat_new_msg query param, process it
-    query_params = st.experimental_get_query_params()
-    if 'oracle_chat_new_msg' in query_params:
-        raw = query_params.get('oracle_chat_new_msg')
-        if raw:
-            # raw is a list; take first
-            user_text = raw[0]
-            # decode if encoded
-            try:
-                user_text = (user_text if isinstance(user_text, str) else user_text.decode('utf-8'))
-            except:
-                pass
-            # append user message
-            import datetime
-            st.session_state.chat_messages.append({
-                "role": "user",
-                "content": user_text,
-                "ts": datetime.datetime.now().isoformat()
-            })
+    st.markdown("<p style='color:#888;font-size:12px;margin:10px 0 4px 0;'>⚡ Suggestions :</p>", unsafe_allow_html=True)
+    _SUGGS = ["Quelle équipe est la plus en forme ?","Qui est favori pour le titre ?","Meilleures cotes de la prochaine journée","Analyse les résultats récents"]
+    _sc = st.columns(2)
+    for _si, _sg in enumerate(_SUGGS):
+        with _sc[_si % 2]:
+            if st.button(_sg, key=f"sg47_{_si}", use_container_width=True):
+                st.session_state['_pending_chat_input'] = _sg
+                st.rerun()
 
-            # Prepare context and call IA if available
-            standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
-            full_context = build_full_context(st.session_state['history'], s_active, standings, next_j)
-
-            # If IA available, set contexte and ask for answer
-            if IA_DISPONIBLE:
-                try:
-                    moteur_ia_chat.set_contexte(
-                        history=st.session_state['history'],
-                        saison_active=s_active,
-                        standings=standings,
-                        prochaine_journee=next_j,
-                        contexte_complet=full_context
-                    )
-                except:
-                    pass
-
-            with st.spinner("🔮 L'Oracle réfléchit..."):
-                if IA_DISPONIBLE:
-                    try:
-                        reponse = moteur_ia_chat.discuter(user_text)
-                        answer_text = reponse.get("texte", "Je n'ai pas pu générer de réponse.")
-                        source = reponse.get("source", "offline")
-                    except Exception as e:
-                        answer_text = f"Erreur IA: {e}"
-                        source = "error"
-                else:
-                    # Fallback offline response
-                    answer_text = "Mode offline — IA non disponible sur ce serveur."
-                    source = "offline"
-
-            st.session_state.chat_messages.append({
-                "role": "assistant",
-                "content": answer_text,
-                "source": source,
-                "ts": datetime.datetime.now().isoformat()
-            })
-
-            # save & clear query param then rerun so front-end reloads messages
-            save_chat_history(st.session_state.chat_messages)
-            # NOTE: Streamlit does not provide a direct way to remove a query param without reload,
-            # so we trigger a rerun without the param by redirecting to same URL without it.
-            url = st.experimental_get_query_params()
-            # simple rerun
-            st.experimental_set_query_params()
-            st.experimental_rerun()
-
-    # ---------------- Suggestions & utilities ----------------
-    st.divider()
-    st.markdown("#### ⚡ Suggestions rapides")
-    suggestions = [
-        "Quelle équipe est la plus en forme ?",
-        "Analyse Manchester Blue vs London Blues",
-        "Qui est favori pour le titre ?",
-        "Meilleures cotes valeur de la prochaine journée",
-        "Résume les performances actuelles"
-    ]
-    cols = st.columns(3)
-    for idx, s in enumerate(suggestions):
-        with cols[idx % 3]:
-            if st.button(s, key=f"quick_sugg_{idx}", use_container_width=True):
-                # add suggestion as user message and rerun to process
-                import datetime
-                st.session_state.chat_messages.append({"role":"user","content":s,"ts":datetime.datetime.now().isoformat()})
-                save_chat_history(st.session_state.chat_messages)
-                st.experimental_set_query_params(oracle_chat_new_msg=s)
-                st.experimental_rerun()
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        if st.button("🧹 Effacer l'historique", use_container_width=True):
-            st.session_state.chat_messages = []
-            save_chat_history([])
-            st.experimental_rerun()
-    with c2:
-        if st.button("📋 Voir le contexte complet", use_container_width=True):
-            standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
-            ctx = build_full_context(st.session_state['history'], s_active, standings, next_j)
-            st.text_area("Contexte envoyé à l'IA", ctx, height=300)
-    with c3:
-        if st.button("💾 Exporter chat", use_container_width=True):
-            st.download_button(
-                label="📥 Télécharger",
-                data=json.dumps(st.session_state.chat_messages, indent=2, ensure_ascii=False),
-                file_name="oracle_chat_export.json",
-                mime="application/json"
-                    )
+# ===================== Sauvegarde Globale =====================
 # ===================== Sauvegarde Globale =====================
 if st.button("💾 Sauvegarder tout maintenant", key="btn_save_all"):
     save_db(st.session_state['history'])
