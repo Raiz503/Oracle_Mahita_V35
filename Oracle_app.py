@@ -2125,21 +2125,232 @@ with tabs[4]:
                 else:
                     st.info("Pas encore de résultats pour calculer le classement.")
 
+            # ── BOUTON PRÉDIRE (test rapide du moteur) ──
+            st.markdown("---")
+            cal_disponible = d.get("cal", [])
+            if cal_disponible:
+                if st.button(f"🔮 Prédire cette journée (test moteur)", key=f"btn_predire_{jk}"):
+                    st.markdown(f"##### 🧪 Résultats de prédiction — {jk}")
+                    standings_test = get_standings(st.session_state['history'][s_active], engine.teams_list)
+
+                    # Historique partiel : tout ce qui précède cette journée
+                    j_num_test = int(re.search(r'\d+', jk).group()) if re.search(r'\d+', jk) else 0
+                    history_avant = {
+                        jj: st.session_state['history'][s_active][jj]
+                        for jj in sorted_j
+                        if (int(re.search(r'\d+', jj).group()) if re.search(r'\d+', jj) else 0) < j_num_test
+                    }
+
+                    rows_pred = []
+                    for m_test in cal_disponible:
+                        r_d = int(standings_test[standings_test['Équipe'] == m_test['h']]['Rang'].values[0]) \
+                              if not standings_test[standings_test['Équipe'] == m_test['h']].empty else 10
+                        r_e = int(standings_test[standings_test['Équipe'] == m_test['a']]['Rang'].values[0]) \
+                              if not standings_test[standings_test['Équipe'] == m_test['a']].empty else 10
+                        f_d = get_forme_equipe(st.session_state['history'], s_active, m_test['h'])
+                        f_e = get_forme_equipe(st.session_state['history'], s_active, m_test['a'])
+                        s_d = get_serie_victoires(f_d)
+                        s_e = get_serie_victoires(f_e)
+
+                        pred_test = None
+                        if oracle_brain:
+                            pred_test = oracle_brain.analyser_match(
+                                equipe_dom=m_test['h'], equipe_ext=m_test['a'],
+                                cotes=m_test.get('o', [2.0, 3.0, 2.0]),
+                                journee=j_num_test, rang_dom=r_d, rang_ext=r_e,
+                                serie_dom=s_d, serie_ext=s_e,
+                                forme_dom=f_d, forme_ext=f_e
+                            )
+
+                        score_reel = None
+                        for r_match in d.get("res", []):
+                            if r_match.get('h') == m_test['h'] and r_match.get('a') == m_test['a']:
+                                score_reel = r_match.get('s', '?')
+                                break
+
+                        row = {
+                            "Match": f"{m_test['h']} vs {m_test['a']}",
+                            "Score prédit": pred_test['score_predit'] if pred_test else "?",
+                            "Confiance": pred_test['confiance'] if pred_test else "?",
+                            "Choix": pred_test['choix_expert'] if pred_test else "?",
+                            "Score réel": score_reel or "–",
+                        }
+                        if pred_test and score_reel and score_reel != '?':
+                            try:
+                                sp = pred_test['score_predit']
+                                exact = sp.replace(':', '-') == score_reel.replace(':', '-')
+                                sh_r, sa_r = map(int, score_reel.replace('-',':').split(':'))
+                                sh_p, sa_p = map(int, sp.split(':'))
+                                tend_ok = (
+                                    (sh_r > sa_r and sh_p > sa_p) or
+                                    (sh_r == sa_r and sh_p == sa_p) or
+                                    (sh_r < sa_r and sh_p < sa_p)
+                                )
+                                row["Résultat"] = "✅ Exact" if exact else ("🟡 1N2 OK" if tend_ok else "❌")
+                            except:
+                                row["Résultat"] = "?"
+                        else:
+                            row["Résultat"] = "–"
+                        rows_pred.append(row)
+
+                    if rows_pred:
+                        df_pred = pd.DataFrame(rows_pred)
+                        # Colorier selon résultat
+                        def style_pred(row):
+                            r = row.get("Résultat", "")
+                            if "Exact" in str(r):   return ['background-color: rgba(0,255,0,0.15)'] * len(row)
+                            if "1N2" in str(r):      return ['background-color: rgba(255,165,0,0.12)'] * len(row)
+                            if "❌" in str(r):        return ['background-color: rgba(255,75,75,0.12)'] * len(row)
+                            return [''] * len(row)
+                        st.dataframe(df_pred.style.apply(style_pred, axis=1),
+                                     use_container_width=True, hide_index=True)
+
+                        # Score global du test
+                        exacts = sum(1 for r in rows_pred if "Exact" in str(r.get("Résultat", "")))
+                        ok_1n2 = sum(1 for r in rows_pred if "1N2" in str(r.get("Résultat", "")))
+                        total_t = sum(1 for r in rows_pred if r.get("Résultat", "–") != "–")
+                        if total_t > 0:
+                            c1t, c2t, c3t = st.columns(3)
+                            c1t.metric("✅ Scores exacts", exacts)
+                            c2t.metric("🟡 1N2 corrects", ok_1n2)
+                            c3t.metric("📊 Taux", f"{(exacts + ok_1n2) / total_t * 100:.0f}%")
+            else:
+                st.info("Aucun calendrier disponible pour prédire cette journée.")
+
 # ===================== TAB 5 : GESTION =====================
 with tabs[5]:
     st.markdown("### ⚙️ Gestion")
-    ns = st.text_input("Nouvelle saison (ex: Saison 2027)")
+
+    # ── 1) CRÉER UNE NOUVELLE SAISON ──
+    st.markdown("#### ➕ Nouvelle Saison")
+    ns = st.text_input("Nom (ex: Saison 2027)", key="input_nouvelle_saison")
     if st.button("Créer Saison", key="btn_creer_saison"):
         if ns and ns not in st.session_state['history']:
             st.session_state['history'][ns] = {}
             save_db(st.session_state['history'])
             st.rerun()
+        elif ns in st.session_state['history']:
+            st.warning("Cette saison existe déjà.")
 
     st.divider()
-    if st.button("📥 Exporter Backup", key="btn_export_backup"):
-        st.download_button("Télécharger Backup", 
-                           data=json.dumps(st.session_state['history'], indent=4, ensure_ascii=False),
-                           file_name="oracle_backup.json", mime="application/json")
+
+    # ── 2) RENOMMER LA SAISON EN COURS ──
+    st.markdown("#### ✏️ Renommer la Saison en cours")
+    col_rn1, col_rn2 = st.columns([3, 1])
+    with col_rn1:
+        nouveau_nom = st.text_input(
+            f"Nouveau nom pour « {s_active} »",
+            value=s_active,
+            key="input_renommer_saison"
+        )
+    with col_rn2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("✅ Renommer", key="btn_renommer_saison", use_container_width=True):
+            if nouveau_nom and nouveau_nom != s_active:
+                if nouveau_nom in st.session_state['history']:
+                    st.error("Ce nom est déjà utilisé par une autre saison.")
+                else:
+                    # Copier les données sous le nouveau nom, supprimer l'ancien
+                    st.session_state['history'][nouveau_nom] = st.session_state['history'].pop(s_active)
+                    save_db(st.session_state['history'])
+                    st.success(f"Saison renommée en « {nouveau_nom} »")
+                    st.rerun()
+
+    st.divider()
+
+    # ── 3) EXPORTER BACKUP ──
+    st.markdown("#### 📥 Exporter")
+    st.download_button(
+        label="📥 Télécharger Backup JSON",
+        data=json.dumps(st.session_state['history'], indent=4, ensure_ascii=False),
+        file_name="oracle_backup.json",
+        mime="application/json",
+        key="btn_export_backup"
+    )
+
+    st.divider()
+
+    # ── 4) IMPORTER & FUSIONNER DES DONNÉES ──
+    st.markdown("#### 📤 Importer & Fusionner des Données")
+    st.caption("Importez un fichier JSON exporté depuis Oracle. Les données seront **fusionnées** avec l'existant (aucune perte).")
+
+    fichier_import = st.file_uploader(
+        "Choisir un fichier backup JSON",
+        type=["json"],
+        key="uploader_import_backup"
+    )
+
+    if fichier_import is not None:
+        try:
+            contenu_import = json.loads(fichier_import.read().decode("utf-8"))
+            
+            # Aperçu de ce qui va être importé
+            st.markdown("**Aperçu du fichier :**")
+            for saison_imp, data_imp in contenu_import.items():
+                nb_j = len(data_imp)
+                nb_res = sum(len(jd.get("res", [])) for jd in data_imp.values())
+                nb_cal = sum(len(jd.get("cal", [])) for jd in data_imp.values())
+                exist = "✅ existe déjà" if saison_imp in st.session_state['history'] else "🆕 nouvelle"
+                st.markdown(f"- **{saison_imp}** ({exist}) — {nb_j} journées · {nb_cal} matchs calendrier · {nb_res} résultats")
+
+            col_imp1, col_imp2 = st.columns(2)
+            with col_imp1:
+                if st.button("🔀 Fusionner (recommandé)", key="btn_fusionner", use_container_width=True):
+                    nb_saisons_ajoutees = 0
+                    nb_journees_fusionnees = 0
+                    for saison_imp, data_imp in contenu_import.items():
+                        if saison_imp not in st.session_state['history']:
+                            st.session_state['history'][saison_imp] = {}
+                            nb_saisons_ajoutees += 1
+                        for jk_imp, jdata_imp in data_imp.items():
+                            if jk_imp not in st.session_state['history'][saison_imp]:
+                                # Journée absente : on l'ajoute entièrement
+                                st.session_state['history'][saison_imp][jk_imp] = jdata_imp
+                                nb_journees_fusionnees += 1
+                            else:
+                                # Journée existante : fusionner chaque sous-clé
+                                existing = st.session_state['history'][saison_imp][jk_imp]
+                                for cle in ["cal", "res", "pro"]:
+                                    if cle in jdata_imp and not existing.get(cle):
+                                        existing[cle] = jdata_imp[cle]
+                                nb_journees_fusionnees += 1
+                    save_db(st.session_state['history'])
+                    # Recharger l'apprentissage IA avec le nouvel historique
+                    st.session_state['_ia_history_loaded'] = False
+                    st.success(f"✅ Fusion réussie ! {nb_saisons_ajoutees} nouvelles saisons, {nb_journees_fusionnees} journées traitées.")
+                    st.rerun()
+
+            with col_imp2:
+                if st.button("♻️ Remplacer tout", key="btn_remplacer", use_container_width=True):
+                    st.session_state['history'] = contenu_import
+                    save_db(st.session_state['history'])
+                    st.session_state['_ia_history_loaded'] = False
+                    st.warning("⚠️ Remplacement effectué. Toutes les données précédentes ont été remplacées.")
+                    st.rerun()
+
+        except Exception as e:
+            st.error(f"Erreur lors de la lecture du fichier : {e}")
+
+    st.divider()
+
+    # ── 5) ANALYSE CROSS-SAISONS ──
+    if oracle_brain and len(st.session_state['history']) >= 2:
+        st.markdown("#### 🔄 Apprentissage Cross-Saisons")
+        st.caption("Analyse les trajectoires d'équipes à travers toutes les saisons disponibles.")
+        if st.button("🧠 Lancer l'analyse cross-saisons", key="btn_cross_saisons"):
+            result = oracle_brain.apprendre_cross_saisons(st.session_state['history'])
+            st.metric("Équipes analysées", result.get("nb_equipes_analysees", 0))
+            st.metric("Saisons parcourues", result.get("nb_saisons", 0))
+            rapport_cs = result.get("rapport", "")
+            if rapport_cs:
+                st.markdown("**Trajectoires détectées :**")
+                st.code(rapport_cs)
+            mem = result.get("memoire", {})
+            if mem:
+                rows_mem = [{"Équipe": eq, "Tendance pts/match": v["tendance"],
+                             "Saisons": v["nb_saisons"]} for eq, v in mem.items()]
+                st.dataframe(pd.DataFrame(rows_mem).sort_values("Tendance pts/match", ascending=False),
+                             use_container_width=True, hide_index=True)
 
 # ===================== TAB 6 : PERFORMANCE =====================
 with tabs[6]:
@@ -2409,8 +2620,8 @@ def render_floating_chat():
     <!-- Bouton rond flottant -->
     <button id="chat-toggle-btn" onclick="openOracleChat()" title="Ouvrir le chat Oracle">🔮</button>
 
-    <!-- Fenêtre de chat -->
-    <div id="chat-window">
+    <!-- Fenêtre de chat — style inline display:none = jamais visible avant JS -->
+    <div id="chat-window" style="display:none; position:fixed; bottom:100px; right:16px; width:min(370px, calc(100vw - 32px)); height:min(530px, calc(100vh - 130px)); background:#0F1626; border-radius:18px; border:1.5px solid rgba(127,255,212,0.5); box-shadow:0 12px 50px rgba(0,0,0,0.85); flex-direction:column; overflow:hidden; z-index:10000;">
 
         <!-- Header style Messenger -->
         <div id="chat-header">
@@ -2445,9 +2656,9 @@ def render_floating_chat():
             const win = document.getElementById('chat-window');
             const btn = document.getElementById('chat-toggle-btn');
             if (!win) return;
-            win.classList.add('open');
+            win.style.display = 'flex';
             win.classList.remove('minimized');
-            btn.style.display = 'none';          // cache le bouton rond
+            if (btn) btn.style.display = 'none';
             renderChatMessages();
             setTimeout(function() {{
                 var inp = document.getElementById('chat-input');
@@ -2467,8 +2678,9 @@ def render_floating_chat():
             const win = document.getElementById('chat-window');
             const btn = document.getElementById('chat-toggle-btn');
             if (!win) return;
-            win.classList.remove('open', 'minimized');
-            if (btn) btn.style.display = 'flex';  // réaffiche le bouton rond
+            win.style.display = 'none';
+            win.classList.remove('minimized');
+            if (btn) btn.style.display = 'flex';
         }};
 
         /* ── Rendu des messages ── */
@@ -2506,10 +2718,17 @@ def render_floating_chat():
         }};
 
         /* ── Au chargement : fenêtre fermée, bouton visible ── */
+        /* (display:none est déjà dans le style inline, double sécurité ici) */
+        (function ensureHidden() {{
+            const win = document.getElementById('chat-window');
+            const btn = document.getElementById('chat-toggle-btn');
+            if (win) {{ win.style.display = 'none'; win.classList.remove('minimized'); }}
+            if (btn) btn.style.display = 'flex';
+        }})();
         document.addEventListener('DOMContentLoaded', function() {{
             const win = document.getElementById('chat-window');
             const btn = document.getElementById('chat-toggle-btn');
-            if (win) win.classList.remove('open', 'minimized');
+            if (win) {{ win.style.display = 'none'; win.classList.remove('minimized'); }}
             if (btn) btn.style.display = 'flex';
         }});
 
