@@ -2574,24 +2574,23 @@ def render_floating_chat():
 # ===================== TAB 7 : ASSISTANT IA =====================
 with tabs[7]:
     st.markdown("""
-    <div class="main-header" style="padding: 20px; margin-bottom: 25px; text-align:center;">
+    <div class="main-header" style="padding: 20px; margin-bottom: 18px; text-align:center;">
         <h2 style="color: #7FFFD4; margin:0;">🤖 Oracle IA Assistant</h2>
         <p style="color: #888; margin:8px 0 0 0;">Analyse intelligente • Contexte complet • Apprentissage continu</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Chat flottant
+    # Floating chat (conserve la fonction existante)
     render_floating_chat()
-
     st.divider()
 
-    # Configuration Groq
+    # Groq / status area (identique à avant)
     st.markdown("### 🔑 Configuration Groq")
     col1, col2 = st.columns([3, 1])
     with col1:
         api_key_input = st.text_input(
-            "Clé API Groq", 
-            value=getattr(moteur_ia_chat, 'api_key', ''),
+            "Clé API Groq",
+            value=getattr(moteur_ia_chat, 'api_key', '') if IA_DISPONIBLE else '',
             type="password",
             placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxx"
         )
@@ -2599,126 +2598,297 @@ with tabs[7]:
         if st.button("🔗 Connecter", use_container_width=True):
             if api_key_input:
                 os.environ["GROQ_API_KEY"] = api_key_input
-                moteur_ia_chat.api_key = api_key_input
-                try:
-                    from groq import Groq
-                    moteur_ia_chat.client = Groq(api_key=api_key_input)
-                    custom_notify("✅ Groq connecté avec succès !", "#00FF00")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erreur : {e}")
+                if IA_DISPONIBLE:
+                    moteur_ia_chat.api_key = api_key_input
+                    try:
+                        from groq import Groq
+                        moteur_ia_chat.client = Groq(api_key=api_key_input)
+                        custom_notify("✅ Groq connecté avec succès !", "#00FF00")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erreur : {e}")
+                else:
+                    st.info("Module IA non disponible en environnement actuel.")
 
-    # Status
-    col_stat1, col_stat2, col_stat3 = st.columns(3)
-    with col_stat1:
-        if getattr(moteur_ia_chat, 'est_connecte', lambda: False)():
+    stat1, stat2, stat3 = st.columns(3)
+    with stat1:
+        if IA_DISPONIBLE and getattr(moteur_ia_chat, 'est_connecte', lambda: False)():
             st.success("🟢 Groq Connecté")
         else:
             st.warning("🟡 Mode Offline")
-    with col_stat2:
+    with stat2:
         stats_ia = moteur_apprentissage.get_stats_apprentissage() if IA_DISPONIBLE else {"total": 0}
         st.metric("Matchs appris", stats_ia.get("total", 0))
-    with col_stat3:
-        total_res = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
+    with stat3:
+        total_res = sum(len(jd.get("res", [])) for sd in st.session_state['history'].values() for jd in sd.values())
         st.metric("Résultats enregistrés", total_res)
 
     st.divider()
 
-    # Zone de chat dans l'onglet (redondance utile)
-    st.markdown("### 💬 Discussion dans l'onglet")
-
+    # ---------------- Chat area: fixed height container + sticky input ----------------
+    # Ensure chat history is loaded
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = load_chat_history()
 
-    # Affichage des messages
-    for msg in st.session_state.chat_messages:
-        if msg["role"] == "user":
-            st.markdown(f"""
-            <div class="chat-user">
-                <b>👤 Vous</b><br>{msg['content']}
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            source = "🧠 Groq" if msg.get("source") == "groq" else "🤖 Offline"
-            st.markdown(f"""
-            <div class="chat-bot">
-                <b>🔮 Oracle</b> <small style="color:#888">[{source}]</small><br>
-                {msg['content']}
-            </div>
-            """, unsafe_allow_html=True)
+    # Provide messages JSON for client-side rendering
+    messages_json_safe = json.dumps(st.session_state.get('chat_messages', []), ensure_ascii=False).replace("'", "\\'")
+    st.markdown(f"""
+    <style>
+    /* Chat container fixed height and style */
+    .chat-container {{
+        position: relative;
+        height: 600px;
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(127,255,212,0.12);
+        background: #0a0f1c;
+    }}
+    .chat-messages-box {{
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+        scrollbar-width: thin;
+        scrollbar-color: #7FFFD4 rgba(127,255,212,0.06);
+    }}
+    .bubble-user {{
+        align-self: flex-end;
+        background: linear-gradient(135deg, #0f3460, #1a4480);
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 16px 16px 4px 16px;
+        max-width: 80%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        word-break: break-word;
+        font-size:13px;
+    }}
+    .bubble-bot {{
+        align-self: flex-start;
+        display:flex;
+        gap:8px;
+        max-width: 85%;
+    }}
+    .bubble-bot .content {{
+        background: rgba(127,255,212,0.08);
+        border: 1px solid rgba(127,255,212,0.12);
+        padding: 10px 14px;
+        border-radius: 16px 16px 16px 4px;
+        color: #e8f7f0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+        font-size:13px;
+        word-break: break-word;
+    }}
+    .bot-avatar {{
+        width:32px; height:32px; border-radius:50%;
+        background: linear-gradient(135deg,#7FFFD4,#00b894);
+        display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
+    }}
+    .msg-ts {{
+        font-size:11px; color:#7a8a92; margin-top:4px;
+    }}
+    .chat-input-zone {{
+        padding:10px;
+        background:#0F1626;
+        border-top:1px solid rgba(127,255,212,0.06);
+        display:flex; gap:8px; align-items:center;
+    }}
+    .chat-input-field {{
+        flex:1;
+        border-radius:22px;
+        padding:10px 14px;
+        background:#1a2338;
+        border:1px solid rgba(127,255,212,0.06);
+        color:#fff;
+        outline:none;
+    }}
+    .chat-send-btn {{
+        width:40px; height:40px; border-radius:50%;
+        background:linear-gradient(135deg,#7FFFD4,#00b894);
+        border:none; cursor:pointer; color:#111; font-weight:700;
+    }}
+    @media (max-width:600px){{
+        .chat-container{{height:440px;}}
+    }}
+    </style>
 
-    # Formulaire de saisie
-    with st.form("chat_form_tab7", clear_on_submit=True):
-        user_input = st.text_input(
-            "", 
-            placeholder="Exemple : Analyse la forme actuelle de Liverpool...",
-            label_visibility="collapsed"
-        )
-        
-        c1, c2, c3 = st.columns([2, 1, 1])
-        with c1:
-            submit = st.form_submit_button("📤 Envoyer à l'Oracle", use_container_width=True)
-        with c2:
-            if st.form_submit_button("🗑️ Effacer", use_container_width=True):
-                st.session_state.chat_messages = []
-                save_chat_history([])
-                st.rerun()
-        with c3:
-            if st.form_submit_button("📋 Voir contexte", use_container_width=True):
-                standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
-                ctx = build_full_context(st.session_state['history'], s_active, standings, next_j)
-                st.text_area("Contexte complet transmis à l'IA", ctx, height=300)
+    <div class="chat-container" id="chat-container">
+      <div id="chat-messages-display" class="chat-messages-box"></div>
+      <div class="chat-input-zone">
+         <input id="chat-input-new" class="chat-input-field" placeholder="Posez votre question à l'Oracle..." />
+         <button id="chat-send-btn-new" class="chat-send-btn">➤</button>
+      </div>
+    </div>
 
-    # Traitement de la réponse
-    if submit and user_input.strip():
-        import datetime
-        
-        ts = datetime.datetime.now().isoformat()
-        st.session_state.chat_messages.append({"role": "user", "content": user_input, "ts": ts})
+    <script>
+    (function(){{
+        const messages = JSON.parse('{messages_json_safe}');
 
-        # Contexte complet
-        standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
-        full_context = build_full_context(st.session_state['history'], s_active, standings, next_j)
+        function escapeHtml(text){{
+            if(!text) return '';
+            return text
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/\"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+        }}
 
-        if IA_DISPONIBLE:
-            moteur_ia_chat.set_contexte(
-                history=st.session_state['history'],
-                saison_active=s_active,
-                standings=standings,
-                prochaine_journee=next_j,
-                contexte_complet=full_context
-            )
+        function renderMessages() {{
+            const box = document.getElementById('chat-messages-display');
+            if(!box) return;
+            let html = '';
+            if(messages.length === 0){{
+                html = '<div style=\"text-align:center;color:#88a0a6;padding:30px;\">🔮 Bienvenue — posez votre question</div>';
+            }} else {{
+                messages.forEach(m => {{
+                    const ts = m.ts ? new Date(m.ts).toLocaleTimeString('fr-FR', {{hour:'2-digit', minute:'2-digit'}}) : '';
+                    if(m.role === 'user') {{
+                        html += `<div class="bubble-user">${{escapeHtml(m.content)}}</div><div class="msg-ts" style="align-self:flex-end;padding-right:6px;">${{ts}}</div>`;
+                    }} else {{
+                        html += `<div class="bubble-bot"><div class="bot-avatar">🔮</div><div><div class="content">${{escapeHtml(m.content)}}</div><div class="msg-ts">${{ts}}</div></div></div>`;
+                    }}
+                }});
+            }}
+            box.innerHTML = html;
+            box.scrollTop = box.scrollHeight;
+        }}
 
-        with st.spinner("🔮 L'Oracle réfléchit..."):
-            reponse = moteur_ia_chat.discuter(user_input)
+        function sendMessage() {{
+            const input = document.getElementById('chat-input-new');
+            if(!input) return;
+            const txt = input.value.trim();
+            if(!txt) return;
+            // send via query param so Streamlit can pick it up
+            const url = new URL(window.location.href);
+            url.searchParams.set('oracle_chat_new_msg', encodeURIComponent(txt));
+            window.location.href = url.toString();
+        }}
 
-        st.session_state.chat_messages.append({
-            "role": "assistant",
-            "content": reponse.get("texte", "Je n'ai pas pu générer de réponse."),
-            "source": reponse.get("source", "offline"),
-            "ts": datetime.datetime.now().isoformat()
-        })
+        document.getElementById('chat-send-btn-new').addEventListener('click', sendMessage);
+        document.getElementById('chat-input-new').addEventListener('keydown', function(e){{
+            if(e.key === 'Enter' && !e.shiftKey) {{
+                e.preventDefault(); sendMessage();
+            }}
+        }});
 
-        save_chat_history(st.session_state.chat_messages)
-        st.rerun()
+        document.addEventListener('DOMContentLoaded', renderMessages);
+        renderMessages();
+    }})();
+    </script>
+    """, unsafe_allow_html=True)
 
-    # Suggestions
+    # ---------------- Server-side handling of new message (query param) ----------------
+    # If front-end has added oracle_chat_new_msg query param, process it
+    query_params = st.experimental_get_query_params()
+    if 'oracle_chat_new_msg' in query_params:
+        raw = query_params.get('oracle_chat_new_msg')
+        if raw:
+            # raw is a list; take first
+            user_text = raw[0]
+            # decode if encoded
+            try:
+                user_text = (user_text if isinstance(user_text, str) else user_text.decode('utf-8'))
+            except:
+                pass
+            # append user message
+            import datetime
+            st.session_state.chat_messages.append({
+                "role": "user",
+                "content": user_text,
+                "ts": datetime.datetime.now().isoformat()
+            })
+
+            # Prepare context and call IA if available
+            standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
+            full_context = build_full_context(st.session_state['history'], s_active, standings, next_j)
+
+            # If IA available, set contexte and ask for answer
+            if IA_DISPONIBLE:
+                try:
+                    moteur_ia_chat.set_contexte(
+                        history=st.session_state['history'],
+                        saison_active=s_active,
+                        standings=standings,
+                        prochaine_journee=next_j,
+                        contexte_complet=full_context
+                    )
+                except:
+                    pass
+
+            with st.spinner("🔮 L'Oracle réfléchit..."):
+                if IA_DISPONIBLE:
+                    try:
+                        reponse = moteur_ia_chat.discuter(user_text)
+                        answer_text = reponse.get("texte", "Je n'ai pas pu générer de réponse.")
+                        source = reponse.get("source", "offline")
+                    except Exception as e:
+                        answer_text = f"Erreur IA: {e}"
+                        source = "error"
+                else:
+                    # Fallback offline response
+                    answer_text = "Mode offline — IA non disponible sur ce serveur."
+                    source = "offline"
+
+            st.session_state.chat_messages.append({
+                "role": "assistant",
+                "content": answer_text,
+                "source": source,
+                "ts": datetime.datetime.now().isoformat()
+            })
+
+            # save & clear query param then rerun so front-end reloads messages
+            save_chat_history(st.session_state.chat_messages)
+            # NOTE: Streamlit does not provide a direct way to remove a query param without reload,
+            # so we trigger a rerun without the param by redirecting to same URL without it.
+            url = st.experimental_get_query_params()
+            # simple rerun
+            st.experimental_set_query_params()
+            st.experimental_rerun()
+
+    # ---------------- Suggestions & utilities ----------------
+    st.divider()
     st.markdown("#### ⚡ Suggestions rapides")
     suggestions = [
         "Quelle équipe est la plus en forme ?",
         "Analyse Manchester Blue vs London Blues",
         "Qui est favori pour le titre ?",
         "Meilleures cotes valeur de la prochaine journée",
-        "Résume les performances de Liverpool"
+        "Résume les performances actuelles"
     ]
-
     cols = st.columns(3)
-    for idx, text in enumerate(suggestions):
+    for idx, s in enumerate(suggestions):
         with cols[idx % 3]:
-            if st.button(text, key=f"sugg_tab7_{idx}", use_container_width=True):
-                st.session_state.chat_messages.append({"role": "user", "content": text, "ts": datetime.datetime.now().isoformat()})
-                st.rerun()
+            if st.button(s, key=f"quick_sugg_{idx}", use_container_width=True):
+                # add suggestion as user message and rerun to process
+                import datetime
+                st.session_state.chat_messages.append({"role":"user","content":s,"ts":datetime.datetime.now().isoformat()})
+                save_chat_history(st.session_state.chat_messages)
+                st.experimental_set_query_params(oracle_chat_new_msg=s)
+                st.experimental_rerun()
 
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        if st.button("🧹 Effacer l'historique", use_container_width=True):
+            st.session_state.chat_messages = []
+            save_chat_history([])
+            st.experimental_rerun()
+    with c2:
+        if st.button("📋 Voir le contexte complet", use_container_width=True):
+            standings = get_standings(st.session_state['history'][s_active], engine.teams_list)
+            ctx = build_full_context(st.session_state['history'], s_active, standings, next_j)
+            st.text_area("Contexte envoyé à l'IA", ctx, height=300)
+    with c3:
+        if st.button("💾 Exporter chat", use_container_width=True):
+            st.download_button(
+                label="📥 Télécharger",
+                data=json.dumps(st.session_state.chat_messages, indent=2, ensure_ascii=False),
+                file_name="oracle_chat_export.json",
+                mime="application/json"
+                    )
 # ===================== Sauvegarde Globale =====================
 if st.button("💾 Sauvegarder tout maintenant", key="btn_save_all"):
     save_db(st.session_state['history'])
