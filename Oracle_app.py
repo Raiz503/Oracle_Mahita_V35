@@ -2207,214 +2207,288 @@ with tabs[6]:
             st.info("Aucun pattern encore. Enregistrez des résultats.")
 
 # ===================== TAB 7 : ASSISTANT IA — CHAT MESSENGER =====================
+# Fichiers requis dans le même dépôt GitHub :
+#   - moteur_ia_chat.py         (V2)
+#   - moteur_apprentissage.py   (V2)
+#   - oracle_chat_component.py  (nouveau)
+# ─────────────────────────────────────────────────────────────
+
 import streamlit.components.v1 as components
 import datetime as _dt
 
 with tabs[7]:
-    # ── Traitement message AVANT le rendu ──
+
+    # ── Initialisation messages ──
+    if "chat_messages" not in st.session_state:
+        st.session_state['chat_messages'] = load_chat_history()
+
+    # ────────────────────────────────────────────────────
+    # TRAITEMENT DU MESSAGE EN ATTENTE
+    # (posté depuis le formulaire Streamlit ou suggestions)
+    # ────────────────────────────────────────────────────
     if st.session_state.get('_pending_chat_input'):
-        user_q = st.session_state.pop('_pending_chat_input')
-        ts_now = _dt.datetime.now().isoformat()
-        st.session_state.chat_messages.append({"role": "user", "content": user_q, "ts": ts_now})
+        _q = st.session_state.pop('_pending_chat_input')
+        _ts = _dt.datetime.now().isoformat()
+
+        # Ajouter message utilisateur
+        st.session_state.chat_messages.append({
+            "role": "user", "content": _q, "ts": _ts
+        })
+
+        # Appel IA
         try:
             if IA_DISPONIBLE:
-                standings_ctx = get_standings(st.session_state['history'][s_active], engine.teams_list)
-                full_ctx = build_full_context(st.session_state['history'], s_active, standings_ctx, next_j)
+                _std = get_standings(st.session_state['history'][s_active], engine.teams_list)
+                _ctx = build_full_context(st.session_state['history'], s_active, _std, next_j)
                 if hasattr(moteur_ia_chat, 'set_contexte'):
                     moteur_ia_chat.set_contexte(
                         history=st.session_state['history'],
                         saison_active=s_active,
-                        standings=standings_ctx,
+                        standings=_std,
                         prochaine_journee=next_j,
-                        contexte_complet=full_ctx
+                        contexte_complet=_ctx
                     )
             with st.spinner("🔮 L'Oracle réfléchit..."):
-                rep = moteur_ia_chat.discuter(user_q)
-        except Exception as ex:
-            rep = {"texte": f"Erreur : {ex}", "source": "offline"}
+                _rep = moteur_ia_chat.discuter(_q)
+        except Exception as _ex:
+            _rep = {"texte": f"Erreur : {_ex}", "source": "offline"}
+
         st.session_state.chat_messages.append({
             "role": "assistant",
-            "content": rep.get("texte", "Pas de réponse."),
-            "source": rep.get("source", "offline"),
+            "content": _rep.get("texte", "Pas de réponse."),
+            "source": _rep.get("source", "offline"),
             "ts": _dt.datetime.now().isoformat()
         })
         save_chat_history(st.session_state.chat_messages)
         st.rerun()
 
+    # ────────────────────────────────────────────────────
+    # EN-TÊTE + CONFIG GROQ
+    # ────────────────────────────────────────────────────
     st.markdown("""
-    <div style="text-align:center;padding:14px 0 4px 0;">
+    <div style="text-align:center;padding:14px 0 8px 0;">
         <span style="font-size:2em;">🔮</span>
         <h2 style="color:#7FFFD4;margin:4px 0 2px 0;font-size:1.3em;">Oracle IA — Assistant</h2>
-        <p style="color:#666;margin:0;font-size:0.8em;">Cliquez sur le bouton 🔮 ci-dessous pour ouvrir le chat</p>
+        <p style="color:#666;margin:0;font-size:0.8em;">Chat Messenger intégré · Groq IA</p>
     </div>
     """, unsafe_allow_html=True)
 
     with st.expander("🔑 Configuration Groq API", expanded=False):
-        c1, c2 = st.columns([3,1])
-        with c1:
-            api_key_input = st.text_input("Clé API", value=getattr(moteur_ia_chat,'api_key',''),
-                                          type="password", placeholder="gsk_xxx...")
-        with c2:
-            if st.button("🔗 Connecter", use_container_width=True):
-                if api_key_input:
-                    os.environ["GROQ_API_KEY"] = api_key_input
-                    moteur_ia_chat.api_key = api_key_input
+        _c1, _c2 = st.columns([3, 1])
+        with _c1:
+            _api_key = st.text_input(
+                "Clé API Groq",
+                value=getattr(moteur_ia_chat, 'api_key', '') if IA_DISPONIBLE else '',
+                type="password", placeholder="gsk_xxx..."
+            )
+        with _c2:
+            if st.button("🔗 Connecter", use_container_width=True, key="btn_groq_connect"):
+                if _api_key and IA_DISPONIBLE:
+                    os.environ["GROQ_API_KEY"] = _api_key
+                    moteur_ia_chat.api_key = _api_key
                     try:
                         from groq import Groq
-                        moteur_ia_chat.client = Groq(api_key=api_key_input)
-                        st.success("✅ Groq connecté !")
+                        moteur_ia_chat.client = Groq(api_key=_api_key)
+                        custom_notify("✅ Groq connecté !", "#00FF00")
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"Erreur : {e}")
-        cs1, cs2, cs3 = st.columns(3)
-        cs1.success("🟢 Groq" if getattr(moteur_ia_chat,'est_connecte',lambda:False)() else "🟡 Offline")
-        _stats2 = moteur_apprentissage.get_stats_apprentissage() if IA_DISPONIBLE else {"total":0}
-        cs2.metric("Matchs appris", _stats2.get("total", 0))
-        _tr2 = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
-        cs3.metric("Résultats", _tr2)
+                    except Exception as _e:
+                        st.error(f"Erreur : {_e}")
+                elif not IA_DISPONIBLE:
+                    st.info("IA non disponible — vérifiez moteur_ia_chat.py dans le dépôt.")
+
+        _sc1, _sc2, _sc3 = st.columns(3)
+        _connected = IA_DISPONIBLE and getattr(moteur_ia_chat, 'est_connecte', lambda: False)()
+        _sc1.success("🟢 Groq actif") if _connected else _sc1.warning("🟡 Mode Offline")
+        _stats_ia = moteur_apprentissage.get_stats_apprentissage() if IA_DISPONIBLE else {"total": 0}
+        _sc2.metric("Matchs appris", _stats_ia.get("total", 0))
+        _total_r = sum(len(jd.get("res", [])) for sd in st.session_state['history'].values() for jd in sd.values())
+        _sc3.metric("Résultats totaux", _total_r)
 
     st.markdown("---")
 
-    msgs_chat = st.session_state.get('chat_messages', [])
-    msgs_json_chat = json.dumps(msgs_chat, ensure_ascii=False)
+    # ────────────────────────────────────────────────────
+    # CHAT MESSENGER INTÉGRÉ (toujours visible dans l'onglet)
+    # Utilise components.html — seule méthode fiable sur Android
+    # ────────────────────────────────────────────────────
+    _msgs = st.session_state.get('chat_messages', [])
+    _msgs_json = json.dumps(_msgs, ensure_ascii=False)
 
-    CHAT_HTML = f"""<!DOCTYPE html>
+    _CHAT_HTML = f"""<!DOCTYPE html>
 <html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0;}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:transparent;min-height:70px;display:flex;justify-content:flex-end;align-items:flex-end;padding:4px;}}
-#fab{{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);border:none;cursor:pointer;font-size:28px;box-shadow:0 4px 20px rgba(127,255,212,0.6);transition:transform .2s;position:relative;z-index:5;display:flex;align-items:center;justify-content:center;}}
-#fab:active{{transform:scale(.92);}}
-#badge{{position:absolute;top:0;right:0;background:#FF4B4B;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;border:2px solid #0a0f1c;padding:0 3px;}}
-#win{{display:none;flex-direction:column;position:fixed;bottom:80px;right:12px;width:min(370px,calc(100vw - 24px));height:min(560px,calc(100vh - 110px));background:#fff;border-radius:20px;box-shadow:0 12px 50px rgba(0,0,0,0.35);overflow:hidden;z-index:9999;}}
-#win.open{{display:flex !important;animation:pop .22s ease;}}
-@keyframes pop{{from{{opacity:0;transform:translateY(16px) scale(.97)}}to{{opacity:1;transform:none}}}}
-#hd{{background:#FFD966;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}}
-#hd-av{{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.15);}}
-#hd-info{{flex:1;}}
-#hd-name{{color:#1a1a2e;font-weight:800;font-size:15px;}}
-#hd-sub{{color:#555;font-size:11px;margin-top:1px;}}
-#close{{background:none;border:none;color:#333;font-size:24px;cursor:pointer;line-height:1;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;}}
-#msgs{{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:10px;background:#F0F2F5;scrollbar-width:none;}}
-#msgs::-webkit-scrollbar{{display:none;}}
-.welcome{{background:#e8f4fd;border-radius:14px;padding:12px 14px;color:#555;font-size:13px;text-align:center;border:1px solid #c9e6f7;}}
+html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:transparent;}}
+.root{{display:flex;flex-direction:column;height:520px;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.25);}}
+.hd{{background:#FFD966;padding:13px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}}
+.hd-av{{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.15);}}
+.hd-info{{flex:1;}}
+.hd-name{{color:#1a1a2e;font-weight:800;font-size:15px;}}
+.hd-status{{color:#444;font-size:11px;margin-top:1px;}}
+.msgs{{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;background:#F0F2F5;scrollbar-width:thin;scrollbar-color:#7FFFD4 #e0e0e0;}}
+.msgs::-webkit-scrollbar{{width:4px;}}
+.msgs::-webkit-scrollbar-thumb{{background:#7FFFD4;border-radius:4px;}}
+.welcome{{background:#e8f4fd;border:1px solid #c9e6f7;border-radius:14px;padding:12px 14px;color:#555;font-size:13px;text-align:center;}}
 .bw-u{{display:flex;justify-content:flex-end;align-items:flex-end;}}
-.bu-u{{background:#FFD966;color:#1a1a2e;padding:10px 14px;border-radius:20px 20px 4px 20px;max-width:78%;font-size:14px;line-height:1.45;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,0.12);}}
+.bu-u{{background:#FFD966;color:#1a1a2e;padding:10px 14px;border-radius:20px 20px 4px 20px;max-width:78%;font-size:14px;line-height:1.45;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,.12);}}
 .bw-b{{display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;}}
-.av-b{{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;margin-bottom:2px;}}
-.bu-b{{background:#fff;color:#1a1a2e;padding:10px 14px;border-radius:20px 20px 20px 4px;max-width:82%;font-size:14px;line-height:1.45;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,0.1);}}
+.av-b{{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-bottom:2px;}}
+.bu-b{{background:#fff;color:#1a1a2e;padding:10px 14px;border-radius:20px 20px 20px 4px;max-width:82%;font-size:14px;line-height:1.45;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,.1);}}
 .src-lbl{{font-size:10px;color:#00b894;font-weight:700;margin-bottom:3px;}}
 .ts{{font-size:10px;color:#aaa;margin-top:4px;text-align:right;}}
 .bu-b .ts{{text-align:left;}}
 .typing{{display:flex;gap:4px;align-items:center;padding:4px 2px;}}
-.typing span{{width:8px;height:8px;border-radius:50%;background:#00b894;opacity:.4;animation:bounce 1.1s infinite;}}
-.typing span:nth-child(2){{animation-delay:.18s;}}
-.typing span:nth-child(3){{animation-delay:.36s;}}
-@keyframes bounce{{0%,80%,100%{{transform:scale(.7);opacity:.3}}40%{{transform:scale(1.1);opacity:1}}}}
-#bar{{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border-top:1px solid #e5e7eb;flex-shrink:0;}}
-#inp{{flex:1;min-width:0;background:#F0F2F5;border:none;border-radius:22px;padding:11px 16px;font-size:14px;color:#1a1a2e;outline:none;}}
-#inp::placeholder{{color:#aaa;}}
-#snd-btn{{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;color:#1a1a2e;box-shadow:0 2px 8px rgba(0,185,148,.4);transition:transform .15s;flex-shrink:0;}}
-#snd-btn:active{{transform:scale(.9);}}
+.typing span{{width:8px;height:8px;border-radius:50%;background:#00b894;opacity:.4;animation:bnc 1.1s infinite;}}
+.typing span:nth-child(2){{animation-delay:.18s;}}.typing span:nth-child(3){{animation-delay:.36s;}}
+@keyframes bnc{{0%,80%,100%{{transform:scale(.7);opacity:.3}}40%{{transform:scale(1.1);opacity:1}}}}
+.bar{{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border-top:1px solid #e5e7eb;flex-shrink:0;}}
+.inp{{flex:1;min-width:0;background:#F0F2F5;border:none;border-radius:22px;padding:11px 16px;font-size:14px;color:#1a1a2e;outline:none;}}
+.inp::placeholder{{color:#aaa;}}
+.snd{{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#7FFFD4,#00b894);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;color:#1a1a2e;box-shadow:0 2px 8px rgba(0,185,148,.4);transition:transform .15s;flex-shrink:0;}}
+.snd:active{{transform:scale(.9);}}
+@media(max-width:600px){{.root{{height:430px;}}}}
 </style>
 </head>
 <body>
-<button id="fab" onclick="togWin()">🔮<span id="badge"></span></button>
-<div id="win">
-  <div id="hd">
-    <div id="hd-av">🔮</div>
-    <div id="hd-info"><div id="hd-name">Oracle Mahita IA</div><div id="hd-sub">● En ligne · Assistant pronostics</div></div>
-    <button id="close" onclick="togWin()">✕</button>
+<div class="root">
+  <div class="hd">
+    <div class="hd-av">🔮</div>
+    <div class="hd-info">
+      <div class="hd-name">Oracle Mahita IA</div>
+      <div class="hd-status">● En ligne · Assistant pronostics</div>
+    </div>
   </div>
-  <div id="msgs"><div class="welcome">🔮 Bonjour ! Posez-moi n'importe quelle question sur vos pronostics, classements ou résultats.</div></div>
-  <div id="bar">
-    <input id="inp" type="text" placeholder="Écrivez votre message..." autocomplete="off">
-    <button id="snd-btn" onclick="doSend()">&#10148;</button>
+  <div class="msgs" id="msgs">
+    <div class="welcome">🔮 Bonjour ! Posez-moi n'importe quelle question.</div>
+  </div>
+  <div class="bar">
+    <input class="inp" id="inp" type="text" placeholder="Écrivez votre message..." autocomplete="off">
+    <button class="snd" onclick="doSend()">&#10148;</button>
   </div>
 </div>
 <script>
-const MSGS={msgs_json_chat};
-let isOpen=false;
-function esc(t){{return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}}
+const MSGS={_msgs_json};
+function esc(t){{return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}}
 function fmt(ts){{try{{const d=new Date(ts);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}}catch(e){{return'';}}}}
 function renderAll(){{
-  const a=document.getElementById('msgs');
-  let h='<div class="welcome">🔮 Bonjour ! Posez-moi n\'importe quelle question.</div>';
+  const box=document.getElementById('msgs');
+  let h='<div class="welcome">🔮 Bonjour ! Posez-moi n\\'importe quelle question.</div>';
   MSGS.forEach(function(m){{
     const t=fmt(m.ts||'');
     if(m.role==='user'){{
       h+='<div class="bw-u"><div class="bu-u">'+esc(m.content)+'<div class="ts">'+t+'</div></div></div>';
     }}else{{
       const src=m.source==='groq'?'🧠 Groq':'🤖 Offline';
-      h+='<div class="bw-b"><div class="av-b">🔮</div><div class="bu-b"><div class="src-lbl">'+src+'</div>'+esc(m.content).replace(/\n/g,'<br>')+'<div class="ts">'+t+'</div></div></div>';
+      h+='<div class="bw-b"><div class="av-b">🔮</div><div class="bu-b"><div class="src-lbl">'+src+'</div>'+esc(m.content).replace(/\\n/g,'<br>')+'<div class="ts">'+t+'</div></div></div>';
     }}
   }});
-  a.innerHTML=h;a.scrollTop=a.scrollHeight;
-}}
-function togWin(){{
-  isOpen=!isOpen;
-  const w=document.getElementById('win');
-  const b=document.getElementById('badge');
-  if(isOpen){{w.classList.add('open');b.style.display='none';renderAll();setTimeout(function(){{document.getElementById('inp').focus();}},150);}}
-  else{{w.classList.remove('open');}}
+  box.innerHTML=h; box.scrollTop=box.scrollHeight;
 }}
 function doSend(){{
   const inp=document.getElementById('inp');
   const text=inp.value.trim();
   if(!text)return;
-  inp.value='';
-  const a=document.getElementById('msgs');
-  a.innerHTML+='<div class="bw-u"><div class="bu-u">'+esc(text)+'</div></div>';
-  a.innerHTML+='<div id="typ-row" class="bw-b"><div class="av-b">🔮</div><div class="bu-b"><div class="typing"><span></span><span></span><span></span></div></div></div>';
-  a.scrollTop=a.scrollHeight;
-  window.parent.postMessage({{type:'oracle_msg',text:text}},'*');
+  inp.value=''; inp.disabled=true;
+  document.querySelector('.snd').disabled=true;
+  const box=document.getElementById('msgs');
+  box.innerHTML+='<div class="bw-u"><div class="bu-u">'+esc(text)+'</div></div>';
+  box.innerHTML+='<div class="bw-b"><div class="av-b">🔮</div><div class="bu-b"><div class="typing"><span></span><span></span><span></span></div></div></div>';
+  box.scrollTop=box.scrollHeight;
+  // ✅ Envoie le message au parent Streamlit via query params
+  const url=new URL(window.parent.location.href);
+  url.searchParams.set('_ochat',encodeURIComponent(text));
+  window.parent.history.replaceState(null,'',url.toString());
+  // Déclenche un rerun Streamlit en soumettant un form caché
+  window.parent.postMessage({{type:'streamlit:forceRerun',msg:text}},'*');
 }}
-document.getElementById('inp').addEventListener('keydown',function(e){{if(e.key==='Enter'){{e.preventDefault();doSend();}}  }});
-if(MSGS.length>0){{const b=document.getElementById('badge');b.style.display='flex';b.textContent=MSGS.length>9?'9+':MSGS.length;}}
+document.getElementById('inp').addEventListener('keydown',function(e){{
+  if(e.key==='Enter'){{e.preventDefault();doSend();}}
+}});
+renderAll();
 </script>
 </body></html>"""
 
-    components.html(CHAT_HTML, height=80, scrolling=False)
+    components.html(_CHAT_HTML, height=540, scrolling=False)
+
+    # ✅ Récupération du message depuis query params (méthode fiable Streamlit)
+    try:
+        _qp = st.query_params.get("_ochat", None)
+        if _qp:
+            _user_msg = _qp if isinstance(_qp, str) else _qp
+            # Nettoyer le param pour éviter boucle
+            st.query_params.pop("_ochat", None)
+            if _user_msg and _user_msg not in [m.get("content","") for m in _msgs[-2:] if m.get("role")=="user"]:
+                st.session_state['_pending_chat_input'] = _user_msg
+                st.rerun()
+    except Exception:
+        pass  # Streamlit < 1.30 n'a pas st.query_params
 
     st.markdown("---")
 
-    st.markdown("<p style='color:#7FFFD4;font-size:13px;margin-bottom:4px;'>💬 Envoyer un message à Oracle :</p>", unsafe_allow_html=True)
+    # ────────────────────────────────────────────────────
+    # FORMULAIRE STREAMLIT NATIF (envoi garanti sur Android)
+    # ────────────────────────────────────────────────────
+    st.markdown(
+        "<p style='color:#7FFFD4;font-size:13px;margin-bottom:4px;'>💬 Ou tapez ici :</p>",
+        unsafe_allow_html=True
+    )
+    with st.form("chat_form_v48", clear_on_submit=True):
+        _user_input = st.text_input(
+            "msg", placeholder="Ex: Quelle équipe est la plus en forme ?",
+            label_visibility="collapsed"
+        )
+        _fc1, _fc2, _fc3 = st.columns([3, 1, 1])
+        with _fc1: _submit  = st.form_submit_button("📤 Envoyer", use_container_width=True)
+        with _fc2: _clear   = st.form_submit_button("🗑️ Effacer", use_container_width=True)
+        with _fc3: _ctx_btn = st.form_submit_button("📋 Contexte", use_container_width=True)
 
-    with st.form("chat_form_v47", clear_on_submit=True):
-        user_input = st.text_input("msg", placeholder="Ex: Quelle équipe est la plus en forme ?",
-                                   label_visibility="collapsed")
-        cs1, cs2, cs3 = st.columns([3,1,1])
-        with cs1: submit_chat = st.form_submit_button("📤 Envoyer", use_container_width=True)
-        with cs2: clear_chat  = st.form_submit_button("🗑️ Effacer", use_container_width=True)
-        with cs3: ctx_chat    = st.form_submit_button("📋 Contexte", use_container_width=True)
-
-    if clear_chat:
+    if _clear:
         st.session_state.chat_messages = []
         save_chat_history([])
         st.rerun()
 
-    if ctx_chat:
+    if _ctx_btn:
         try:
-            _st2 = get_standings(st.session_state['history'][s_active], engine.teams_list)
-            _ctx2 = build_full_context(st.session_state['history'], s_active, _st2, next_j)
-            st.text_area("Contexte transmis à l'IA", _ctx2, height=200)
-        except Exception as ex:
-            st.error(f"Erreur : {ex}")
+            _std3 = get_standings(st.session_state['history'][s_active], engine.teams_list)
+            _ctx3 = build_full_context(st.session_state['history'], s_active, _std3, next_j)
+            st.text_area("Contexte transmis à l'IA", _ctx3, height=200)
+        except Exception as _ex3:
+            st.error(f"Erreur : {_ex3}")
 
-    if submit_chat and user_input.strip():
-        st.session_state['_pending_chat_input'] = user_input.strip()
+    if _submit and _user_input.strip():
+        st.session_state['_pending_chat_input'] = _user_input.strip()
         st.rerun()
 
-    st.markdown("<p style='color:#888;font-size:12px;margin:10px 0 4px 0;'>⚡ Suggestions :</p>", unsafe_allow_html=True)
-    _SUGGS = ["Quelle équipe est la plus en forme ?","Qui est favori pour le titre ?","Meilleures cotes de la prochaine journée","Analyse les résultats récents"]
-    _sc = st.columns(2)
+    # Export
+    if st.button("💾 Exporter l'historique du chat", use_container_width=True, key="btn_export_chat"):
+        st.download_button(
+            label="📥 Télécharger JSON",
+            data=json.dumps(st.session_state.chat_messages, indent=2, ensure_ascii=False),
+            file_name="oracle_chat_export.json",
+            mime="application/json"
+        )
+
+    st.markdown("---")
+
+    # ── Suggestions rapides ──
+    st.markdown(
+        "<p style='color:#888;font-size:12px;margin:4px 0;'>⚡ Suggestions :</p>",
+        unsafe_allow_html=True
+    )
+    _SUGGS = [
+        "Quelle équipe est la plus en forme ?",
+        "Qui est favori pour le titre ?",
+        "Meilleures cotes de la prochaine journée",
+        "Analyse les résultats récents",
+    ]
+    _sg_cols = st.columns(2)
     for _si, _sg in enumerate(_SUGGS):
-        with _sc[_si % 2]:
-            if st.button(_sg, key=f"sg47_{_si}", use_container_width=True):
+        with _sg_cols[_si % 2]:
+            if st.button(_sg, key=f"sg48_{_si}", use_container_width=True):
                 st.session_state['_pending_chat_input'] = _sg
                 st.rerun()
 
+# ===================== Sauvegarde Globale =====================
 # ===================== Sauvegarde Globale =====================
 # ===================== Sauvegarde Globale =====================
 if st.button("💾 Sauvegarder tout maintenant", key="btn_save_all"):
