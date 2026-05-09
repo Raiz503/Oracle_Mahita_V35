@@ -188,6 +188,7 @@ def get_dernier_adversaire(history: dict, saison: str, equipe: str):
 # ===================== PERSISTENCE =====================
 DB_FILE = "oracle_history.json"
 CHAT_FILE = "oracle_chat_history.json"
+CHAT_SESSIONS_FILE = "oracle_chat_sessions.json"
 
 def load_db():
     if os.path.exists(DB_FILE):
@@ -218,6 +219,64 @@ def save_chat_history(messages):
             json.dump(messages, f, indent=2, ensure_ascii=False)
     except Exception as e:
         pass
+
+# ── Multi-session chat ──
+def load_chat_sessions() -> dict:
+    """Charge toutes les sessions de chat. Format: {session_id: {title, created, messages}}"""
+    if os.path.exists(CHAT_SESSIONS_FILE):
+        try:
+            with open(CHAT_SESSIONS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except: return {}
+    return {}
+
+def save_chat_sessions(sessions: dict):
+    try:
+        with open(CHAT_SESSIONS_FILE, "w", encoding="utf-8") as f:
+            json.dump(sessions, f, indent=2, ensure_ascii=False)
+    except: pass
+
+def new_chat_session(title: str = "") -> str:
+    """Crée une nouvelle session et retourne son ID."""
+    import datetime as _dtm
+    sid = _dtm.datetime.now().strftime("%Y%m%d_%H%M%S")
+    sessions = load_chat_sessions()
+    sessions[sid] = {
+        "title": title or f"Chat {_dtm.datetime.now().strftime('%d/%m %H:%M')}",
+        "created": _dtm.datetime.now().isoformat(),
+        "messages": []
+    }
+    save_chat_sessions(sessions)
+    return sid
+
+def get_or_create_active_session() -> str:
+    """Retourne l'ID de session active, en crée une si nécessaire."""
+    sessions = load_chat_sessions()
+    if st.session_state.get('active_chat_session') and st.session_state['active_chat_session'] in sessions:
+        return st.session_state['active_chat_session']
+    if sessions:
+        sid = sorted(sessions.keys())[-1]
+        st.session_state['active_chat_session'] = sid
+        return sid
+    sid = new_chat_session()
+    st.session_state['active_chat_session'] = sid
+    return sid
+
+def save_session_messages(sid: str, messages: list):
+    sessions = load_chat_sessions()
+    if sid in sessions:
+        sessions[sid]["messages"] = messages
+        # Auto-titre basé sur le 1er message utilisateur
+        if not sessions[sid].get("_titled") and messages:
+            first_user = next((m["content"] for m in messages if m.get("role") == "user"), None)
+            if first_user:
+                sessions[sid]["title"] = first_user[:40] + ("…" if len(first_user) > 40 else "")
+                sessions[sid]["_titled"] = True
+        save_chat_sessions(sessions)
+
+def load_session_messages(sid: str) -> list:
+    sessions = load_chat_sessions()
+    return sessions.get(sid, {}).get("messages", [])
 
 def build_full_context(history: dict, saison_active: str, standings: pd.DataFrame, next_j: int) -> str:
     """Construit un contexte complet avec TOUTES les données de l'historique pour l'IA."""
@@ -2211,19 +2270,21 @@ import streamlit.components.v1 as components
 import datetime as _dt
 
 with tabs[7]:
+
     # ══════════════════════════════════════════════════════
-    # INIT
+    # INIT session state
     # ══════════════════════════════════════════════════════
     if "chat_messages" not in st.session_state:
         st.session_state['chat_messages'] = load_chat_history()
+    if 'active_chat_session' not in st.session_state:
+        st.session_state['active_chat_session'] = None
+    if 'chat_theme' not in st.session_state:
+        st.session_state['chat_theme'] = "🟢 Vert Oracle"
 
     # ══════════════════════════════════════════════════════
-    # ÉTAPE 1 — Récupérer le message depuis query_params
-    #           ET appeler l'IA dans le MÊME rerun
-    #           → 1 seul rechargement au lieu de 3
+    # APPEL IA
     # ══════════════════════════════════════════════════════
     def _call_ia(user_q: str):
-        """Appelle l'IA et retourne la réponse. Mis en fonction pour clarté."""
         try:
             if IA_DISPONIBLE:
                 _std = get_standings(st.session_state['history'][s_active], engine.teams_list)
@@ -2238,217 +2299,41 @@ with tabs[7]:
                     )
                 return moteur_ia_chat.discuter(user_q)
         except Exception as _ex:
-            return {"texte": f"Erreur : {_ex}", "source": "offline"}
-        return moteur_ia_chat.discuter(user_q) if IA_DISPONIBLE else {"texte": "Mode offline.", "source": "offline"}
+            return {"texte": f"Erreur IA : {_ex}", "source": "offline"}
+        return {"texte": "Mode offline.", "source": "offline"}
 
     # ══════════════════════════════════════════════════════
-    # SÉLECTEUR DE THÈME — Professionnel
-    # ══════════════════════════════════════════════════════
-    _THEMES = {
-        "🟢 Vert Oracle (défaut)": {
-            "hd_grad": "linear-gradient(135deg,#00FF88,#7FFFD4)",
-            "hd_name_color": "#002211",
-            "hd_status_color": "#003322",
-            "dot_color": "#006644",
-            "msgs_bg": "#071410",
-            "scroll_color": "#00FF88",
-            "welcome_bg": "rgba(0,255,136,.07)",
-            "welcome_border": "rgba(0,255,136,.2)",
-            "welcome_color": "#7FFFD4",
-            "bu_u_grad": "linear-gradient(135deg,#00FF88,#00e07a)",
-            "bu_u_color": "#001a0d",
-            "bu_u_shadow": "rgba(0,255,136,.4)",
-            "av_b_grad": "linear-gradient(135deg,#7FFFD4,#00FF88)",
-            "bu_b_bg": "rgba(255,255,255,.07)",
-            "bu_b_border": "rgba(127,255,212,.2)",
-            "bu_b_color": "#ffffff",
-            "src_lbl_color": "#00FF88",
-            "typing_color": "#7FFFD4",
-            "bar_bg": "#0a1e16",
-            "bar_border": "rgba(0,255,136,.15)",
-            "inp_bg": "rgba(255,255,255,.06)",
-            "inp_border": "rgba(0,255,136,.25)",
-            "inp_focus": "#00FF88",
-            "inp_focus_shadow": "rgba(0,255,136,.1)",
-            "inp_placeholder": "rgba(127,255,212,.4)",
-            "snd_grad": "linear-gradient(135deg,#00FF88,#7FFFD4)",
-            "snd_color": "#001a0d",
-            "snd_shadow": "rgba(0,255,136,.5)",
-            "root_shadow": "rgba(0,255,140,.2)",
-            "root_border": "rgba(0,255,140,.3)",
-        },
-        "🔵 Bleu Professionnel": {
-            "hd_grad": "linear-gradient(135deg,#1a73e8,#4fc3f7)",
-            "hd_name_color": "#ffffff",
-            "hd_status_color": "#cce4ff",
-            "dot_color": "#81d4fa",
-            "msgs_bg": "#0d1b2a",
-            "scroll_color": "#1a73e8",
-            "welcome_bg": "rgba(26,115,232,.08)",
-            "welcome_border": "rgba(26,115,232,.25)",
-            "welcome_color": "#4fc3f7",
-            "bu_u_grad": "linear-gradient(135deg,#1a73e8,#1565c0)",
-            "bu_u_color": "#ffffff",
-            "bu_u_shadow": "rgba(26,115,232,.4)",
-            "av_b_grad": "linear-gradient(135deg,#4fc3f7,#1a73e8)",
-            "bu_b_bg": "rgba(255,255,255,.06)",
-            "bu_b_border": "rgba(79,195,247,.2)",
-            "bu_b_color": "#e8f4fd",
-            "src_lbl_color": "#4fc3f7",
-            "typing_color": "#4fc3f7",
-            "bar_bg": "#0a1929",
-            "bar_border": "rgba(26,115,232,.2)",
-            "inp_bg": "rgba(255,255,255,.05)",
-            "inp_border": "rgba(26,115,232,.3)",
-            "inp_focus": "#4fc3f7",
-            "inp_focus_shadow": "rgba(79,195,247,.15)",
-            "inp_placeholder": "rgba(79,195,247,.4)",
-            "snd_grad": "linear-gradient(135deg,#1a73e8,#4fc3f7)",
-            "snd_color": "#ffffff",
-            "snd_shadow": "rgba(26,115,232,.5)",
-            "root_shadow": "rgba(26,115,232,.2)",
-            "root_border": "rgba(26,115,232,.35)",
-        },
-        "🟣 Violet Premium": {
-            "hd_grad": "linear-gradient(135deg,#7c3aed,#c084fc)",
-            "hd_name_color": "#ffffff",
-            "hd_status_color": "#ede9fe",
-            "dot_color": "#a78bfa",
-            "msgs_bg": "#0f0a1e",
-            "scroll_color": "#7c3aed",
-            "welcome_bg": "rgba(124,58,237,.08)",
-            "welcome_border": "rgba(124,58,237,.25)",
-            "welcome_color": "#c084fc",
-            "bu_u_grad": "linear-gradient(135deg,#7c3aed,#6d28d9)",
-            "bu_u_color": "#ffffff",
-            "bu_u_shadow": "rgba(124,58,237,.4)",
-            "av_b_grad": "linear-gradient(135deg,#c084fc,#7c3aed)",
-            "bu_b_bg": "rgba(255,255,255,.06)",
-            "bu_b_border": "rgba(192,132,252,.2)",
-            "bu_b_color": "#f3e8ff",
-            "src_lbl_color": "#c084fc",
-            "typing_color": "#c084fc",
-            "bar_bg": "#0c0818",
-            "bar_border": "rgba(124,58,237,.2)",
-            "inp_bg": "rgba(255,255,255,.05)",
-            "inp_border": "rgba(124,58,237,.3)",
-            "inp_focus": "#c084fc",
-            "inp_focus_shadow": "rgba(192,132,252,.15)",
-            "inp_placeholder": "rgba(192,132,252,.4)",
-            "snd_grad": "linear-gradient(135deg,#7c3aed,#c084fc)",
-            "snd_color": "#ffffff",
-            "snd_shadow": "rgba(124,58,237,.5)",
-            "root_shadow": "rgba(124,58,237,.2)",
-            "root_border": "rgba(124,58,237,.35)",
-        },
-        "🟠 Orange Sport": {
-            "hd_grad": "linear-gradient(135deg,#f97316,#fbbf24)",
-            "hd_name_color": "#1a0a00",
-            "hd_status_color": "#431407",
-            "dot_color": "#92400e",
-            "msgs_bg": "#1a0e00",
-            "scroll_color": "#f97316",
-            "welcome_bg": "rgba(249,115,22,.08)",
-            "welcome_border": "rgba(249,115,22,.25)",
-            "welcome_color": "#fbbf24",
-            "bu_u_grad": "linear-gradient(135deg,#f97316,#ea580c)",
-            "bu_u_color": "#ffffff",
-            "bu_u_shadow": "rgba(249,115,22,.4)",
-            "av_b_grad": "linear-gradient(135deg,#fbbf24,#f97316)",
-            "bu_b_bg": "rgba(255,255,255,.06)",
-            "bu_b_border": "rgba(251,191,36,.2)",
-            "bu_b_color": "#fff7ed",
-            "src_lbl_color": "#fbbf24",
-            "typing_color": "#fbbf24",
-            "bar_bg": "#150b00",
-            "bar_border": "rgba(249,115,22,.2)",
-            "inp_bg": "rgba(255,255,255,.05)",
-            "inp_border": "rgba(249,115,22,.3)",
-            "inp_focus": "#fbbf24",
-            "inp_focus_shadow": "rgba(251,191,36,.15)",
-            "inp_placeholder": "rgba(251,191,36,.4)",
-            "snd_grad": "linear-gradient(135deg,#f97316,#fbbf24)",
-            "snd_color": "#1a0a00",
-            "snd_shadow": "rgba(249,115,22,.5)",
-            "root_shadow": "rgba(249,115,22,.2)",
-            "root_border": "rgba(249,115,22,.35)",
-        },
-        "⚪ Blanc Élégant": {
-            "hd_grad": "linear-gradient(135deg,#374151,#6b7280)",
-            "hd_name_color": "#ffffff",
-            "hd_status_color": "#d1d5db",
-            "dot_color": "#9ca3af",
-            "msgs_bg": "#f9fafb",
-            "scroll_color": "#374151",
-            "welcome_bg": "rgba(55,65,81,.06)",
-            "welcome_border": "rgba(55,65,81,.15)",
-            "welcome_color": "#374151",
-            "bu_u_grad": "linear-gradient(135deg,#374151,#1f2937)",
-            "bu_u_color": "#ffffff",
-            "bu_u_shadow": "rgba(55,65,81,.3)",
-            "av_b_grad": "linear-gradient(135deg,#6b7280,#374151)",
-            "bu_b_bg": "#ffffff",
-            "bu_b_border": "rgba(55,65,81,.15)",
-            "bu_b_color": "#111827",
-            "src_lbl_color": "#374151",
-            "typing_color": "#6b7280",
-            "bar_bg": "#f3f4f6",
-            "bar_border": "rgba(55,65,81,.15)",
-            "inp_bg": "#ffffff",
-            "inp_border": "rgba(55,65,81,.2)",
-            "inp_focus": "#374151",
-            "inp_focus_shadow": "rgba(55,65,81,.1)",
-            "inp_placeholder": "rgba(55,65,81,.4)",
-            "snd_grad": "linear-gradient(135deg,#374151,#6b7280)",
-            "snd_color": "#ffffff",
-            "snd_shadow": "rgba(55,65,81,.3)",
-            "root_shadow": "rgba(55,65,81,.15)",
-            "root_border": "rgba(55,65,81,.2)",
-        },
-    }
-
-    if 'chat_theme' not in st.session_state:
-        st.session_state['chat_theme'] = "🟢 Vert Oracle (défaut)"
-
-    _theme_col1, _theme_col2 = st.columns([1, 3])
-    with _theme_col1:
-        st.markdown("<p style='color:#7FFFD4;font-size:12px;margin-bottom:2px;'>🎨 Thème du chat :</p>", unsafe_allow_html=True)
-    with _theme_col2:
-        _selected_theme = st.selectbox(
-            "Thème", list(_THEMES.keys()),
-            index=list(_THEMES.keys()).index(st.session_state['chat_theme']),
-            label_visibility="collapsed", key="theme_selector_v49"
-        )
-        if _selected_theme != st.session_state['chat_theme']:
-            st.session_state['chat_theme'] = _selected_theme
-            st.rerun()
-
-    _T = _THEMES[st.session_state['chat_theme']]
-
-    # ══════════════════════════════════════════════════════
-    # INCOMING — Message depuis le chat HTML (query_params) ou suggestions
+    # LIRE MESSAGE ENTRANT (query_params — envoyé par le HTML)
     # ══════════════════════════════════════════════════════
     _incoming = None
-
-    # Lire depuis query_params — envoyé par le chat HTML via window.parent.location.href
     try:
         _qraw = st.query_params.get("_ochat", None)
         if _qraw:
-            # Pas de décodeURIComponent ici car Streamlit décode automatiquement
+            # Streamlit décode automatiquement l'URL — pas besoin de décoder manuellement
             _incoming = _qraw if isinstance(_qraw, str) else str(_qraw)
-            st.query_params.pop("_ochat", None)  # nettoyer immédiatement
+            # Supprimer proprement le paramètre
+            _new_params = {k: v for k, v in st.query_params.items() if k != "_ochat"}
+            st.query_params.clear()
+            for k, v in _new_params.items():
+                st.query_params[k] = v
     except Exception:
         pass
 
-    # Aussi vérifier pending (formulaire natif + suggestions)
     if not _incoming and st.session_state.get('_pending_chat_input'):
         _incoming = st.session_state.pop('_pending_chat_input')
 
-    # Si un message est arrivé → traiter IA maintenant
+    # Obtenir la session active
+    _sid = get_or_create_active_session()
+    # Synchroniser chat_messages avec la session active
+    if st.session_state.get('_last_loaded_session') != _sid:
+        st.session_state['chat_messages'] = load_session_messages(_sid)
+        st.session_state['_last_loaded_session'] = _sid
+
+    # Traiter le message entrant
     if _incoming:
         _already = [m.get("content","") for m in st.session_state.get('chat_messages',[])[-3:] if m.get("role")=="user"]
         if _incoming not in _already:
-            _ts = __import__('datetime').datetime.now().isoformat()
+            _ts = _dt.datetime.now().isoformat()
             st.session_state.chat_messages.append({"role":"user","content":_incoming,"ts":_ts})
             with st.spinner("🔮 Oracle réfléchit..."):
                 _rep = _call_ia(_incoming)
@@ -2456,14 +2341,157 @@ with tabs[7]:
                 "role": "assistant",
                 "content": _rep.get("texte", "Pas de réponse."),
                 "source": _rep.get("source", "offline"),
-                "ts": __import__('datetime').datetime.now().isoformat()
+                "ts": _dt.datetime.now().isoformat()
             })
+            save_session_messages(_sid, st.session_state.chat_messages)
             save_chat_history(st.session_state.chat_messages)
             st.rerun()
 
     # ══════════════════════════════════════════════════════
-    # RENDU — Chat Messenger avec thème dynamique
+    # THÈMES
     # ══════════════════════════════════════════════════════
+    _THEMES = {
+        "🟢 Vert Oracle": {
+            "hd": "linear-gradient(135deg,#00FF88,#7FFFD4)",
+            "hd_txt": "#002211", "hd_sub": "#003322", "dot": "#006644",
+            "msgs_bg": "#071410", "scroll": "#00FF88",
+            "wel_bg": "rgba(0,255,136,.07)", "wel_bd": "rgba(0,255,136,.2)", "wel_c": "#7FFFD4",
+            "bu_u": "linear-gradient(135deg,#00FF88,#00e07a)", "bu_u_c": "#001a0d", "bu_u_sh": "rgba(0,255,136,.4)",
+            "av": "linear-gradient(135deg,#7FFFD4,#00FF88)",
+            "bu_b_bg": "rgba(255,255,255,.07)", "bu_b_bd": "rgba(127,255,212,.2)", "bu_b_c": "#ffffff",
+            "lbl": "#00FF88", "typ": "#7FFFD4",
+            "bar_bg": "#0a1e16", "bar_bd": "rgba(0,255,136,.15)",
+            "inp_bg": "rgba(255,255,255,.06)", "inp_bd": "rgba(0,255,136,.25)",
+            "inp_foc": "#00FF88", "inp_fsh": "rgba(0,255,136,.1)", "inp_ph": "rgba(127,255,212,.4)",
+            "snd": "linear-gradient(135deg,#00FF88,#7FFFD4)", "snd_c": "#001a0d", "snd_sh": "rgba(0,255,136,.5)",
+            "root_sh": "rgba(0,255,140,.2)", "root_bd": "rgba(0,255,140,.3)",
+        },
+        "🔵 Bleu Professionnel": {
+            "hd": "linear-gradient(135deg,#1a73e8,#4fc3f7)",
+            "hd_txt": "#ffffff", "hd_sub": "#cce4ff", "dot": "#81d4fa",
+            "msgs_bg": "#0d1b2a", "scroll": "#1a73e8",
+            "wel_bg": "rgba(26,115,232,.08)", "wel_bd": "rgba(26,115,232,.25)", "wel_c": "#4fc3f7",
+            "bu_u": "linear-gradient(135deg,#1a73e8,#1565c0)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(26,115,232,.4)",
+            "av": "linear-gradient(135deg,#4fc3f7,#1a73e8)",
+            "bu_b_bg": "rgba(255,255,255,.06)", "bu_b_bd": "rgba(79,195,247,.2)", "bu_b_c": "#e8f4fd",
+            "lbl": "#4fc3f7", "typ": "#4fc3f7",
+            "bar_bg": "#0a1929", "bar_bd": "rgba(26,115,232,.2)",
+            "inp_bg": "rgba(255,255,255,.05)", "inp_bd": "rgba(26,115,232,.3)",
+            "inp_foc": "#4fc3f7", "inp_fsh": "rgba(79,195,247,.15)", "inp_ph": "rgba(79,195,247,.4)",
+            "snd": "linear-gradient(135deg,#1a73e8,#4fc3f7)", "snd_c": "#ffffff", "snd_sh": "rgba(26,115,232,.5)",
+            "root_sh": "rgba(26,115,232,.2)", "root_bd": "rgba(26,115,232,.35)",
+        },
+        "🟣 Violet Premium": {
+            "hd": "linear-gradient(135deg,#7c3aed,#c084fc)",
+            "hd_txt": "#ffffff", "hd_sub": "#ede9fe", "dot": "#a78bfa",
+            "msgs_bg": "#0f0a1e", "scroll": "#7c3aed",
+            "wel_bg": "rgba(124,58,237,.08)", "wel_bd": "rgba(124,58,237,.25)", "wel_c": "#c084fc",
+            "bu_u": "linear-gradient(135deg,#7c3aed,#6d28d9)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(124,58,237,.4)",
+            "av": "linear-gradient(135deg,#c084fc,#7c3aed)",
+            "bu_b_bg": "rgba(255,255,255,.06)", "bu_b_bd": "rgba(192,132,252,.2)", "bu_b_c": "#f3e8ff",
+            "lbl": "#c084fc", "typ": "#c084fc",
+            "bar_bg": "#0c0818", "bar_bd": "rgba(124,58,237,.2)",
+            "inp_bg": "rgba(255,255,255,.05)", "inp_bd": "rgba(124,58,237,.3)",
+            "inp_foc": "#c084fc", "inp_fsh": "rgba(192,132,252,.15)", "inp_ph": "rgba(192,132,252,.4)",
+            "snd": "linear-gradient(135deg,#7c3aed,#c084fc)", "snd_c": "#ffffff", "snd_sh": "rgba(124,58,237,.5)",
+            "root_sh": "rgba(124,58,237,.2)", "root_bd": "rgba(124,58,237,.35)",
+        },
+        "🟠 Orange Sport": {
+            "hd": "linear-gradient(135deg,#f97316,#fbbf24)",
+            "hd_txt": "#1a0a00", "hd_sub": "#431407", "dot": "#92400e",
+            "msgs_bg": "#1a0e00", "scroll": "#f97316",
+            "wel_bg": "rgba(249,115,22,.08)", "wel_bd": "rgba(249,115,22,.25)", "wel_c": "#fbbf24",
+            "bu_u": "linear-gradient(135deg,#f97316,#ea580c)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(249,115,22,.4)",
+            "av": "linear-gradient(135deg,#fbbf24,#f97316)",
+            "bu_b_bg": "rgba(255,255,255,.06)", "bu_b_bd": "rgba(251,191,36,.2)", "bu_b_c": "#fff7ed",
+            "lbl": "#fbbf24", "typ": "#fbbf24",
+            "bar_bg": "#150b00", "bar_bd": "rgba(249,115,22,.2)",
+            "inp_bg": "rgba(255,255,255,.05)", "inp_bd": "rgba(249,115,22,.3)",
+            "inp_foc": "#fbbf24", "inp_fsh": "rgba(251,191,36,.15)", "inp_ph": "rgba(251,191,36,.4)",
+            "snd": "linear-gradient(135deg,#f97316,#fbbf24)", "snd_c": "#1a0a00", "snd_sh": "rgba(249,115,22,.5)",
+            "root_sh": "rgba(249,115,22,.2)", "root_bd": "rgba(249,115,22,.35)",
+        },
+        "⚪ Blanc Élégant": {
+            "hd": "linear-gradient(135deg,#374151,#6b7280)",
+            "hd_txt": "#ffffff", "hd_sub": "#d1d5db", "dot": "#9ca3af",
+            "msgs_bg": "#f9fafb", "scroll": "#374151",
+            "wel_bg": "rgba(55,65,81,.06)", "wel_bd": "rgba(55,65,81,.15)", "wel_c": "#374151",
+            "bu_u": "linear-gradient(135deg,#374151,#1f2937)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(55,65,81,.3)",
+            "av": "linear-gradient(135deg,#6b7280,#374151)",
+            "bu_b_bg": "#ffffff", "bu_b_bd": "rgba(55,65,81,.15)", "bu_b_c": "#111827",
+            "lbl": "#374151", "typ": "#6b7280",
+            "bar_bg": "#f3f4f6", "bar_bd": "rgba(55,65,81,.15)",
+            "inp_bg": "#ffffff", "inp_bd": "rgba(55,65,81,.2)",
+            "inp_foc": "#374151", "inp_fsh": "rgba(55,65,81,.1)", "inp_ph": "rgba(55,65,81,.4)",
+            "snd": "linear-gradient(135deg,#374151,#6b7280)", "snd_c": "#ffffff", "snd_sh": "rgba(55,65,81,.3)",
+            "root_sh": "rgba(55,65,81,.15)", "root_bd": "rgba(55,65,81,.2)",
+        },
+    }
+
+    # ══════════════════════════════════════════════════════
+    # BARRE DE CONTRÔLE (thème + nouvelle session)
+    # ══════════════════════════════════════════════════════
+    _ctrl1, _ctrl2, _ctrl3 = st.columns([2, 2, 1])
+    with _ctrl1:
+        _sel_theme = st.selectbox(
+            "🎨 Thème", list(_THEMES.keys()),
+            index=list(_THEMES.keys()).index(st.session_state['chat_theme'])
+                  if st.session_state['chat_theme'] in _THEMES else 0,
+            key="chat_theme_sel_v50", label_visibility="collapsed"
+        )
+        if _sel_theme != st.session_state['chat_theme']:
+            st.session_state['chat_theme'] = _sel_theme
+            st.rerun()
+
+    with _ctrl3:
+        if st.button("➕ Nouveau chat", key="btn_new_chat_v50", use_container_width=True):
+            _new_sid = new_chat_session()
+            st.session_state['active_chat_session'] = _new_sid
+            st.session_state['chat_messages'] = []
+            st.session_state['_last_loaded_session'] = _new_sid
+            st.rerun()
+
+    # ══════════════════════════════════════════════════════
+    # SÉLECTEUR DE SESSION (panneau latéral intégré)
+    # ══════════════════════════════════════════════════════
+    _all_sessions = load_chat_sessions()
+    if _all_sessions:
+        _sorted_sids = sorted(_all_sessions.keys(), reverse=True)
+        _session_labels = {
+            sid: f"💬 {_all_sessions[sid].get('title','Chat')} — {sid[6:8]}/{sid[4:6]}/{sid[0:4]} {sid[9:11]}:{sid[11:13]}"
+            for sid in _sorted_sids
+        }
+        _current_idx = _sorted_sids.index(_sid) if _sid in _sorted_sids else 0
+        _chosen_label = st.selectbox(
+            "📂 Historique des chats",
+            options=list(_session_labels.values()),
+            index=_current_idx,
+            key="chat_session_sel_v50"
+        )
+        # Retrouver le sid depuis le label choisi
+        _chosen_sid = next((s for s, l in _session_labels.items() if l == _chosen_label), _sid)
+        if _chosen_sid != _sid:
+            st.session_state['active_chat_session'] = _chosen_sid
+            st.session_state['chat_messages'] = load_session_messages(_chosen_sid)
+            st.session_state['_last_loaded_session'] = _chosen_sid
+            _sid = _chosen_sid
+            st.rerun()
+
+        # Renommer la session courante
+        with st.expander("✏️ Renommer ce chat", expanded=False):
+            _rename_val = st.text_input("Nouveau titre", value=_all_sessions.get(_sid, {}).get("title", ""), key="rename_input_v50")
+            if st.button("💾 Enregistrer le nom", key="btn_rename_v50"):
+                _sess = load_chat_sessions()
+                if _sid in _sess:
+                    _sess[_sid]["title"] = _rename_val
+                    _sess[_sid]["_titled"] = True
+                    save_chat_sessions(_sess)
+                    st.rerun()
+
+    # ══════════════════════════════════════════════════════
+    # RENDU CHAT HTML
+    # ══════════════════════════════════════════════════════
+    _T = _THEMES[st.session_state['chat_theme']]
     _msgs = st.session_state.get('chat_messages', [])
     _msgs_json = json.dumps(_msgs, ensure_ascii=False)
 
@@ -2473,129 +2501,57 @@ with tabs[7]:
 <style>
 *{{box-sizing:border-box;margin:0;padding:0;}}
 html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:transparent;}}
-
-.root{{
-  display:flex;flex-direction:column;
-  height:500px;border-radius:18px;overflow:hidden;
-  box-shadow:0 0 40px {_T['root_shadow']},0 8px 32px rgba(0,0,0,.4);
-  border:1.5px solid {_T['root_border']};
-}}
-
-.hd{{
-  background:{_T['hd_grad']};
-  padding:13px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;
-}}
-.hd-av{{
-  width:44px;height:44px;border-radius:50%;
-  background:rgba(255,255,255,.3);backdrop-filter:blur(6px);
-  display:flex;align-items:center;justify-content:center;
-  font-size:24px;flex-shrink:0;
-  box-shadow:0 2px 12px rgba(0,0,0,.2);
-}}
-.hd-name{{color:{_T['hd_name_color']};font-weight:800;font-size:15px;}}
-.hd-status{{color:{_T['hd_status_color']};font-size:11px;margin-top:2px;display:flex;align-items:center;gap:5px;}}
-.dot{{width:8px;height:8px;border-radius:50%;background:{_T['dot_color']};animation:pulse 2s infinite;}}
+.root{{display:flex;flex-direction:column;height:500px;border-radius:18px;overflow:hidden;
+  box-shadow:0 0 40px {_T['root_sh']},0 8px 32px rgba(0,0,0,.4);
+  border:1.5px solid {_T['root_bd']};}}
+.hd{{background:{_T['hd']};padding:13px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}}
+.hd-av{{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.3);
+  display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}}
+.hd-name{{color:{_T['hd_txt']};font-weight:800;font-size:15px;}}
+.hd-status{{color:{_T['hd_sub']};font-size:11px;margin-top:2px;display:flex;align-items:center;gap:5px;}}
+.dot{{width:8px;height:8px;border-radius:50%;background:{_T['dot']};animation:pulse 2s infinite;}}
 @keyframes pulse{{0%,100%{{opacity:1;transform:scale(1)}}50%{{opacity:.6;transform:scale(.85)}}}}
-
-.msgs{{
-  flex:1;overflow-y:auto;padding:14px 12px;
-  display:flex;flex-direction:column;gap:10px;
-  background:{_T['msgs_bg']};
-  scrollbar-width:thin;scrollbar-color:{_T['scroll_color']} {_T['msgs_bg']};
-}}
+.msgs{{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;
+  background:{_T['msgs_bg']};scrollbar-width:thin;scrollbar-color:{_T['scroll']} {_T['msgs_bg']};}}
 .msgs::-webkit-scrollbar{{width:4px;}}
-.msgs::-webkit-scrollbar-thumb{{background:{_T['scroll_color']};border-radius:4px;}}
-
-.welcome{{
-  background:{_T['welcome_bg']};border:1px solid {_T['welcome_border']};
-  border-radius:14px;padding:12px 14px;
-  color:{_T['welcome_color']};font-size:13px;text-align:center;
-}}
-
+.msgs::-webkit-scrollbar-thumb{{background:{_T['scroll']};border-radius:4px;}}
+.welcome{{background:{_T['wel_bg']};border:1px solid {_T['wel_bd']};border-radius:14px;
+  padding:12px 14px;color:{_T['wel_c']};font-size:13px;text-align:center;}}
 .bw-u{{display:flex;justify-content:flex-end;}}
-.bu-u{{
-  background:{_T['bu_u_grad']};
-  color:{_T['bu_u_color']};
-  padding:10px 15px;
-  border-radius:20px 20px 4px 20px;
-  max-width:78%;font-size:14px;line-height:1.45;
-  word-break:break-word;font-weight:600;
-  box-shadow:0 3px 16px {_T['bu_u_shadow']};
-}}
-.bu-u .ts{{color:rgba(0,0,0,.35);font-size:10px;margin-top:3px;text-align:right;}}
-
+.bu-u{{background:{_T['bu_u']};color:{_T['bu_u_c']};padding:10px 15px;
+  border-radius:20px 20px 4px 20px;max-width:78%;font-size:14px;line-height:1.45;
+  word-break:break-word;font-weight:600;box-shadow:0 3px 16px {_T['bu_u_sh']};}}
+.bu-u .ts{{color:rgba(0,0,0,.3);font-size:10px;margin-top:3px;text-align:right;}}
 .bw-b{{display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;}}
-.av-b{{
-  width:32px;height:32px;border-radius:50%;
-  background:{_T['av_b_grad']};
-  display:flex;align-items:center;justify-content:center;
-  font-size:16px;flex-shrink:0;margin-bottom:2px;
-}}
-.bu-b{{
-  background:{_T['bu_b_bg']};
-  border:1px solid {_T['bu_b_border']};
-  color:{_T['bu_b_color']};
-  padding:10px 15px;
-  border-radius:20px 20px 20px 4px;
-  max-width:82%;font-size:14px;line-height:1.5;
-  word-break:break-word;
-}}
-.src-lbl{{font-size:10px;color:{_T['src_lbl_color']};font-weight:700;margin-bottom:4px;}}
-.bu-b .ts{{font-size:10px;color:rgba(127,200,180,.5);margin-top:4px;}}
-
+.av-b{{width:32px;height:32px;border-radius:50%;background:{_T['av']};
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-bottom:2px;}}
+.bu-b{{background:{_T['bu_b_bg']};border:1px solid {_T['bu_b_bd']};color:{_T['bu_b_c']};
+  padding:10px 15px;border-radius:20px 20px 20px 4px;max-width:82%;font-size:14px;
+  line-height:1.5;word-break:break-word;}}
+.src-lbl{{font-size:10px;color:{_T['lbl']};font-weight:700;margin-bottom:4px;}}
+.bu-b .ts{{font-size:10px;color:rgba(127,200,180,.45);margin-top:4px;}}
 .typing{{display:flex;gap:5px;align-items:center;padding:4px 2px;}}
-.typing span{{
-  width:9px;height:9px;border-radius:50%;
-  background:{_T['typing_color']};opacity:.5;
-  animation:bnc 1.1s infinite;
-}}
+.typing span{{width:9px;height:9px;border-radius:50%;background:{_T['typ']};opacity:.5;animation:bnc 1.1s infinite;}}
 .typing span:nth-child(2){{animation-delay:.18s;}}
 .typing span:nth-child(3){{animation-delay:.36s;}}
 @keyframes bnc{{0%,80%,100%{{transform:scale(.65);opacity:.3}}40%{{transform:scale(1.15);opacity:1}}}}
-
-/* Barre de saisie */
-.bar{{
-  display:flex;align-items:flex-end;gap:8px;
-  padding:10px 12px;
-  background:{_T['bar_bg']};
-  border-top:1px solid {_T['bar_border']};
-  flex-shrink:0;
-}}
-/* BUG 2 FIX: textarea multiline au lieu de input */
-.inp{{
-  flex:1;min-width:0;
-  background:{_T['inp_bg']};
-  border:1.5px solid {_T['inp_border']};
-  border-radius:18px;
-  padding:10px 16px;
-  font-size:14px;color:{_T['bu_b_color']};outline:none;
-  transition:border-color .2s;
-  resize:none;
-  min-height:42px;max-height:120px;
-  overflow-y:auto;
-  line-height:1.4;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-}}
-.inp:focus{{border-color:{_T['inp_focus']};box-shadow:0 0 0 3px {_T['inp_focus_shadow']};}}
-.inp::placeholder{{color:{_T['inp_placeholder']};}}
-.snd{{
-  width:44px;height:44px;border-radius:50%;
-  background:{_T['snd_grad']};
-  border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;color:{_T['snd_color']};font-weight:bold;
-  box-shadow:0 3px 16px {_T['snd_shadow']};
-  transition:transform .15s,box-shadow .15s;flex-shrink:0;
-  margin-bottom:1px;
-}}
+.bar{{display:flex;align-items:flex-end;gap:8px;padding:10px 12px;
+  background:{_T['bar_bg']};border-top:1px solid {_T['bar_bd']};flex-shrink:0;}}
+.inp{{flex:1;min-width:0;background:{_T['inp_bg']};border:1.5px solid {_T['inp_bd']};
+  border-radius:18px;padding:10px 16px;font-size:14px;color:{_T['bu_b_c']};outline:none;
+  transition:border-color .2s;resize:none;min-height:42px;max-height:120px;
+  overflow-y:auto;line-height:1.4;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}}
+.inp:focus{{border-color:{_T['inp_foc']};box-shadow:0 0 0 3px {_T['inp_fsh']};}}
+.inp::placeholder{{color:{_T['inp_ph']};}}
+.snd{{width:44px;height:44px;border-radius:50%;background:{_T['snd']};border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:20px;color:{_T['snd_c']};
+  font-weight:bold;box-shadow:0 3px 16px {_T['snd_sh']};transition:transform .15s;flex-shrink:0;margin-bottom:1px;}}
 .snd:hover{{transform:scale(1.08);}}
 .snd:active{{transform:scale(.9);}}
 .snd:disabled{{opacity:.35;cursor:default;transform:none;}}
-
 @media(max-width:600px){{.root{{height:420px;}}}}
-</style>
-</head>
-<body>
+</style></head><body>
 <div class="root">
   <div class="hd">
     <div class="hd-av">🔮</div>
@@ -2604,97 +2560,69 @@ html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',s
       <div class="hd-status"><span class="dot"></span> En ligne · Assistant pronostics</div>
     </div>
   </div>
-
-  <div class="msgs" id="msgs">
-    <div class="welcome">🔮 Bonjour ! Posez-moi n'importe quelle question sur vos pronostics, classements ou résultats.</div>
-  </div>
-
+  <div class="msgs" id="msgs"></div>
   <div class="bar">
-    <textarea class="inp" id="inp" placeholder="Écrivez votre message..." autocomplete="off" rows="1"></textarea>
+    <textarea class="inp" id="inp" placeholder="Écrivez votre message... (Entrée = envoyer, Maj+Entrée = nouvelle ligne)" rows="1"></textarea>
     <button class="snd" id="snd" onclick="doSend()">&#10148;</button>
   </div>
 </div>
-
 <script>
 const MSGS={_msgs_json};
-
 function esc(t){{return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}}
 function fmt(ts){{
   try{{const d=new Date(ts);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}}
   catch(e){{return'';}}
 }}
-
 function renderAll(){{
   const box=document.getElementById('msgs');
-  let h='<div class="welcome">🔮 Bonjour ! Posez-moi n\\'importe quelle question.</div>';
+  let h='<div class="welcome">🔮 Bonjour ! Posez-moi n\\'importe quelle question sur vos pronostics, classements ou résultats.</div>';
   MSGS.forEach(function(m){{
     const t=fmt(m.ts||'');
     if(m.role==='user'){{
       h+='<div class="bw-u"><div class="bu-u">'+esc(m.content).replace(/\\n/g,'<br>')+'<div class="ts">'+t+'</div></div></div>';
     }}else{{
       const src=m.source==='groq'?'🧠 Groq':'🤖 Offline';
-      h+='<div class="bw-b"><div class="av-b">🔮</div>'
-       +'<div class="bu-b"><div class="src-lbl">'+src+'</div>'
-       +esc(m.content).replace(/\\n/g,'<br>')
-       +'<div class="ts">'+t+'</div></div></div>';
+      h+='<div class="bw-b"><div class="av-b">🔮</div><div class="bu-b"><div class="src-lbl">'+src+'</div>'
+       +esc(m.content).replace(/\\n/g,'<br>')+'<div class="ts">'+t+'</div></div></div>';
     }}
   }});
   box.innerHTML=h;
   box.scrollTop=box.scrollHeight;
 }}
-
-/* BUG 2 FIX: auto-resize textarea */
 const inp=document.getElementById('inp');
-inp.addEventListener('input',function(){{
-  this.style.height='auto';
-  this.style.height=Math.min(this.scrollHeight,120)+'px';
-}});
-
+inp.addEventListener('input',function(){{this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';}});
 function doSend(){{
   const snd=document.getElementById('snd');
   const text=inp.value.trim();
   if(!text)return;
-
-  inp.value='';
-  inp.style.height='auto';
-  inp.disabled=true;
-  snd.disabled=true;
-
-  // Affichage immédiat message utilisateur + typing
+  inp.value='';inp.style.height='auto';
+  inp.disabled=true;snd.disabled=true;
   const box=document.getElementById('msgs');
   box.innerHTML+='<div class="bw-u"><div class="bu-u">'+esc(text).replace(/\\n/g,'<br>')+'</div></div>';
-  box.innerHTML+='<div class="bw-b"><div class="av-b">🔮</div>'
-    +'<div class="bu-b"><div class="typing"><span></span><span></span><span></span></div></div></div>';
+  box.innerHTML+='<div class="bw-b"><div class="av-b">🔮</div><div class="bu-b"><div class="typing"><span></span><span></span><span></span></div></div></div>';
   box.scrollTop=box.scrollHeight;
-
-  // ✅ BUG 1 FIX: navigation vers le parent avec le message (sans double-encodage)
-  try {{
-    const url = new URL(window.parent.location.href);
+  // ✅ FIX : utiliser URLSearchParams directement sur la fenêtre parente sans double-encodage
+  try{{
+    const url=new URL(window.parent.location.href);
     url.searchParams.set('_ochat', text);
-    window.parent.location.href = url.toString();
-  }} catch(err) {{
-    // Fallback si cross-origin bloqué: réactiver le champ
-    inp.disabled=false;
-    snd.disabled=false;
+    window.parent.location.href=url.toString();
+  }}catch(err){{
+    inp.disabled=false;snd.disabled=false;
   }}
 }}
-
-/* BUG 1 FIX: Enter envoie, Shift+Enter fait un saut de ligne */
-inp.addEventListener('keydown',function(e){{
-  if(e.key==='Enter' && !e.shiftKey){{e.preventDefault();doSend();}}
-}});
-
+inp.addEventListener('keydown',function(e){{if(e.key==='Enter'&&!e.shiftKey){{e.preventDefault();doSend();}}}});
 renderAll();
-</script>
-</body></html>"""
+</script></body></html>"""
 
     components.html(_CHAT_HTML, height=540, scrolling=False)
 
     st.markdown("---")
 
-    # Formulaire Streamlit natif (backup fiable)
-    st.markdown("<p style='color:#00FF88;font-size:13px;margin-bottom:4px;'>💬 Ou tapez ici :</p>", unsafe_allow_html=True)
-    with st.form("chat_form_v48", clear_on_submit=True):
+    # ══════════════════════════════════════════════════════
+    # FORMULAIRE NATIF STREAMLIT (toujours fonctionnel)
+    # ══════════════════════════════════════════════════════
+    st.markdown("<p style='color:#00FF88;font-size:13px;margin-bottom:4px;'>💬 Ou tapez ici (100% fiable) :</p>", unsafe_allow_html=True)
+    with st.form("chat_form_v50", clear_on_submit=True):
         _ui = st.text_input("msg", placeholder="Ex: Quelle équipe est la plus en forme ?", label_visibility="collapsed")
         _fc1, _fc2, _fc3 = st.columns([3,1,1])
         with _fc1: _submit  = st.form_submit_button("📤 Envoyer", use_container_width=True)
@@ -2703,6 +2631,7 @@ renderAll();
 
     if _clear:
         st.session_state.chat_messages = []
+        save_session_messages(_sid, [])
         save_chat_history([])
         st.rerun()
 
@@ -2726,7 +2655,7 @@ renderAll();
                                      value=getattr(moteur_ia_chat,'api_key','') if IA_DISPONIBLE else '',
                                      type="password", placeholder="gsk_xxx...")
         with _c2:
-            if st.button("🔗 Connecter", use_container_width=True, key="btn_groq_v48"):
+            if st.button("🔗 Connecter", use_container_width=True, key="btn_groq_v50"):
                 if _api_key and IA_DISPONIBLE:
                     os.environ["GROQ_API_KEY"] = _api_key
                     moteur_ia_chat.api_key = _api_key
@@ -2745,16 +2674,31 @@ renderAll();
         _tr = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
         _sc3.metric("Résultats", _tr)
 
-    # Export + effacer
-    _col1, _col2 = st.columns(2)
+    # Export + effacer session + supprimer session
+    _col1, _col2, _col3 = st.columns(3)
     with _col1:
-        if st.button("💾 Exporter chat", use_container_width=True, key="btn_export_v48"):
-            st.download_button("📥 JSON", data=json.dumps(st.session_state.chat_messages, indent=2, ensure_ascii=False),
-                               file_name="oracle_chat.json", mime="application/json")
+        if st.button("💾 Exporter chat", use_container_width=True, key="btn_export_v50"):
+            _export_data = json.dumps(st.session_state.chat_messages, indent=2, ensure_ascii=False)
+            _sess_title = _all_sessions.get(_sid, {}).get("title", "chat")
+            st.download_button("📥 Télécharger JSON",
+                data=_export_data,
+                file_name=f"oracle_{_sess_title[:20].replace(' ','_')}.json",
+                mime="application/json")
     with _col2:
-        if st.button("🗑️ Effacer historique", use_container_width=True, key="btn_clr_v48"):
+        if st.button("🗑️ Effacer ce chat", use_container_width=True, key="btn_clr_v50"):
             st.session_state.chat_messages = []
+            save_session_messages(_sid, [])
             save_chat_history([])
+            st.rerun()
+    with _col3:
+        if st.button("❌ Supprimer session", use_container_width=True, key="btn_del_v50"):
+            _sess = load_chat_sessions()
+            if _sid in _sess:
+                del _sess[_sid]
+                save_chat_sessions(_sess)
+            st.session_state['active_chat_session'] = None
+            st.session_state['chat_messages'] = []
+            st.session_state['_last_loaded_session'] = None
             st.rerun()
 
     # Suggestions
@@ -2768,7 +2712,7 @@ renderAll();
     _sg2 = st.columns(2)
     for _si, _sg in enumerate(_SUGGS):
         with _sg2[_si % 2]:
-            if st.button(_sg, key=f"sg48_{_si}", use_container_width=True):
+            if st.button(_sg, key=f"sg50_{_si}", use_container_width=True):
                 st.session_state['_pending_chat_input'] = _sg
                 st.rerun()
 
