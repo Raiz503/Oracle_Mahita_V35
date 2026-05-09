@@ -2241,21 +2241,210 @@ with tabs[7]:
             return {"texte": f"Erreur : {_ex}", "source": "offline"}
         return moteur_ia_chat.discuter(user_q) if IA_DISPONIBLE else {"texte": "Mode offline.", "source": "offline"}
 
-    # Lire query param — message envoyé depuis le chat HTML
+    # ══════════════════════════════════════════════════════
+    # SÉLECTEUR DE THÈME — Professionnel
+    # ══════════════════════════════════════════════════════
+    _THEMES = {
+        "🟢 Vert Oracle (défaut)": {
+            "hd_grad": "linear-gradient(135deg,#00FF88,#7FFFD4)",
+            "hd_name_color": "#002211",
+            "hd_status_color": "#003322",
+            "dot_color": "#006644",
+            "msgs_bg": "#071410",
+            "scroll_color": "#00FF88",
+            "welcome_bg": "rgba(0,255,136,.07)",
+            "welcome_border": "rgba(0,255,136,.2)",
+            "welcome_color": "#7FFFD4",
+            "bu_u_grad": "linear-gradient(135deg,#00FF88,#00e07a)",
+            "bu_u_color": "#001a0d",
+            "bu_u_shadow": "rgba(0,255,136,.4)",
+            "av_b_grad": "linear-gradient(135deg,#7FFFD4,#00FF88)",
+            "bu_b_bg": "rgba(255,255,255,.07)",
+            "bu_b_border": "rgba(127,255,212,.2)",
+            "bu_b_color": "#ffffff",
+            "src_lbl_color": "#00FF88",
+            "typing_color": "#7FFFD4",
+            "bar_bg": "#0a1e16",
+            "bar_border": "rgba(0,255,136,.15)",
+            "inp_bg": "rgba(255,255,255,.06)",
+            "inp_border": "rgba(0,255,136,.25)",
+            "inp_focus": "#00FF88",
+            "inp_focus_shadow": "rgba(0,255,136,.1)",
+            "inp_placeholder": "rgba(127,255,212,.4)",
+            "snd_grad": "linear-gradient(135deg,#00FF88,#7FFFD4)",
+            "snd_color": "#001a0d",
+            "snd_shadow": "rgba(0,255,136,.5)",
+            "root_shadow": "rgba(0,255,140,.2)",
+            "root_border": "rgba(0,255,140,.3)",
+        },
+        "🔵 Bleu Professionnel": {
+            "hd_grad": "linear-gradient(135deg,#1a73e8,#4fc3f7)",
+            "hd_name_color": "#ffffff",
+            "hd_status_color": "#cce4ff",
+            "dot_color": "#81d4fa",
+            "msgs_bg": "#0d1b2a",
+            "scroll_color": "#1a73e8",
+            "welcome_bg": "rgba(26,115,232,.08)",
+            "welcome_border": "rgba(26,115,232,.25)",
+            "welcome_color": "#4fc3f7",
+            "bu_u_grad": "linear-gradient(135deg,#1a73e8,#1565c0)",
+            "bu_u_color": "#ffffff",
+            "bu_u_shadow": "rgba(26,115,232,.4)",
+            "av_b_grad": "linear-gradient(135deg,#4fc3f7,#1a73e8)",
+            "bu_b_bg": "rgba(255,255,255,.06)",
+            "bu_b_border": "rgba(79,195,247,.2)",
+            "bu_b_color": "#e8f4fd",
+            "src_lbl_color": "#4fc3f7",
+            "typing_color": "#4fc3f7",
+            "bar_bg": "#0a1929",
+            "bar_border": "rgba(26,115,232,.2)",
+            "inp_bg": "rgba(255,255,255,.05)",
+            "inp_border": "rgba(26,115,232,.3)",
+            "inp_focus": "#4fc3f7",
+            "inp_focus_shadow": "rgba(79,195,247,.15)",
+            "inp_placeholder": "rgba(79,195,247,.4)",
+            "snd_grad": "linear-gradient(135deg,#1a73e8,#4fc3f7)",
+            "snd_color": "#ffffff",
+            "snd_shadow": "rgba(26,115,232,.5)",
+            "root_shadow": "rgba(26,115,232,.2)",
+            "root_border": "rgba(26,115,232,.35)",
+        },
+        "🟣 Violet Premium": {
+            "hd_grad": "linear-gradient(135deg,#7c3aed,#c084fc)",
+            "hd_name_color": "#ffffff",
+            "hd_status_color": "#ede9fe",
+            "dot_color": "#a78bfa",
+            "msgs_bg": "#0f0a1e",
+            "scroll_color": "#7c3aed",
+            "welcome_bg": "rgba(124,58,237,.08)",
+            "welcome_border": "rgba(124,58,237,.25)",
+            "welcome_color": "#c084fc",
+            "bu_u_grad": "linear-gradient(135deg,#7c3aed,#6d28d9)",
+            "bu_u_color": "#ffffff",
+            "bu_u_shadow": "rgba(124,58,237,.4)",
+            "av_b_grad": "linear-gradient(135deg,#c084fc,#7c3aed)",
+            "bu_b_bg": "rgba(255,255,255,.06)",
+            "bu_b_border": "rgba(192,132,252,.2)",
+            "bu_b_color": "#f3e8ff",
+            "src_lbl_color": "#c084fc",
+            "typing_color": "#c084fc",
+            "bar_bg": "#0c0818",
+            "bar_border": "rgba(124,58,237,.2)",
+            "inp_bg": "rgba(255,255,255,.05)",
+            "inp_border": "rgba(124,58,237,.3)",
+            "inp_focus": "#c084fc",
+            "inp_focus_shadow": "rgba(192,132,252,.15)",
+            "inp_placeholder": "rgba(192,132,252,.4)",
+            "snd_grad": "linear-gradient(135deg,#7c3aed,#c084fc)",
+            "snd_color": "#ffffff",
+            "snd_shadow": "rgba(124,58,237,.5)",
+            "root_shadow": "rgba(124,58,237,.2)",
+            "root_border": "rgba(124,58,237,.35)",
+        },
+        "🟠 Orange Sport": {
+            "hd_grad": "linear-gradient(135deg,#f97316,#fbbf24)",
+            "hd_name_color": "#1a0a00",
+            "hd_status_color": "#431407",
+            "dot_color": "#92400e",
+            "msgs_bg": "#1a0e00",
+            "scroll_color": "#f97316",
+            "welcome_bg": "rgba(249,115,22,.08)",
+            "welcome_border": "rgba(249,115,22,.25)",
+            "welcome_color": "#fbbf24",
+            "bu_u_grad": "linear-gradient(135deg,#f97316,#ea580c)",
+            "bu_u_color": "#ffffff",
+            "bu_u_shadow": "rgba(249,115,22,.4)",
+            "av_b_grad": "linear-gradient(135deg,#fbbf24,#f97316)",
+            "bu_b_bg": "rgba(255,255,255,.06)",
+            "bu_b_border": "rgba(251,191,36,.2)",
+            "bu_b_color": "#fff7ed",
+            "src_lbl_color": "#fbbf24",
+            "typing_color": "#fbbf24",
+            "bar_bg": "#150b00",
+            "bar_border": "rgba(249,115,22,.2)",
+            "inp_bg": "rgba(255,255,255,.05)",
+            "inp_border": "rgba(249,115,22,.3)",
+            "inp_focus": "#fbbf24",
+            "inp_focus_shadow": "rgba(251,191,36,.15)",
+            "inp_placeholder": "rgba(251,191,36,.4)",
+            "snd_grad": "linear-gradient(135deg,#f97316,#fbbf24)",
+            "snd_color": "#1a0a00",
+            "snd_shadow": "rgba(249,115,22,.5)",
+            "root_shadow": "rgba(249,115,22,.2)",
+            "root_border": "rgba(249,115,22,.35)",
+        },
+        "⚪ Blanc Élégant": {
+            "hd_grad": "linear-gradient(135deg,#374151,#6b7280)",
+            "hd_name_color": "#ffffff",
+            "hd_status_color": "#d1d5db",
+            "dot_color": "#9ca3af",
+            "msgs_bg": "#f9fafb",
+            "scroll_color": "#374151",
+            "welcome_bg": "rgba(55,65,81,.06)",
+            "welcome_border": "rgba(55,65,81,.15)",
+            "welcome_color": "#374151",
+            "bu_u_grad": "linear-gradient(135deg,#374151,#1f2937)",
+            "bu_u_color": "#ffffff",
+            "bu_u_shadow": "rgba(55,65,81,.3)",
+            "av_b_grad": "linear-gradient(135deg,#6b7280,#374151)",
+            "bu_b_bg": "#ffffff",
+            "bu_b_border": "rgba(55,65,81,.15)",
+            "bu_b_color": "#111827",
+            "src_lbl_color": "#374151",
+            "typing_color": "#6b7280",
+            "bar_bg": "#f3f4f6",
+            "bar_border": "rgba(55,65,81,.15)",
+            "inp_bg": "#ffffff",
+            "inp_border": "rgba(55,65,81,.2)",
+            "inp_focus": "#374151",
+            "inp_focus_shadow": "rgba(55,65,81,.1)",
+            "inp_placeholder": "rgba(55,65,81,.4)",
+            "snd_grad": "linear-gradient(135deg,#374151,#6b7280)",
+            "snd_color": "#ffffff",
+            "snd_shadow": "rgba(55,65,81,.3)",
+            "root_shadow": "rgba(55,65,81,.15)",
+            "root_border": "rgba(55,65,81,.2)",
+        },
+    }
+
+    if 'chat_theme' not in st.session_state:
+        st.session_state['chat_theme'] = "🟢 Vert Oracle (défaut)"
+
+    _theme_col1, _theme_col2 = st.columns([1, 3])
+    with _theme_col1:
+        st.markdown("<p style='color:#7FFFD4;font-size:12px;margin-bottom:2px;'>🎨 Thème du chat :</p>", unsafe_allow_html=True)
+    with _theme_col2:
+        _selected_theme = st.selectbox(
+            "Thème", list(_THEMES.keys()),
+            index=list(_THEMES.keys()).index(st.session_state['chat_theme']),
+            label_visibility="collapsed", key="theme_selector_v49"
+        )
+        if _selected_theme != st.session_state['chat_theme']:
+            st.session_state['chat_theme'] = _selected_theme
+            st.rerun()
+
+    _T = _THEMES[st.session_state['chat_theme']]
+
+    # ══════════════════════════════════════════════════════
+    # INCOMING — Message depuis le chat HTML (query_params) ou suggestions
+    # ══════════════════════════════════════════════════════
     _incoming = None
+
+    # Lire depuis query_params — envoyé par le chat HTML via window.parent.location.href
     try:
         _qraw = st.query_params.get("_ochat", None)
         if _qraw:
+            # Pas de décodeURIComponent ici car Streamlit décode automatiquement
             _incoming = _qraw if isinstance(_qraw, str) else str(_qraw)
             st.query_params.pop("_ochat", None)  # nettoyer immédiatement
     except Exception:
         pass
 
-    # Aussi vérifier pending (suggestions)
+    # Aussi vérifier pending (formulaire natif + suggestions)
     if not _incoming and st.session_state.get('_pending_chat_input'):
         _incoming = st.session_state.pop('_pending_chat_input')
 
-    # Si un message est arrivé → traiter IA maintenant (1 seul rerun)
+    # Si un message est arrivé → traiter IA maintenant
     if _incoming:
         _already = [m.get("content","") for m in st.session_state.get('chat_messages',[])[-3:] if m.get("role")=="user"]
         if _incoming not in _already:
@@ -2270,10 +2459,10 @@ with tabs[7]:
                 "ts": __import__('datetime').datetime.now().isoformat()
             })
             save_chat_history(st.session_state.chat_messages)
-            st.rerun()  # 1 seul rerun pour mettre à jour l'affichage
+            st.rerun()
 
     # ══════════════════════════════════════════════════════
-    # RENDU — Chat Messenger style Vert Lumineux + Blanc
+    # RENDU — Chat Messenger avec thème dynamique
     # ══════════════════════════════════════════════════════
     _msgs = st.session_state.get('chat_messages', [])
     _msgs_json = json.dumps(_msgs, ensure_ascii=False)
@@ -2288,13 +2477,12 @@ html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',s
 .root{{
   display:flex;flex-direction:column;
   height:500px;border-radius:18px;overflow:hidden;
-  box-shadow:0 0 40px rgba(0,255,140,.2),0 8px 32px rgba(0,0,0,.4);
-  border:1.5px solid rgba(0,255,140,.3);
+  box-shadow:0 0 40px {_T['root_shadow']},0 8px 32px rgba(0,0,0,.4);
+  border:1.5px solid {_T['root_border']};
 }}
 
-/* Header vert lumineux */
 .hd{{
-  background:linear-gradient(135deg,#00FF88,#7FFFD4);
+  background:{_T['hd_grad']};
   padding:13px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;
 }}
 .hd-av{{
@@ -2304,66 +2492,61 @@ html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',s
   font-size:24px;flex-shrink:0;
   box-shadow:0 2px 12px rgba(0,0,0,.2);
 }}
-.hd-name{{color:#002211;font-weight:800;font-size:15px;}}
-.hd-status{{color:#003322;font-size:11px;margin-top:2px;display:flex;align-items:center;gap:5px;}}
-.dot{{width:8px;height:8px;border-radius:50%;background:#006644;animation:pulse 2s infinite;}}
+.hd-name{{color:{_T['hd_name_color']};font-weight:800;font-size:15px;}}
+.hd-status{{color:{_T['hd_status_color']};font-size:11px;margin-top:2px;display:flex;align-items:center;gap:5px;}}
+.dot{{width:8px;height:8px;border-radius:50%;background:{_T['dot_color']};animation:pulse 2s infinite;}}
 @keyframes pulse{{0%,100%{{opacity:1;transform:scale(1)}}50%{{opacity:.6;transform:scale(.85)}}}}
 
-/* Zone messages — fond sombre */
 .msgs{{
   flex:1;overflow-y:auto;padding:14px 12px;
   display:flex;flex-direction:column;gap:10px;
-  background:#071410;
-  scrollbar-width:thin;scrollbar-color:#00FF88 #071410;
+  background:{_T['msgs_bg']};
+  scrollbar-width:thin;scrollbar-color:{_T['scroll_color']} {_T['msgs_bg']};
 }}
 .msgs::-webkit-scrollbar{{width:4px;}}
-.msgs::-webkit-scrollbar-thumb{{background:#00FF88;border-radius:4px;}}
+.msgs::-webkit-scrollbar-thumb{{background:{_T['scroll_color']};border-radius:4px;}}
 
 .welcome{{
-  background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);
+  background:{_T['welcome_bg']};border:1px solid {_T['welcome_border']};
   border-radius:14px;padding:12px 14px;
-  color:#7FFFD4;font-size:13px;text-align:center;
+  color:{_T['welcome_color']};font-size:13px;text-align:center;
 }}
 
-/* Bulles utilisateur — VERT LUMINEUX */
 .bw-u{{display:flex;justify-content:flex-end;}}
 .bu-u{{
-  background:linear-gradient(135deg,#00FF88,#00e07a);
-  color:#001a0d;
+  background:{_T['bu_u_grad']};
+  color:{_T['bu_u_color']};
   padding:10px 15px;
   border-radius:20px 20px 4px 20px;
   max-width:78%;font-size:14px;line-height:1.45;
   word-break:break-word;font-weight:600;
-  box-shadow:0 3px 16px rgba(0,255,136,.4);
+  box-shadow:0 3px 16px {_T['bu_u_shadow']};
 }}
-.bu-u .ts{{color:rgba(0,26,13,.5);font-size:10px;margin-top:3px;text-align:right;}}
+.bu-u .ts{{color:rgba(0,0,0,.35);font-size:10px;margin-top:3px;text-align:right;}}
 
-/* Bulles Oracle — BLANC sur fond sombre */
 .bw-b{{display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;}}
 .av-b{{
   width:32px;height:32px;border-radius:50%;
-  background:linear-gradient(135deg,#7FFFD4,#00FF88);
+  background:{_T['av_b_grad']};
   display:flex;align-items:center;justify-content:center;
   font-size:16px;flex-shrink:0;margin-bottom:2px;
-  box-shadow:0 2px 10px rgba(127,255,212,.35);
 }}
 .bu-b{{
-  background:rgba(255,255,255,.07);
-  border:1px solid rgba(127,255,212,.2);
-  color:#ffffff;
+  background:{_T['bu_b_bg']};
+  border:1px solid {_T['bu_b_border']};
+  color:{_T['bu_b_color']};
   padding:10px 15px;
   border-radius:20px 20px 20px 4px;
   max-width:82%;font-size:14px;line-height:1.5;
   word-break:break-word;
 }}
-.src-lbl{{font-size:10px;color:#00FF88;font-weight:700;margin-bottom:4px;}}
-.bu-b .ts{{font-size:10px;color:rgba(127,255,212,.4);margin-top:4px;}}
+.src-lbl{{font-size:10px;color:{_T['src_lbl_color']};font-weight:700;margin-bottom:4px;}}
+.bu-b .ts{{font-size:10px;color:rgba(127,200,180,.5);margin-top:4px;}}
 
-/* Typing dots — vert d'eau */
 .typing{{display:flex;gap:5px;align-items:center;padding:4px 2px;}}
 .typing span{{
   width:9px;height:9px;border-radius:50%;
-  background:#7FFFD4;opacity:.5;
+  background:{_T['typing_color']};opacity:.5;
   animation:bnc 1.1s infinite;
 }}
 .typing span:nth-child(2){{animation-delay:.18s;}}
@@ -2372,33 +2555,40 @@ html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',s
 
 /* Barre de saisie */
 .bar{{
-  display:flex;align-items:center;gap:8px;
+  display:flex;align-items:flex-end;gap:8px;
   padding:10px 12px;
-  background:#0a1e16;
-  border-top:1px solid rgba(0,255,136,.15);
+  background:{_T['bar_bg']};
+  border-top:1px solid {_T['bar_border']};
   flex-shrink:0;
 }}
+/* BUG 2 FIX: textarea multiline au lieu de input */
 .inp{{
   flex:1;min-width:0;
-  background:rgba(255,255,255,.06);
-  border:1.5px solid rgba(0,255,136,.25);
-  border-radius:24px;
-  padding:11px 18px;
-  font-size:14px;color:#ffffff;outline:none;
+  background:{_T['inp_bg']};
+  border:1.5px solid {_T['inp_border']};
+  border-radius:18px;
+  padding:10px 16px;
+  font-size:14px;color:{_T['bu_b_color']};outline:none;
   transition:border-color .2s;
+  resize:none;
+  min-height:42px;max-height:120px;
+  overflow-y:auto;
+  line-height:1.4;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }}
-.inp:focus{{border-color:#00FF88;box-shadow:0 0 0 3px rgba(0,255,136,.1);}}
-.inp::placeholder{{color:rgba(127,255,212,.4);}}
+.inp:focus{{border-color:{_T['inp_focus']};box-shadow:0 0 0 3px {_T['inp_focus_shadow']};}}
+.inp::placeholder{{color:{_T['inp_placeholder']};}}
 .snd{{
   width:44px;height:44px;border-radius:50%;
-  background:linear-gradient(135deg,#00FF88,#7FFFD4);
+  background:{_T['snd_grad']};
   border:none;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  font-size:20px;color:#001a0d;font-weight:bold;
-  box-shadow:0 3px 16px rgba(0,255,136,.5);
+  font-size:20px;color:{_T['snd_color']};font-weight:bold;
+  box-shadow:0 3px 16px {_T['snd_shadow']};
   transition:transform .15s,box-shadow .15s;flex-shrink:0;
+  margin-bottom:1px;
 }}
-.snd:hover{{transform:scale(1.08);box-shadow:0 4px 20px rgba(0,255,136,.7);}}
+.snd:hover{{transform:scale(1.08);}}
 .snd:active{{transform:scale(.9);}}
 .snd:disabled{{opacity:.35;cursor:default;transform:none;}}
 
@@ -2420,7 +2610,7 @@ html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',s
   </div>
 
   <div class="bar">
-    <input class="inp" id="inp" type="text" placeholder="Écrivez votre message..." autocomplete="off">
+    <textarea class="inp" id="inp" placeholder="Écrivez votre message..." autocomplete="off" rows="1"></textarea>
     <button class="snd" id="snd" onclick="doSend()">&#10148;</button>
   </div>
 </div>
@@ -2440,7 +2630,7 @@ function renderAll(){{
   MSGS.forEach(function(m){{
     const t=fmt(m.ts||'');
     if(m.role==='user'){{
-      h+='<div class="bw-u"><div class="bu-u">'+esc(m.content)+'<div class="ts">'+t+'</div></div></div>';
+      h+='<div class="bw-u"><div class="bu-u">'+esc(m.content).replace(/\\n/g,'<br>')+'<div class="ts">'+t+'</div></div></div>';
     }}else{{
       const src=m.source==='groq'?'🧠 Groq':'🤖 Offline';
       h+='<div class="bw-b"><div class="av-b">🔮</div>'
@@ -2453,38 +2643,52 @@ function renderAll(){{
   box.scrollTop=box.scrollHeight;
 }}
 
+/* BUG 2 FIX: auto-resize textarea */
+const inp=document.getElementById('inp');
+inp.addEventListener('input',function(){{
+  this.style.height='auto';
+  this.style.height=Math.min(this.scrollHeight,120)+'px';
+}});
+
 function doSend(){{
-  const inp=document.getElementById('inp');
   const snd=document.getElementById('snd');
   const text=inp.value.trim();
   if(!text)return;
 
   inp.value='';
+  inp.style.height='auto';
   inp.disabled=true;
   snd.disabled=true;
 
-  // Affichage immédiat
+  // Affichage immédiat message utilisateur + typing
   const box=document.getElementById('msgs');
-  box.innerHTML+='<div class="bw-u"><div class="bu-u">'+esc(text)+'</div></div>';
+  box.innerHTML+='<div class="bw-u"><div class="bu-u">'+esc(text).replace(/\\n/g,'<br>')+'</div></div>';
   box.innerHTML+='<div class="bw-b"><div class="av-b">🔮</div>'
     +'<div class="bu-b"><div class="typing"><span></span><span></span><span></span></div></div></div>';
   box.scrollTop=box.scrollHeight;
 
-  // ✅ Un seul rechargement : on passe le message via l'URL parent
-  const url=new URL(window.parent.location.href);
-  url.searchParams.set('_ochat', encodeURIComponent(text));
-  window.parent.location.href = url.toString();
+  // ✅ BUG 1 FIX: navigation vers le parent avec le message (sans double-encodage)
+  try {{
+    const url = new URL(window.parent.location.href);
+    url.searchParams.set('_ochat', text);
+    window.parent.location.href = url.toString();
+  }} catch(err) {{
+    // Fallback si cross-origin bloqué: réactiver le champ
+    inp.disabled=false;
+    snd.disabled=false;
+  }}
 }}
 
-document.getElementById('inp').addEventListener('keydown',function(e){{
-  if(e.key==='Enter'){{e.preventDefault();doSend();}}
+/* BUG 1 FIX: Enter envoie, Shift+Enter fait un saut de ligne */
+inp.addEventListener('keydown',function(e){{
+  if(e.key==='Enter' && !e.shiftKey){{e.preventDefault();doSend();}}
 }});
 
 renderAll();
 </script>
 </body></html>"""
 
-    components.html(_CHAT_HTML, height=520, scrolling=False)
+    components.html(_CHAT_HTML, height=540, scrolling=False)
 
     st.markdown("---")
 
