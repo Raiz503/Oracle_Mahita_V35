@@ -116,28 +116,12 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
 .main-header {
-    text-align: center; padding: 15px; 
-    background: #0E1117; margin-bottom: 20px;
-    border-bottom: 3px solid #7FFFD4;
-}
-.logo-container {
-    display: flex; align-items: center; justify-content: center; gap: 15px;
-    margin-bottom: 8px;
-}
-.logo-svg {
-    width: 50px; height: 50px;
-    flex-shrink: 0;
-}
-.header-title {
-    color: #7FFFD4; font-size: 3.5em; font-weight: 900;
-    font-family: 'Orbitron', sans-serif;
-    text-transform: uppercase; letter-spacing: 5px;
-    text-shadow: 0 0 25px #7FFFD4, 0 0 50px rgba(127,255,212,0.6);
-    line-height: 1;
-}
-.header-subtitle {
-    color: #888; font-size: 1em; letter-spacing: 3px;
-    margin-top: 5px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #071410 0%, #0a1f16 100%);
+    margin-bottom: 20px;
+    border: 1.5px solid #1a4a2a;
+    border-radius: 14px;
+    box-shadow: 0 0 30px rgba(0,255,136,0.12), inset 0 0 20px rgba(0,255,136,0.03);
 }
 .prono-safe { border-left: 5px solid #00FF00; padding: 14px; background: rgba(0,255,0,0.08); border-radius: 8px; margin: 10px 0; }
 .prono-risque { border-left: 5px solid #FFA500; padding: 14px; background: rgba(255,165,0,0.08); border-radius: 8px; margin: 10px 0; }
@@ -154,45 +138,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ===================== LOGO SVG =====================
-LOGO_SVG = """
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <!-- Fond -->
-  <circle cx="50" cy="50" r="48" fill="#7FFFD4" opacity="0.15"/>
-  <circle cx="50" cy="50" r="45" fill="none" stroke="#7FFFD4" stroke-width="1.5" opacity="0.6"/>
-  
-  <!-- Boule cristal -->
-  <circle cx="50" cy="50" r="38" fill="none" stroke="#7FFFD4" stroke-width="2"/>
-  <circle cx="50" cy="50" r="35" fill="#0E1117" opacity="0.8"/>
-  
-  <!-- Glow -->
-  <circle cx="50" cy="50" r="36" fill="none" stroke="#7FFFD4" stroke-width="0.8" opacity="0.4">
-    <animate attributeName="r" values="36;38;36" dur="3s" repeatCount="indefinite"/>
-    <animate attributeName="opacity" values="0.4;0.7;0.4" dur="3s" repeatCount="indefinite"/>
-  </circle>
-  
-  <!-- Demi-ballon -->
-  <path d="M 25 50 A 25 25 0 0 1 75 50" fill="none" stroke="#7FFFD4" stroke-width="1.5"/>
-  <path d="M 35 38 L 42 45 L 35 52" fill="none" stroke="#7FFFD4" stroke-width="1"/>
-  <path d="M 65 38 L 58 45 L 65 52" fill="none" stroke="#7FFFD4" stroke-width="1"/>
-  <path d="M 42 45 L 58 45" fill="none" stroke="#7FFFD4" stroke-width="1"/>
-  
-  <!-- Demi-cerveau -->
-  <path d="M 50 30 Q 72 30 72 50 Q 72 70 50 70" fill="none" stroke="#00FF00" stroke-width="1.5"/>
-  <circle cx="58" cy="42" r="2" fill="#00FF00"/>
-  <circle cx="66" cy="48" r="2" fill="#00FF00"/>
-  <circle cx="60" cy="58" r="2" fill="#00FF00"/>
-  <line x1="58" y1="42" x2="66" y2="48" stroke="#00FF00" stroke-width="1"/>
-  <line x1="66" y1="48" x2="60" y2="58" stroke="#00FF00" stroke-width="1"/>
-  
-  <!-- Étoile -->
-  <polygon points="50,12 52,18 58,18 53,22 55,28 50,24 45,28 47,22 42,18 48,18" fill="#FFD700"/>
-  
-  <!-- Base -->
-  <ellipse cx="50" cy="88" rx="15" ry="4" fill="none" stroke="#7FFFD4" stroke-width="1.5"/>
-</svg>
-"""
-
+# ===================== LOGO PNG (Base64) =====================
+LOGO_PNG_B64 = "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"
 # ===================== UTILITAIRES =====================
 def custom_notify(text: str, color: str = "#00FF00"):
     st.markdown(f"""
@@ -415,35 +362,44 @@ if 'history' not in st.session_state:
 if 'chat_messages' not in st.session_state:
     st.session_state['chat_messages'] = load_chat_history()
 
-# ── Initialiser IA Apprentissage avec TOUT l'historique au 1er chargement ──
+# ── Initialiser IA Apprentissage — UNIQUEMENT si les patterns sont vides ──
+# CORRECTION BUG: ce bloc ne doit s'exécuter qu'UNE SEULE FOIS (1ère utilisation).
+# Le flag session_state se réinitialise à chaque rechargement de page, ce qui
+# provoquait un réapprentissage de TOUS les matchs à chaque session → compteurs x30.
+# Solution: vérifier d'abord si le moteur a déjà des patterns sauvegardés.
 if IA_DISPONIBLE and not st.session_state.get('_ia_history_loaded'):
     try:
-        for saison, saison_data in st.session_state['history'].items():
-            journees = sorted(saison_data.keys(),
-                              key=lambda x: int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 0)
-            for jk in journees:
-                jdata = saison_data[jk]
-                cal_ia = jdata.get("cal", [])
-                res_ia = jdata.get("res", [])
-                for i, m in enumerate(res_ia):
-                    try:
-                        sh, sa = map(int, m['s'].replace('-', ':').split(':'))
-                        resultat = "1" if sh > sa else ("X" if sh == sa else "2")
-                        cotes = cal_ia[i].get('o', [2.0, 3.0, 3.0]) if cal_ia and i < len(cal_ia) else [2.0, 3.0, 3.0]
-                        moteur_apprentissage.analyser_pattern_cotes(cotes[0], cotes[1], cotes[2], resultat)
-                        moteur_apprentissage.analyser_pattern_equipe(
-                            m['h'],
-                            "V" if resultat == "1" else ("N" if resultat == "X" else "D"),
-                            {"domicile": True}
-                        )
-                        moteur_apprentissage.analyser_pattern_equipe(
-                            m['a'],
-                            "V" if resultat == "2" else ("N" if resultat == "X" else "D"),
-                            {"domicile": False}
-                        )
-                    except:
-                        pass
-        moteur_apprentissage.save()
+        _stats_existants = moteur_apprentissage.get_stats_apprentissage()
+        _patterns_vides = _stats_existants.get('total', 0) == 0
+        if _patterns_vides:
+            # 1ère utilisation seulement : charger tout l'historique
+            for saison, saison_data in st.session_state['history'].items():
+                journees = sorted(saison_data.keys(),
+                                  key=lambda x: int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 0)
+                for jk in journees:
+                    jdata = saison_data[jk]
+                    cal_ia = jdata.get("cal", [])
+                    res_ia = jdata.get("res", [])
+                    for i, m in enumerate(res_ia):
+                        try:
+                            sh, sa = map(int, m['s'].replace('-', ':').split(':'))
+                            resultat = "1" if sh > sa else ("X" if sh == sa else "2")
+                            cotes = cal_ia[i].get('o', [2.0, 3.0, 3.0]) if cal_ia and i < len(cal_ia) else [2.0, 3.0, 3.0]
+                            moteur_apprentissage.analyser_pattern_cotes(cotes[0], cotes[1], cotes[2], resultat)
+                            moteur_apprentissage.analyser_pattern_equipe(
+                                m['h'],
+                                "V" if resultat == "1" else ("N" if resultat == "X" else "D"),
+                                {"domicile": True}
+                            )
+                            moteur_apprentissage.analyser_pattern_equipe(
+                                m['a'],
+                                "V" if resultat == "2" else ("N" if resultat == "X" else "D"),
+                                {"domicile": False}
+                            )
+                        except:
+                            pass
+            moteur_apprentissage.save()
+        # Sinon: patterns déjà chargés depuis le fichier sauvegardé → on ne recharge pas
     except:
         pass
     finally:
@@ -995,36 +951,55 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 # ===================== HEADER & SAISON =====================
 st.markdown(f"""
 <div class="main-header">
-    <div class="logo-container">
-        <div class="logo-svg" style="width:34px;height:34px;">{LOGO_SVG}</div>
-        <div>
-            <h1 class="header-title" style="font-size:2.1em;letter-spacing:3px;">ORACLE MAHITA</h1>
-            <div class="header-subtitle">V52.0 — IA Intégrée · Apprentissage Actif · OCR Bet261</div>
+    <div style="display:flex;align-items:center;gap:16px;">
+        <!-- LOGO PNG -->
+        <img src="data:image/png;base64,{LOGO_PNG_B64}"
+             style="height:72px;width:auto;flex-shrink:0;filter:drop-shadow(0 0 10px #00FF88);" />
+        <!-- TITRE + SOUS-TITRE -->
+        <div style="flex:1;">
+            <div style="display:flex;align-items:baseline;gap:14px;">
+                <span style="font-family:'Orbitron',sans-serif;font-size:2.1em;font-weight:900;
+                    color:#7FFFD4;letter-spacing:3px;text-shadow:0 0 20px #00FF88,0 0 40px rgba(0,255,136,.5);">
+                    ORACLE MAHITA
+                </span>
+                <span style="font-family:'Orbitron',sans-serif;font-size:1.1em;font-weight:700;
+                    color:#00FF88;letter-spacing:1px;">V53.0</span>
+            </div>
+            <div style="color:#aaa;font-size:0.85em;letter-spacing:2px;margin-top:3px;">
+                IA Intégrée &middot; Apprentissage Actif
+            </div>
         </div>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px;">
-        <span style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;
-            background:{'rgba(0,255,0,0.15)' if CERVEAU_DISPONIBLE else 'rgba(255,100,0,0.15)'};
-            border:1px solid {'#00FF00' if CERVEAU_DISPONIBLE else '#FF6400'};
-            color:{'#00FF00' if CERVEAU_DISPONIBLE else '#FF9900'};">
-            {'✅' if CERVEAU_DISPONIBLE else '⚠️'} Cerveau 1 {'Actif' if CERVEAU_DISPONIBLE else 'Fallback'}
-        </span>
-        <span style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;
-            background:{'rgba(0,255,0,0.15)' if IA_DISPONIBLE else 'rgba(128,128,128,0.15)'};
-            border:1px solid {'#00FF88' if IA_DISPONIBLE else '#666'};
-            color:{'#00FF88' if IA_DISPONIBLE else '#888'};">
-            {'✅' if IA_DISPONIBLE else '⭕'} IA Apprentissage {'Active' if IA_DISPONIBLE else 'Inactive'}
-        </span>
-        <span style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;
-            background:{'rgba(0,200,255,0.15)' if CHAT_IA_DISPONIBLE else 'rgba(128,128,128,0.15)'};
-            border:1px solid {'#00C8FF' if CHAT_IA_DISPONIBLE else '#666'};
-            color:{'#00C8FF' if CHAT_IA_DISPONIBLE else '#888'};">
-            {'✅' if CHAT_IA_DISPONIBLE else '⭕'} Chat IA {'Chargé' if CHAT_IA_DISPONIBLE else 'Absent'}
-        </span>
+        <!-- DIAGNOSTICS PANEL -->
+        <div style="background:#0a1a12;border:1px solid #1a3a2a;border-radius:10px;
+             padding:10px 16px;min-width:185px;flex-shrink:0;">
+            <div style="color:#7FFFD4;font-size:9px;font-weight:700;letter-spacing:2px;
+                 text-transform:uppercase;margin-bottom:8px;text-align:center;">
+                ⬡ Technical Diagnostics
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <span style="color:#ccc;font-size:11px;">🧠 Cerveau Actif</span>
+                    <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;
+                        background:{'#00FF88' if CERVEAU_DISPONIBLE else '#FFA500'};
+                        box-shadow:0 0 6px {'#00FF88' if CERVEAU_DISPONIBLE else '#FFA500'};"></span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <span style="color:#ccc;font-size:11px;">⚙️ IA apprentissage</span>
+                    <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;
+                        background:{'#00FF88' if IA_DISPONIBLE else '#666'};
+                        box-shadow:0 0 6px {'#00FF88' if IA_DISPONIBLE else 'transparent'};"></span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <span style="color:#ccc;font-size:11px;">💬 Chat IA</span>
+                    <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;
+                        background:{'#00FF88' if CHAT_IA_DISPONIBLE else '#666'};
+                        box-shadow:0 0 6px {'#00FF88' if CHAT_IA_DISPONIBLE else 'transparent'};"></span>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
-
 s_active = st.selectbox("Saison", list(st.session_state['history'].keys()), label_visibility="collapsed")
 st.session_state['s_active'] = s_active
 
@@ -2430,7 +2405,10 @@ with tabs[6]:
         st.markdown("### 🧠 Performance IA Apprentissage")
         stats_ia = moteur_apprentissage.get_stats_apprentissage()
         _mc1, _mc2, _mc3, _mc4 = st.columns(4)
-        _mc1.metric("Matchs appris", stats_ia.get("total", 0))
+        # Afficher le nb de matchs RÉELS (depuis l'historique) plutôt que le compteur interne
+        # qui peut être gonflé par des rechargements multiples
+        _matchs_reels_ia = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
+        _mc1.metric("Matchs appris", _matchs_reels_ia)
         _mc2.metric("Taux réussite IA", f"{stats_ia.get('taux_reussite', 0):.1f}%")
         _mc3.metric("Taux 1N2", f"{stats_ia.get('taux_1n2', 0):.1f}%")
         _mc4.metric("Patterns découverts", stats_ia.get("patterns_connus", 0))
@@ -2560,20 +2538,13 @@ with tabs[7]:
     # ══════════════════════════════════════════════════════
     def _call_ia(user_q: str):
         try:
-            if CHAT_IA_DISPONIBLE and moteur_ia_chat is not None:
-                _std = get_standings(st.session_state['history'][s_active], engine.teams_list)
-                _ctx = build_full_context(st.session_state['history'], s_active, _std, next_j)
-                if hasattr(moteur_ia_chat, 'set_contexte'):
-                    moteur_ia_chat.set_contexte(
-                        history=st.session_state['history'],
-                        saison_active=s_active,
-                        standings=_std,
-                        prochaine_journee=next_j,
-                        contexte_complet=_ctx
-                    )
-                return moteur_ia_chat.discuter(user_q)
-            # Fallback: Groq direct avec clé configurée dans l'interface
+            # ── PRIORITÉ 1 : Clé Groq directe (session state) ──
+            # On vérifie d'abord la clé directe car moteur_ia_chat peut être
+            # importé sans avoir la clé API configurée, ce qui donne "Mode Offline"
             _gk = st.session_state.get('groq_api_key_direct', '')
+            # Injecter aussi la clé depuis moteur_ia_chat si disponible
+            if not _gk and CHAT_IA_DISPONIBLE and moteur_ia_chat is not None:
+                _gk = getattr(moteur_ia_chat, 'api_key', '') or ''
             if _gk:
                 from groq import Groq as _GQ
                 _gc = _GQ(api_key=_gk)
@@ -2582,15 +2553,32 @@ with tabs[7]:
                 _r = _gc.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
-                        {"role":"system","content":f"Tu es Oracle Mahita IA, assistant pronostics football expert.\n\nCONTEXTE SAISON:\n{_ctx2}"},
+                        {"role":"system","content":f"Tu es Oracle Mahita IA, assistant pronostics football expert. "
+                         f"Réponds en français, de façon précise et détaillée.\n\nCONTEXTE SAISON COMPLÈTE:\n{_ctx2}"},
                         {"role":"user","content":user_q}
                     ],
-                    max_tokens=600, temperature=0.7
+                    max_tokens=800, temperature=0.7
                 )
-                return {"texte": _r.choices[0].message.content, "source": "groq-direct"}
-            return {"texte": "💡 Saisissez votre clé Groq API dans la section **Configuration Groq** ci-dessous.", "source": "offline"}
+                return {"texte": _r.choices[0].message.content, "source": "groq"}
+            # ── PRIORITÉ 2 : moteur_ia_chat (si connecté via son propre client) ──
+            if CHAT_IA_DISPONIBLE and moteur_ia_chat is not None:
+                _est_conn = getattr(moteur_ia_chat, 'est_connecte', lambda: False)()
+                if _est_conn:
+                    _std = get_standings(st.session_state['history'][s_active], engine.teams_list)
+                    _ctx = build_full_context(st.session_state['history'], s_active, _std, next_j)
+                    if hasattr(moteur_ia_chat, 'set_contexte'):
+                        moteur_ia_chat.set_contexte(
+                            history=st.session_state['history'],
+                            saison_active=s_active,
+                            standings=_std,
+                            prochaine_journee=next_j,
+                            contexte_complet=_ctx
+                        )
+                    return moteur_ia_chat.discuter(user_q)
+            # ── OFFLINE : aucune clé disponible ──
+            return {"texte": "💡 Saisissez votre clé Groq API dans la section **Configuration Groq** ci-dessous pour activer l'IA.", "source": "offline"}
         except Exception as _ex:
-            return {"texte": f"Erreur : {_ex}", "source": "offline"}
+            return {"texte": f"Erreur connexion Groq : {_ex}", "source": "offline"}
 
     # ══════════════════════════════════════════════════════
     # LIRE MESSAGE ENTRANT (query_params — envoyé par le HTML)
