@@ -22,24 +22,86 @@ from typing import List, Dict
 from scipy.signal import find_peaks
 from scipy.ndimage import uniform_filter1d
 
-# ── Import IA ──
+# ── Import IA (v53 en priorité, fallback v49) ──
 try:
     from moteur_apprentissage_v53 import moteur_apprentissage
-    from moteur_ia_chat import moteur_ia_chat
     IA_DISPONIBLE = True
 except ImportError:
     try:
         from moteur_apprentissage import moteur_apprentissage
-        from moteur_ia_chat import moteur_ia_chat
         IA_DISPONIBLE = True
     except ImportError:
         IA_DISPONIBLE = False
+        moteur_apprentissage = None
 
-# ── Import Cerveau I ──
+try:
+    from moteur_ia_chat import moteur_ia_chat
+    CHAT_IA_DISPONIBLE = True
+except ImportError:
+    CHAT_IA_DISPONIBLE = False
+    moteur_ia_chat = None
+
+# ── Import Cerveau (fichier externe ou fallback intégré) ──
 try:
     from moteur_cerveau1 import cerveau1 as oracle_brain
+    CERVEAU_DISPONIBLE = True
 except ImportError:
-    oracle_brain = None
+    # ══ CERVEAU INLINE FALLBACK ══
+    class _CerveauInline:
+        """Cerveau analytique intégré — utilisé si moteur_cerveau1.py est absent."""
+        def analyser_match(self, equipe_dom, equipe_ext, cotes, journee=1,
+                           rang_dom=10, rang_ext=10, serie_dom=0, serie_ext=0,
+                           forme_dom=None, forme_ext=None, match_precedent_dom=None):
+            c1, cx, c2 = cotes
+            # Forces de base (inverse des cotes)
+            f1 = 1/c1; fx = 1/cx; f2 = 1/c2
+            # Ajustement classement
+            diff = (rang_ext - rang_dom) * 0.018
+            f1 += diff; f2 -= diff
+            # Ajustement forme
+            if forme_dom:
+                pts = sum(3 if r=="V" else (1 if r=="N" else 0) for r in forme_dom[-5:])
+                f1 += pts * 0.012
+            if forme_ext:
+                pts = sum(3 if r=="V" else (1 if r=="N" else 0) for r in forme_ext[-5:])
+                f2 += pts * 0.012
+            # Série victoires
+            f1 += serie_dom * 0.025; f2 += serie_ext * 0.025
+            tot = f1 + fx + f2
+            p1 = f1/tot; px = fx/tot; p2 = f2/tot
+            if p1 > px and p1 > p2:
+                pred, conf, cote_c = "1", int(p1*100), c1
+                choix = f"{equipe_dom} (cote {c1})"
+            elif p2 > p1 and p2 > px:
+                pred, conf, cote_c = "2", int(p2*100), c2
+                choix = f"{equipe_ext} (cote {c2})"
+            else:
+                pred, conf, cote_c = "X", int(px*100), cx
+                choix = f"Nul (cote {cx})"
+            if conf >= 72:   label = "BANKER"
+            elif conf >= 54: label = "RISQUE CALCULÉ"
+            else:            label = "FUN"
+            # Score estimé simple
+            bd = max(1,round(p1*4)) if pred=="1" else (max(0,round(p1*2)) if pred=="2" else max(1,round(p1*2.5)))
+            be = max(0,round(p2*2)) if pred=="1" else (max(1,round(p2*4)) if pred=="2" else bd)
+            score_p = f"{min(bd,5)}:{min(be,5)}"
+            return {
+                "prediction": pred, "choix_expert": choix,
+                "indice_confiance": conf, "confiance": label,
+                "score_predit": score_p,
+                "proba": {"1": round(p1,3), "X": round(px,3), "2": round(p2,3)}
+            }
+        def calculer_performance_globale(self, history_saison):
+            total = bon = 0
+            for jdata in history_saison.values():
+                for r in jdata.get("res", []):
+                    try:
+                        sh, sa = map(int, r['s'].replace('-',':').split(':'))
+                        total += 1
+                    except: pass
+            return {"total_matchs": total, "taux_1n2": 0, "scores_exacts": 0, "moyenne_points": 0}
+    oracle_brain = _CerveauInline()
+    CERVEAU_DISPONIBLE = False  # indique que c'est le fallback
 
 # ── Configuration ──
 st.set_page_config(page_title="Oracle Mahita V36", layout="wide", page_icon="🔮")
@@ -1235,48 +1297,62 @@ with tabs[2]:
                     match_precedent_dom=dernier_adv
                 )
 
-            # ═══ MOTEUR 2: IA Apprentissage V2.3 (tous patterns) ═══
+            # ═══ MOTEUR 2: IA Apprentissage V2.3 ═══
             prediction_ia = None
             confiance_ia = 50
             details_ia = "Non dispo"
 
-            if IA_DISPONIBLE:
-                _c1p, _cxp, _c2p = m['o']
-                _rd_ia = int(standings[standings['Équipe'] == m['h']]['Rang'].values[0]) if not standings[standings['Équipe'] == m['h']].empty else 10
-                _re_ia = int(standings[standings['Équipe'] == m['a']]['Rang'].values[0]) if not standings[standings['Équipe'] == m['a']].empty else 10
-                _fd_ia = get_forme_equipe(st.session_state['history'], s_active, m['h'], 3)
-                _fe_ia = get_forme_equipe(st.session_state['history'], s_active, m['a'], 3)
-                def _calc_buts_ia(equipe, domicile=True):
-                    _bp, _bc, _n = [], [], 0
-                    for _jdata_ia in st.session_state['history'][s_active].values():
-                        for _match_ia in _jdata_ia.get("res", []):
-                            try:
-                                _sh_ia, _sa_ia = map(int, _match_ia['s'].replace('-', ':').split(':'))
-                                if domicile and _match_ia['h'] == equipe:
-                                    _bp.append(_sh_ia); _bc.append(_sa_ia); _n += 1
-                                elif not domicile and _match_ia['a'] == equipe:
-                                    _bp.append(_sa_ia); _bc.append(_sh_ia); _n += 1
-                            except: pass
-                    return (sum(_bp)/_n if _n else 1.5, sum(_bc)/_n if _n else 1.5)
-                _bpmd_ia, _bcmd_ia = _calc_buts_ia(m['h'], True)
-                _bpme_ia, _bcme_ia = _calc_buts_ia(m['a'], False)
-                _tad_ia = "favori" if _rd_ia <= 5 else ("medium" if _rd_ia <= 15 else "outsider")
-                _tae_ia = "favori" if _re_ia <= 5 else ("medium" if _re_ia <= 15 else "outsider")
-                _ctx_ia = {
-                    "rang_dom": _rd_ia, "rang_ext": _re_ia,
-                    "serie_dom": _fd_ia, "serie_ext": _fe_ia,
-                    "evolution_dom": "stable", "evolution_ext": "stable",
-                    "bp_moy_dom": _bpmd_ia, "bc_moy_dom": _bcmd_ia,
-                    "bp_moy_ext": _bpme_ia, "bc_moy_ext": _bcme_ia,
-                    "type_adv_dom": _tad_ia, "type_adv_ext": _tae_ia,
-                    "prob_forme": {"1": 33.3, "X": 33.3, "2": 33.3}
-                }
-                _pred_ia = moteur_apprentissage.predire_avec_apprentissage(
-                    {"h": m['h'], "a": m['a'], "o": m['o']}, _ctx_ia
-                )
-                prediction_ia = _pred_ia["prediction"]
-                confiance_ia = int(_pred_ia["confiance"])
-                details_ia = f"{prediction_ia} ({confiance_ia}%)"
+            if IA_DISPONIBLE and moteur_apprentissage is not None:
+                try:
+                    _f_dom_ia = get_forme_equipe(st.session_state['history'], s_active, m['h'], 3)
+                    _f_ext_ia = get_forme_equipe(st.session_state['history'], s_active, m['a'], 3)
+                    def _buts_ia(eq, dom=True):
+                        bp, bc, n = [], [], 0
+                        for _jd in st.session_state['history'][s_active].values():
+                            for _mr in _jd.get("res", []):
+                                try:
+                                    _s, _a = map(int, _mr['s'].replace('-',':').split(':'))
+                                    if dom and _mr['h']==eq: bp.append(_s); bc.append(_a); n+=1
+                                    elif not dom and _mr['a']==eq: bp.append(_a); bc.append(_s); n+=1
+                                except: pass
+                        return (sum(bp)/n if n else 1.5, sum(bc)/n if n else 1.5)
+                    _bpmd, _bcmd = _buts_ia(m['h'], True)
+                    _bpme, _bcme = _buts_ia(m['a'], False)
+                    _tad = "favori" if r_dom<=5 else ("medium" if r_dom<=15 else "outsider")
+                    _tae = "favori" if r_ext<=5 else ("medium" if r_ext<=15 else "outsider")
+                    _ctx_ia = {
+                        "rang_dom": r_dom, "rang_ext": r_ext,
+                        "serie_dom": _f_dom_ia, "serie_ext": _f_ext_ia,
+                        "evolution_dom": "stable", "evolution_ext": "stable",
+                        "bp_moy_dom": _bpmd, "bc_moy_dom": _bcmd,
+                        "bp_moy_ext": _bpme, "bc_moy_ext": _bcme,
+                        "type_adv_dom": _tad, "type_adv_ext": _tae,
+                        "prob_forme": {"1": 33.3, "X": 33.3, "2": 33.3}
+                    }
+                    if hasattr(moteur_apprentissage, 'predire_avec_apprentissage'):
+                        _pred = moteur_apprentissage.predire_avec_apprentissage(
+                            {"h": m['h'], "a": m['a'], "o": m['o']}, _ctx_ia)
+                        prediction_ia = _pred["prediction"]
+                        confiance_ia = int(_pred["confiance"])
+                    elif moteur_apprentissage.patterns:
+                        _c1p, _cxp, _c2p = m['o']
+                        for _pk, _pd in moteur_apprentissage.patterns.items():
+                            if isinstance(_pd, dict) and _pd.get("total",0) >= 3:
+                                try:
+                                    _pc1,_pcx,_pc2 = map(float, _pk.split('_'))
+                                    if abs(_pc1-_c1p)+abs(_pcx-_cxp)+abs(_pc2-_c2p) < 1.5:
+                                        _tot = _pd["total"]
+                                        _p1 = _pd.get("1",0)/_tot; _px = _pd.get("X",0)/_tot; _p2 = _pd.get("2",0)/_tot
+                                        if _p1>_px and _p1>_p2: prediction_ia="1"; confiance_ia=int(_p1*100)
+                                        elif _p2>_p1 and _p2>_px: prediction_ia="2"; confiance_ia=int(_p2*100)
+                                        else: prediction_ia="X"; confiance_ia=int(_px*100)
+                                        break
+                                except: continue
+                    if prediction_ia:
+                        details_ia = f"{prediction_ia} ({confiance_ia}%)"
+                except Exception as _e_ia:
+                    details_ia = f"Erreur IA: {str(_e_ia)[:30]}"
+
 
             # ═══ MOTEUR 3: Analyse statistique (cotes + classement + forme) ═══
             cote_1, cote_x, cote_2 = m['o']
@@ -1388,9 +1464,11 @@ with tabs[2]:
                 'confiance': confiance_label,
                 'score_probable': score_probable,
                 'prediction': prediction_finale,
+                'r_dom': r_dom,
+                'r_ext': r_ext,
                 'details_moteurs': {
-                    'cerveau': analyse_cerveau.get('choix_expert', 'N/A') if analyse_cerveau else 'Non dispo',
-                    'ia': f"{prediction_ia} ({confiance_ia}%)" if prediction_ia else 'Non dispo',
+                    'cerveau': (analyse_cerveau.get('choix_expert', 'N/A') + (" (Inline)" if not CERVEAU_DISPONIBLE else "")) if analyse_cerveau else 'Non dispo',
+                    'ia': details_ia,
                     'stats': f"{prediction_stats} ({confiance_stats}%)"
                 }
             }
@@ -1425,7 +1503,7 @@ with tabs[2]:
                 with col1:
                     st.markdown("📊 **Cotes**")
                     st.caption(f"1: {m['o'][0]} | X: {m['o'][1]} | 2: {m['o'][2]}")
-                    st.caption(f"Classement: {m['h']} #{r_dom} vs {m['a']} #{r_ext}")
+                    st.caption(f"Classement: {m['h']} #{analyse['r_dom']} vs {m['a']} #{analyse['r_ext']}")
 
                 with col2:
                     st.markdown("🧠 **Prédiction**")
@@ -1438,9 +1516,11 @@ with tabs[2]:
 
                 with col3:
                     st.markdown("⚽ **Score Probable**")
-                    st.markdown(f"<div style='text-align:center;padding:8px;background:rgba(127,255,212,0.15);border-radius:8px;border:1px solid #7FFFD4;'>", unsafe_allow_html=True)
-                    st.markdown(f"<span style='font-size:1.8em;font-weight:bold;color:#7FFFD4;'>{analyse['score_probable']}</span>", unsafe_allow_html=True)
-                    st.markdown(f"</div>", unsafe_allow_html=True)
+                    st.markdown(f"""<div style='text-align:center;padding:12px 8px;
+                        background:rgba(127,255,212,0.15);border-radius:8px;
+                        border:2px solid #7FFFD4;margin-top:4px;'>
+                        <span style='font-size:2em;font-weight:bold;color:#7FFFD4;'>
+                        {analyse['score_probable']}</span></div>""", unsafe_allow_html=True)
 
                 with col4:
                     st.markdown("🔍 **Détails Moteurs**")
@@ -1639,44 +1719,54 @@ with tabs[3]:
                     save_db(st.session_state['history'])
 
                     # ── Apprentissage IA V2.3 ──
-                    if IA_DISPONIBLE:
-                        _hist_av = {jj: st.session_state['history'][s_active][jj]
-                            for jj in sorted(st.session_state['history'][s_active].keys())
-                            if (int(re.search(r'\d+', jj).group()) if re.search(r'\d+', jj) else 0) < j_res}
-                        _std_av = get_standings(_hist_av, engine.teams_list)
-                        _se = {t: {"bp_dom": [], "bc_dom": [], "bp_ext": [], "bc_ext": []} for t in engine.teams_list}
-                        for _jd in _hist_av.values():
-                            for _mm in _jd.get("res", []):
+                    if IA_DISPONIBLE and moteur_apprentissage is not None:
+                        try:
+                            _hav = {jj: st.session_state['history'][s_active][jj]
+                                for jj in sorted(st.session_state['history'][s_active].keys())
+                                if (int(re.search(r'\d+',jj).group()) if re.search(r'\d+',jj) else 0) < j_res}
+                            _stav = get_standings(_hav, engine.teams_list)
+                            _se = {t: {"bp_dom":[],"bc_dom":[],"bp_ext":[],"bc_ext":[]} for t in engine.teams_list}
+                            for _jd in _hav.values():
+                                for _mm in _jd.get("res",[]):
+                                    try:
+                                        _s,_a = map(int, _mm['s'].replace('-',':').split(':'))
+                                        if _mm['h'] in _se: _se[_mm['h']]["bp_dom"].append(_s); _se[_mm['h']]["bc_dom"].append(_a)
+                                        if _mm['a'] in _se: _se[_mm['a']]["bp_ext"].append(_a); _se[_mm['a']]["bc_ext"].append(_s)
+                                    except: pass
+                            def _moy_l(lst): return sum(lst)/len(lst) if lst else 1.5
+                            for _i, _mm in enumerate(final_res):
                                 try:
-                                    _sh2, _sa2 = map(int, _mm['s'].replace('-', ':').split(':'))
-                                    if _mm['h'] in _se: _se[_mm['h']]["bp_dom"].append(_sh2); _se[_mm['h']]["bc_dom"].append(_sa2)
-                                    if _mm['a'] in _se: _se[_mm['a']]["bp_ext"].append(_sa2); _se[_mm['a']]["bc_ext"].append(_sh2)
+                                    _sh,_sa = map(int, _mm['s'].replace('-',':').split(':'))
+                                    _res = "1" if _sh>_sa else ("X" if _sh==_sa else "2")
+                                    _co = cal_ref[_i].get('o',[2.0,3.0,3.0]) if cal_ref and _i<len(cal_ref) else [2.0,3.0,3.0]
+                                    _rd = int(_stav[_stav['Équipe']==_mm['h']]['Rang'].values[0]) if not _stav[_stav['Équipe']==_mm['h']].empty else 10
+                                    _re = int(_stav[_stav['Équipe']==_mm['a']]['Rang'].values[0]) if not _stav[_stav['Équipe']==_mm['a']].empty else 10
+                                    _fd = get_forme_equipe(st.session_state['history'], s_active, _mm['h'], 3)
+                                    _fe = get_forme_equipe(st.session_state['history'], s_active, _mm['a'], 3)
+                                    _bpmd=_moy_l(_se[_mm['h']]["bp_dom"]); _bcmd=_moy_l(_se[_mm['h']]["bc_dom"])
+                                    _bpme=_moy_l(_se[_mm['a']]["bp_ext"]); _bcme=_moy_l(_se[_mm['a']]["bc_ext"])
+                                    _tad="favori" if _rd<=5 else ("medium" if _rd<=15 else "outsider")
+                                    _tae="favori" if _re<=5 else ("medium" if _re<=15 else "outsider")
+                                    if hasattr(moteur_apprentissage,'analyser_pattern_cotes'):
+                                        moteur_apprentissage.analyser_pattern_cotes(_co[0],_co[1],_co[2],_res)
+                                    if hasattr(moteur_apprentissage,'analyser_pattern_classement'):
+                                        moteur_apprentissage.analyser_pattern_classement(_mm['h'],_mm['a'],_rd,_re,_res)
+                                    if hasattr(moteur_apprentissage,'analyser_pattern_force'):
+                                        moteur_apprentissage.analyser_pattern_force(_mm['h'],_mm['a'],_rd,_re,_res)
+                                    if hasattr(moteur_apprentissage,'analyser_pattern_lieu_rang'):
+                                        moteur_apprentissage.analyser_pattern_lieu_rang(_mm['h'],_mm['a'],_rd,_re,_res)
+                                    if hasattr(moteur_apprentissage,'analyser_pattern_serie_forme'):
+                                        moteur_apprentissage.analyser_pattern_serie_forme(_mm['h'],_mm['a'],_fd,_fe,_res)
+                                    if hasattr(moteur_apprentissage,'analyser_pattern_serie_rang'):
+                                        moteur_apprentissage.analyser_pattern_serie_rang(_mm['h'],_mm['a'],"stable","stable",_res)
+                                    if hasattr(moteur_apprentissage,'analyser_pattern_tendance_buts'):
+                                        moteur_apprentissage.analyser_pattern_tendance_buts(_mm['h'],_mm['a'],_bpmd,_bcmd,_bpme,_bcme,_tad,_tae,_res)
+                                    if hasattr(moteur_apprentissage,'analyser_pattern_equipe'):
+                                        moteur_apprentissage.analyser_pattern_equipe(_mm['h'],"V" if _res=="1" else ("N" if _res=="X" else "D"),{"domicile":True})
+                                        moteur_apprentissage.analyser_pattern_equipe(_mm['a'],"V" if _res=="2" else ("N" if _res=="X" else "D"),{"domicile":False})
                                 except: pass
-                        def _moy_b(lst): return sum(lst)/len(lst) if lst else 1.5
-                        for _i2, _mm2 in enumerate(final_res):
-                            try:
-                                _sh3, _sa3 = map(int, _mm2['s'].replace('-', ':').split(':'))
-                                _r2 = "1" if _sh3 > _sa3 else ("X" if _sh3 == _sa3 else "2")
-                                _co = cal_ref[_i2].get('o', [2.0, 3.0, 3.0]) if cal_ref and _i2 < len(cal_ref) else [2.0, 3.0, 3.0]
-                                _rd2 = int(_std_av[_std_av['Équipe'] == _mm2['h']]['Rang'].values[0]) if not _std_av[_std_av['Équipe'] == _mm2['h']].empty else 10
-                                _re2 = int(_std_av[_std_av['Équipe'] == _mm2['a']]['Rang'].values[0]) if not _std_av[_std_av['Équipe'] == _mm2['a']].empty else 10
-                                _fd2 = get_forme_equipe(st.session_state['history'], s_active, _mm2['h'], 3)
-                                _fe2 = get_forme_equipe(st.session_state['history'], s_active, _mm2['a'], 3)
-                                _bpmd2 = _moy_b(_se[_mm2['h']]["bp_dom"]); _bcmd2 = _moy_b(_se[_mm2['h']]["bc_dom"])
-                                _bpme2 = _moy_b(_se[_mm2['a']]["bp_ext"]); _bcme2 = _moy_b(_se[_mm2['a']]["bc_ext"])
-                                _tad2 = "favori" if _rd2 <= 5 else ("medium" if _rd2 <= 15 else "outsider")
-                                _tae2 = "favori" if _re2 <= 5 else ("medium" if _re2 <= 15 else "outsider")
-                                moteur_apprentissage.analyser_pattern_cotes(_co[0], _co[1], _co[2], _r2)
-                                moteur_apprentissage.analyser_pattern_classement(_mm2['h'], _mm2['a'], _rd2, _re2, _r2)
-                                moteur_apprentissage.analyser_pattern_force(_mm2['h'], _mm2['a'], _rd2, _re2, _r2)
-                                moteur_apprentissage.analyser_pattern_lieu_rang(_mm2['h'], _mm2['a'], _rd2, _re2, _r2)
-                                moteur_apprentissage.analyser_pattern_serie_forme(_mm2['h'], _mm2['a'], _fd2, _fe2, _r2)
-                                moteur_apprentissage.analyser_pattern_serie_rang(_mm2['h'], _mm2['a'], "stable", "stable", _r2)
-                                moteur_apprentissage.analyser_pattern_tendance_buts(_mm2['h'], _mm2['a'], _bpmd2, _bcmd2, _bpme2, _bcme2, _tad2, _tae2, _r2)
-                                moteur_apprentissage.analyser_pattern_equipe(_mm2['h'], "V" if _r2=="1" else ("N" if _r2=="X" else "D"), {"domicile": True})
-                                moteur_apprentissage.analyser_pattern_equipe(_mm2['a'], "V" if _r2=="2" else ("N" if _r2=="X" else "D"), {"domicile": False})
-                            except: pass
-                        moteur_apprentissage.save()
+                            moteur_apprentissage.save()
+                        except Exception as _e_ap: pass
 
                     # Nettoyer session
                     for key in ['ocr_res_matchs', 'ocr_res_img']:
@@ -1773,71 +1863,59 @@ with tabs[3]:
                 st.session_state['history'][s_active][jk]["res"] = final_res_manual
                 save_db(st.session_state['history'])
 
-                # ── Apprentissage IA V2.3 sur résultats manuels ──
-                if IA_DISPONIBLE:
-                    _hist_av_m = {jj: st.session_state['history'][s_active][jj]
-                        for jj in sorted(st.session_state['history'][s_active].keys())
-                        if (int(re.search(r'\d+', jj).group()) if re.search(r'\d+', jj) else 0) < j_res}
-                    _std_av_m = get_standings(_hist_av_m, engine.teams_list)
-                    _se_m = {t: {"bp_dom": [], "bc_dom": [], "bp_ext": [], "bc_ext": []} for t in engine.teams_list}
-                    for _jd_m in _hist_av_m.values():
-                        for _mmm in _jd_m.get("res", []):
+                # ── Apprentissage IA sur résultats manuels ──
+                if IA_DISPONIBLE and moteur_apprentissage is not None:
+                    try:
+                        _hav2 = {jj: st.session_state['history'][s_active][jj]
+                            for jj in sorted(st.session_state['history'][s_active].keys())
+                            if (int(re.search(r'\d+',jj).group()) if re.search(r'\d+',jj) else 0) < j_res}
+                        _stav2 = get_standings(_hav2, engine.teams_list)
+                        _cal_m = st.session_state['history'][s_active].get(jk, {}).get("cal", [])
+                        for _im, _mm in enumerate(final_res_manual):
                             try:
-                                _sh4, _sa4 = map(int, _mmm['s'].replace('-', ':').split(':'))
-                                if _mmm['h'] in _se_m: _se_m[_mmm['h']]["bp_dom"].append(_sh4); _se_m[_mmm['h']]["bc_dom"].append(_sa4)
-                                if _mmm['a'] in _se_m: _se_m[_mmm['a']]["bp_ext"].append(_sa4); _se_m[_mmm['a']]["bc_ext"].append(_sh4)
+                                _sh2,_sa2 = map(int, _mm['s'].replace('-',':').split(':'))
+                                _rm = "1" if _sh2>_sa2 else ("X" if _sh2==_sa2 else "2")
+                                _com = _cal_m[_im].get('o',[2.0,3.0,3.0]) if _cal_m and _im<len(_cal_m) else [2.0,3.0,3.0]
+                                _rdm = int(_stav2[_stav2['Équipe']==_mm['h']]['Rang'].values[0]) if not _stav2[_stav2['Équipe']==_mm['h']].empty else 10
+                                _rem = int(_stav2[_stav2['Équipe']==_mm['a']]['Rang'].values[0]) if not _stav2[_stav2['Équipe']==_mm['a']].empty else 10
+                                _fdm = get_forme_equipe(st.session_state['history'], s_active, _mm['h'], 3)
+                                _fem = get_forme_equipe(st.session_state['history'], s_active, _mm['a'], 3)
+                                if hasattr(moteur_apprentissage,'analyser_pattern_cotes'):
+                                    moteur_apprentissage.analyser_pattern_cotes(_com[0],_com[1],_com[2],_rm)
+                                if hasattr(moteur_apprentissage,'analyser_pattern_classement'):
+                                    moteur_apprentissage.analyser_pattern_classement(_mm['h'],_mm['a'],_rdm,_rem,_rm)
+                                if hasattr(moteur_apprentissage,'analyser_pattern_equipe'):
+                                    moteur_apprentissage.analyser_pattern_equipe(_mm['h'],"V" if _rm=="1" else ("N" if _rm=="X" else "D"),{"domicile":True})
+                                    moteur_apprentissage.analyser_pattern_equipe(_mm['a'],"V" if _rm=="2" else ("N" if _rm=="X" else "D"),{"domicile":False})
                             except: pass
-                    def _moy_m(lst): return sum(lst)/len(lst) if lst else 1.5
-                    _cal_m = st.session_state['history'][s_active].get(jk, {}).get("cal", [])
-                    for _im, _mm_m in enumerate(final_res_manual):
-                        try:
-                            _sh5, _sa5 = map(int, _mm_m['s'].replace('-', ':').split(':'))
-                            _rm = "1" if _sh5 > _sa5 else ("X" if _sh5 == _sa5 else "2")
-                            _com = _cal_m[_im].get('o', [2.0, 3.0, 3.0]) if _cal_m and _im < len(_cal_m) else [2.0, 3.0, 3.0]
-                            _rdm = int(_std_av_m[_std_av_m['Équipe'] == _mm_m['h']]['Rang'].values[0]) if not _std_av_m[_std_av_m['Équipe'] == _mm_m['h']].empty else 10
-                            _rem = int(_std_av_m[_std_av_m['Équipe'] == _mm_m['a']]['Rang'].values[0]) if not _std_av_m[_std_av_m['Équipe'] == _mm_m['a']].empty else 10
-                            _fdm = get_forme_equipe(st.session_state['history'], s_active, _mm_m['h'], 3)
-                            _fem = get_forme_equipe(st.session_state['history'], s_active, _mm_m['a'], 3)
-                            _bpmdm = _moy_m(_se_m[_mm_m['h']]["bp_dom"]); _bcmdm = _moy_m(_se_m[_mm_m['h']]["bc_dom"])
-                            _bpmem = _moy_m(_se_m[_mm_m['a']]["bp_ext"]); _bcmem = _moy_m(_se_m[_mm_m['a']]["bc_ext"])
-                            _tadm = "favori" if _rdm <= 5 else ("medium" if _rdm <= 15 else "outsider")
-                            _taem = "favori" if _rem <= 5 else ("medium" if _rem <= 15 else "outsider")
-                            moteur_apprentissage.analyser_pattern_cotes(_com[0], _com[1], _com[2], _rm)
-                            moteur_apprentissage.analyser_pattern_classement(_mm_m['h'], _mm_m['a'], _rdm, _rem, _rm)
-                            moteur_apprentissage.analyser_pattern_force(_mm_m['h'], _mm_m['a'], _rdm, _rem, _rm)
-                            moteur_apprentissage.analyser_pattern_lieu_rang(_mm_m['h'], _mm_m['a'], _rdm, _rem, _rm)
-                            moteur_apprentissage.analyser_pattern_serie_forme(_mm_m['h'], _mm_m['a'], _fdm, _fem, _rm)
-                            moteur_apprentissage.analyser_pattern_serie_rang(_mm_m['h'], _mm_m['a'], "stable", "stable", _rm)
-                            moteur_apprentissage.analyser_pattern_tendance_buts(_mm_m['h'], _mm_m['a'], _bpmdm, _bcmdm, _bpmem, _bcmem, _tadm, _taem, _rm)
-                            moteur_apprentissage.analyser_pattern_equipe(_mm_m['h'], "V" if _rm=="1" else ("N" if _rm=="X" else "D"), {"domicile": True})
-                            moteur_apprentissage.analyser_pattern_equipe(_mm_m['a'], "V" if _rm=="2" else ("N" if _rm=="X" else "D"), {"domicile": False})
-                        except: pass
-                    moteur_apprentissage.save()
+                        moteur_apprentissage.save()
+                    except: pass
+
                 if 'tmp_res' in st.session_state:
                     del st.session_state['tmp_res']
                 
                 # Notification résultats manuel
-            nb_1m = nb_xm = nb_2m = buts_m = 0
-            for r in final_res_manual:
-                try:
-                    sh, sa = map(int, r['s'].replace('-',':').split(':'))
-                    buts_m += sh + sa
-                    if sh > sa: nb_1m += 1
-                    elif sh == sa: nb_xm += 1
-                    else: nb_2m += 1
-                except: pass
-            st.markdown(f"""
-            <div style="padding:14px;border:2px solid #00FF00;border-radius:12px;
-                 background:rgba(0,255,0,0.05);margin:10px 0;">
-              <div style="color:#00FF88;font-weight:800;margin-bottom:8px;">
-                ✅ Journée {j_res} — Résultats enregistrés !
-              </div>
-              <div style="color:#ccc;font-size:13px;">
-                🏠 Dom: {nb_1m} · 🤝 Nul: {nb_xm} · ✈️ Ext: {nb_2m} · ⚽ Buts: {buts_m}
-              </div>
-            </div>
-            """, unsafe_allow_html=True)
-            st.rerun()
+                nb_1m = nb_xm = nb_2m = buts_m = 0
+                for r in final_res_manual:
+                    try:
+                        sh, sa = map(int, r['s'].replace('-',':').split(':'))
+                        buts_m += sh + sa
+                        if sh > sa: nb_1m += 1
+                        elif sh == sa: nb_xm += 1
+                        else: nb_2m += 1
+                    except: pass
+                st.markdown(f"""
+                <div style="padding:14px;border:2px solid #00FF00;border-radius:12px;
+                     background:rgba(0,255,0,0.05);margin:10px 0;">
+                  <div style="color:#00FF88;font-weight:800;margin-bottom:8px;">
+                    ✅ Journée {j_res} — Résultats enregistrés !
+                  </div>
+                  <div style="color:#ccc;font-size:13px;">
+                    🏠 Dom: {nb_1m} · 🤝 Nul: {nb_xm} · ✈️ Ext: {nb_2m} · ⚽ Buts: {buts_m}
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.rerun()
 
 # ===================== TAB 4 : HISTORIQUE =====================
 with tabs[4]:
@@ -2285,57 +2363,90 @@ with tabs[6]:
         else:
             st.info("Aucun résultat enregistré pour cette saison. Commencez par importer un calendrier et des résultats !")
 
-    # Stats IA Apprentissage V2.3
-    if IA_DISPONIBLE:
+    # Stats IA Apprentissage V2.3 — AFFICHAGE COMPLET
+    if IA_DISPONIBLE and moteur_apprentissage is not None:
         st.divider()
-        st.markdown("### 🧠 Performance IA Apprentissage V2.3")
+        st.markdown("### 🧠 Performance IA Apprentissage")
         stats_ia = moteur_apprentissage.get_stats_apprentissage()
-        _pc1, _pc2, _pc3, _pc4 = st.columns(4)
-        _pc1.metric("Matchs appris", stats_ia.get("total", 0))
-        _pc2.metric("Taux réussite IA", f"{stats_ia.get('taux_reussite', 0):.1f}%")
-        _pc3.metric("Taux 1N2", f"{stats_ia.get('taux_1n2', 0):.1f}%")
-        _pc4.metric("Patterns découverts", stats_ia.get("patterns_connus", 0))
+        _mc1, _mc2, _mc3, _mc4 = st.columns(4)
+        _mc1.metric("Matchs appris", stats_ia.get("total", 0))
+        _mc2.metric("Taux réussite IA", f"{stats_ia.get('taux_reussite', 0):.1f}%")
+        _mc3.metric("Taux 1N2", f"{stats_ia.get('taux_1n2', 0):.1f}%")
+        _mc4.metric("Patterns découverts", stats_ia.get("patterns_connus", 0))
 
-        # Facteurs classés V2.3
-        if hasattr(moteur_apprentissage, 'get_facteurs_classes'):
+        # ── Patterns Cotes ──
+        st.divider()
+        st.markdown("#### 📊 Patterns de Cotes")
+        if hasattr(moteur_apprentissage, 'patterns') and moteur_apprentissage.patterns:
+            _pat_data = []
+            for _p, _d in moteur_apprentissage.patterns.items():
+                if isinstance(_d, dict) and "total" in _d and _d["total"] >= 1:
+                    _tot = _d["total"]
+                    _pat_data.append({
+                        "Pattern Cotes": _p,
+                        "Occurrences": _tot,
+                        "Vic. Dom (1)": f"{_d.get('1',0)} ({_d.get('1',0)/_tot*100:.0f}%)",
+                        "Nul (X)":      f"{_d.get('X',0)} ({_d.get('X',0)/_tot*100:.0f}%)",
+                        "Vic. Ext (2)": f"{_d.get('2',0)} ({_d.get('2',0)/_tot*100:.0f}%)"
+                    })
+            if _pat_data:
+                _df_pat = pd.DataFrame(_pat_data).sort_values("Occurrences", ascending=False)
+                st.dataframe(_df_pat, use_container_width=True, hide_index=True)
+            else:
+                st.info("Enregistrez des résultats pour voir les patterns de cotes !")
+        else:
+            st.info("Aucun pattern de cotes encore. Enregistrez des résultats.")
+
+        # ── Patterns Classement / Équipes ──
+        st.divider()
+        st.markdown("#### 🏆 Patterns Classement & Équipes")
+        if hasattr(moteur_apprentissage, 'patterns_classement'):
+            _pcl = moteur_apprentissage.patterns_classement
+            if _pcl:
+                _pcl_data = []
+                for _pk, _pd in _pcl.items():
+                    if isinstance(_pd, dict) and _pd.get("total",0) >= 1:
+                        _t = _pd["total"]
+                        _pcl_data.append({
+                            "Pattern": _pk, "Occ.": _t,
+                            "1": f"{_pd.get('1',0)} ({_pd.get('1',0)/_t*100:.0f}%)",
+                            "X": f"{_pd.get('X',0)} ({_pd.get('X',0)/_t*100:.0f}%)",
+                            "2": f"{_pd.get('2',0)} ({_pd.get('2',0)/_t*100:.0f}%)"
+                        })
+                if _pcl_data:
+                    st.dataframe(pd.DataFrame(_pcl_data).sort_values("Occ.", ascending=False),
+                                 use_container_width=True, hide_index=True)
+                else:
+                    st.info("Pas encore de patterns classement.")
+            else:
+                st.info("Pas encore de patterns classement.")
+
+        # ── Patterns Équipes ──
+        if hasattr(moteur_apprentissage, 'patterns_equipes'):
             st.divider()
-            st.markdown("#### 🏆 Classement des Facteurs IA (V2.3)")
-            _facteurs = moteur_apprentissage.get_facteurs_classes()
-            if _facteurs:
-                _df_fac = pd.DataFrame(_facteurs)
-                _df_fac.columns = ["Facteur", "Taux (%)", "Poids actuel", "Observations"]
-                st.dataframe(_df_fac, use_container_width=True, hide_index=True)
+            st.markdown("#### ⚽ Statistiques par Équipe (appris)")
+            _peq = moteur_apprentissage.patterns_equipes
+            if _peq:
+                _peq_data = []
+                for _eq, _ed in _peq.items():
+                    if isinstance(_ed, dict) and _ed.get("total",0) >= 1:
+                        _t = _ed["total"]
+                        _peq_data.append({
+                            "Équipe": _eq, "Matchs": _t,
+                            "Victoires": f"{_ed.get('V',0)} ({_ed.get('V',0)/_t*100:.0f}%)",
+                            "Nuls":      f"{_ed.get('N',0)} ({_ed.get('N',0)/_t*100:.0f}%)",
+                            "Défaites":  f"{_ed.get('D',0)} ({_ed.get('D',0)/_t*100:.0f}%)"
+                        })
+                if _peq_data:
+                    _df_eq = pd.DataFrame(_peq_data).sort_values("Matchs", ascending=False)
+                    st.dataframe(_df_eq, use_container_width=True, hide_index=True)
 
-        # Rapport patterns V2.3
+        # ── Rapport complet si disponible ──
         if hasattr(moteur_apprentissage, 'generer_rapport_patterns'):
             st.divider()
-            st.markdown("#### 📊 Rapport Complet des Patterns V2.3")
-            if st.button("📋 Générer le rapport patterns", key="btn_rapport_patterns"):
-                _rapport = moteur_apprentissage.generer_rapport_patterns()
-                st.code(_rapport, language=None)
-
-        # Patterns détectés (tableau)
-        st.divider()
-        st.markdown("#### 📊 Patterns de Cotes (données historiques)")
-        if moteur_apprentissage.patterns:
-            pattern_data = []
-            for p, d in moteur_apprentissage.patterns.items():
-                if isinstance(d, dict) and "total" in d and d["total"] >= 1:
-                    total = d["total"]
-                    pattern_data.append({
-                        "Pattern": p,
-                        "Occ.": total,
-                        "1": f"{d.get('1',0)} ({d.get('1',0)/total*100:.0f}%)",
-                        "X": f"{d.get('X',0)} ({d.get('X',0)/total*100:.0f}%)",
-                        "2": f"{d.get('2',0)} ({d.get('2',0)/total*100:.0f}%)"
-                    })
-            if pattern_data:
-                _df_patt = pd.DataFrame(pattern_data).sort_values("Occ.", ascending=False)
-                st.dataframe(_df_patt, use_container_width=True, hide_index=True)
-            else:
-                st.info("Enregistrez des résultats pour voir les patterns !")
-        else:
-            st.info("Aucun pattern encore. Enregistrez des résultats.")
+            if st.button("📋 Générer rapport complet patterns V2.3", key="btn_rapport_v52"):
+                _rp = moteur_apprentissage.generer_rapport_patterns()
+                st.code(_rp, language=None)
 
 # ===================== TAB 7 : ASSISTANT IA — CHAT MESSENGER =====================
 import streamlit.components.v1 as components
@@ -2358,7 +2469,7 @@ with tabs[7]:
     # ══════════════════════════════════════════════════════
     def _call_ia(user_q: str):
         try:
-            if IA_DISPONIBLE:
+            if CHAT_IA_DISPONIBLE and moteur_ia_chat is not None:
                 _std = get_standings(st.session_state['history'][s_active], engine.teams_list)
                 _ctx = build_full_context(st.session_state['history'], s_active, _std, next_j)
                 if hasattr(moteur_ia_chat, 'set_contexte'):
@@ -2370,16 +2481,44 @@ with tabs[7]:
                         contexte_complet=_ctx
                     )
                 return moteur_ia_chat.discuter(user_q)
+            # Fallback: Groq direct avec clé configurée dans l'interface
+            _gk = st.session_state.get('groq_api_key_direct', '')
+            if _gk:
+                from groq import Groq as _GQ
+                _gc = _GQ(api_key=_gk)
+                _std2 = get_standings(st.session_state['history'][s_active], engine.teams_list)
+                _ctx2 = build_full_context(st.session_state['history'], s_active, _std2, next_j)
+                _r = _gc.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role":"system","content":f"Tu es Oracle Mahita IA, assistant pronostics football expert.\n\nCONTEXTE SAISON:\n{_ctx2}"},
+                        {"role":"user","content":user_q}
+                    ],
+                    max_tokens=600, temperature=0.7
+                )
+                return {"texte": _r.choices[0].message.content, "source": "groq-direct"}
+            return {"texte": "💡 Saisissez votre clé Groq API dans la section **Configuration Groq** ci-dessous.", "source": "offline"}
         except Exception as _ex:
-            return {"texte": f"Erreur IA : {_ex}", "source": "offline"}
-        return {"texte": "Mode offline.", "source": "offline"}
+            return {"texte": f"Erreur : {_ex}", "source": "offline"}
 
     # ══════════════════════════════════════════════════════
-    # LIRE MESSAGE ENTRANT — st.chat_input (natif, 100% fiable)
+    # LIRE MESSAGE ENTRANT (query_params — envoyé par le HTML)
     # ══════════════════════════════════════════════════════
     _incoming = None
-    # 1) Vérifier st.chat_input (défini plus bas — le résultat est disponible ici via session_state)
-    if st.session_state.get('_pending_chat_input'):
+    try:
+        _qraw = st.query_params.get("_ochat", None)
+        if _qraw:
+            # Streamlit décode automatiquement l'URL — pas besoin de décoder manuellement
+            _incoming = _qraw if isinstance(_qraw, str) else str(_qraw)
+            # Supprimer proprement le paramètre
+            _new_params = {k: v for k, v in st.query_params.items() if k != "_ochat"}
+            st.query_params.clear()
+            for k, v in _new_params.items():
+                st.query_params[k] = v
+    except Exception:
+        pass
+
+    if not _incoming and st.session_state.get('_pending_chat_input'):
         _incoming = st.session_state.pop('_pending_chat_input')
 
     # Obtenir la session active
@@ -2611,7 +2750,6 @@ html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',s
 .snd:active{{transform:scale(.9);}}
 .snd:disabled{{opacity:.35;cursor:default;transform:none;}}
 @media(max-width:600px){{.root{{height:420px;}}}}
-.bar{{display:none !important;}}
 </style></head><body>
 <div class="root">
   <div class="hd">
@@ -2653,51 +2791,111 @@ function renderAll(){{
 const inp=document.getElementById('inp');
 inp.addEventListener('input',function(){{this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';}});
 function doSend(){{
-  // ⚠️ DÉSACTIVÉ : utiliser le champ natif Streamlit ci-dessous
+  const snd=document.getElementById('snd');
+  const text=inp.value.trim();
+  if(!text)return;
+  inp.value='';inp.style.height='auto';
+  inp.disabled=true;snd.disabled=true;
+  const box=document.getElementById('msgs');
+  box.innerHTML+='<div class="bw-u"><div class="bu-u">'+esc(text).replace(/\\n/g,'<br>')+'</div></div>';
+  box.innerHTML+='<div class="bw-b"><div class="av-b">🔮</div><div class="bu-b"><div class="typing"><span></span><span></span><span></span></div></div></div>';
+  box.scrollTop=box.scrollHeight;
+  // ✅ FIX : utiliser URLSearchParams directement sur la fenêtre parente sans double-encodage
+  try{{
+    const url=new URL(window.parent.location.href);
+    url.searchParams.set('_ochat', text);
+    window.parent.location.href=url.toString();
+  }}catch(err){{
+    inp.disabled=false;snd.disabled=false;
+  }}
 }}
-inp.addEventListener('keydown',function(e){{if(e.key==='Enter'&&!e.shiftKey){{e.preventDefault();}}}});
+inp.addEventListener('keydown',function(e){{if(e.key==='Enter'&&!e.shiftKey){{e.preventDefault();doSend();}}}});
 renderAll();
 </script></body></html>"""
 
-    # Réduire hauteur puisque la barre est désactivée dans le HTML
-    components.html(_CHAT_HTML, height=480, scrolling=False)
+    components.html(_CHAT_HTML, height=540, scrolling=False)
 
     st.markdown("---")
 
     # ══════════════════════════════════════════════════════
-    # CHAT INPUT NATIF STREAMLIT (100% fiable, remplace le HTML input)
+    # FORMULAIRE NATIF STREAMLIT (toujours fonctionnel)
     # ══════════════════════════════════════════════════════
-    _chat_native = st.chat_input("💬 Posez votre question à Oracle Mahita IA...")
-    if _chat_native and _chat_native.strip():
-        st.session_state['_pending_chat_input'] = _chat_native.strip()
+    st.markdown("<p style='color:#00FF88;font-size:13px;margin-bottom:4px;'>💬 Ou tapez ici (100% fiable) :</p>", unsafe_allow_html=True)
+    with st.form("chat_form_v50", clear_on_submit=True):
+        _ui = st.text_input("msg", placeholder="Ex: Quelle équipe est la plus en forme ?", label_visibility="collapsed")
+        _fc1, _fc2, _fc3 = st.columns([3,1,1])
+        with _fc1: _submit  = st.form_submit_button("📤 Envoyer", use_container_width=True)
+        with _fc2: _clear   = st.form_submit_button("🗑️ Effacer", use_container_width=True)
+        with _fc3: _ctx_btn = st.form_submit_button("📋 Contexte", use_container_width=True)
+
+    if _clear:
+        st.session_state.chat_messages = []
+        save_session_messages(_sid, [])
+        save_chat_history([])
         st.rerun()
 
-    # Config Groq
-    with st.expander("🔑 Configuration Groq API", expanded=False):
+    if _ctx_btn:
+        try:
+            _std3 = get_standings(st.session_state['history'][s_active], engine.teams_list)
+            _ctx3 = build_full_context(st.session_state['history'], s_active, _std3, next_j)
+            st.text_area("Contexte transmis à l'IA", _ctx3, height=200)
+        except Exception as _ex3:
+            st.error(f"Erreur : {_ex3}")
+
+    if _submit and _ui.strip():
+        st.session_state['_pending_chat_input'] = _ui.strip()
+        st.rerun()
+
+    # Config Groq — TOUJOURS ACCESSIBLE
+    with st.expander("🔑 Configuration Groq API", expanded=not st.session_state.get('groq_api_key_direct', '')):
         _c1, _c2 = st.columns([3,1])
         with _c1:
+            _default_key = st.session_state.get('groq_api_key_direct', '')
+            if CHAT_IA_DISPONIBLE and moteur_ia_chat is not None:
+                _default_key = _default_key or getattr(moteur_ia_chat, 'api_key', '')
             _api_key = st.text_input("Clé API Groq",
-                                     value=getattr(moteur_ia_chat,'api_key','') if IA_DISPONIBLE else '',
-                                     type="password", placeholder="gsk_xxx...")
+                                     value=_default_key,
+                                     type="password", placeholder="gsk_xxx...",
+                                     key="groq_key_input_v52")
         with _c2:
-            if st.button("🔗 Connecter", use_container_width=True, key="btn_groq_v50"):
-                if _api_key and IA_DISPONIBLE:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("🔗 Connecter", use_container_width=True, key="btn_groq_v52"):
+                if _api_key:
                     os.environ["GROQ_API_KEY"] = _api_key
-                    moteur_ia_chat.api_key = _api_key
+                    st.session_state['groq_api_key_direct'] = _api_key
+                    # Connecter aussi moteur_ia_chat si disponible
+                    if CHAT_IA_DISPONIBLE and moteur_ia_chat is not None:
+                        moteur_ia_chat.api_key = _api_key
+                        try:
+                            from groq import Groq
+                            moteur_ia_chat.client = Groq(api_key=_api_key)
+                        except: pass
+                    # Tester la connexion
                     try:
-                        from groq import Groq
-                        moteur_ia_chat.client = Groq(api_key=_api_key)
-                        custom_notify("✅ Groq connecté !", "#00FF00")
-                        st.rerun()
-                    except Exception as _e:
-                        st.error(f"Erreur : {_e}")
+                        from groq import Groq as _GT
+                        _GT(api_key=_api_key).chat.completions.create(
+                            model="llama-3.3-70b-versatile",
+                            messages=[{"role":"user","content":"ok"}],
+                            max_tokens=5
+                        )
+                        st.success("✅ Groq connecté avec succès !")
+                    except Exception as _ge:
+                        st.error(f"Erreur connexion : {_ge}")
+                    st.rerun()
+                else:
+                    st.warning("Entrez d'abord votre clé API Groq.")
         _sc1, _sc2, _sc3 = st.columns(3)
-        _conn = IA_DISPONIBLE and getattr(moteur_ia_chat,'est_connecte',lambda:False)()
-        _sc1.success("🟢 Groq actif") if _conn else _sc1.warning("🟡 Offline")
-        _sia = moteur_apprentissage.get_stats_apprentissage() if IA_DISPONIBLE else {"total":0}
-        _sc2.metric("Matchs appris", _sia.get("total",0))
+        _gk_ok = bool(st.session_state.get('groq_api_key_direct', ''))
+        _chat_conn = CHAT_IA_DISPONIBLE and moteur_ia_chat is not None and getattr(moteur_ia_chat,'est_connecte',lambda:False)()
+        if _gk_ok or _chat_conn:
+            _sc1.success("🟢 Groq actif")
+        else:
+            _sc1.warning("🟡 Offline — configurez la clé")
+        _sia2 = moteur_apprentissage.get_stats_apprentissage() if (IA_DISPONIBLE and moteur_apprentissage) else {"total":0}
+        _sc2.metric("Matchs appris", _sia2.get("total",0))
         _tr = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
-        _sc3.metric("Résultats", _tr)
+        _sc3.metric("Résultats stockés", _tr)
+        st.caption("💡 Obtenez votre clé gratuite sur https://console.groq.com")
 
     # Export + effacer session + supprimer session
     _col1, _col2, _col3 = st.columns(3)
