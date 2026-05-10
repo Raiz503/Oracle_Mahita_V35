@@ -43,68 +43,72 @@ except ImportError:
 
 # ── Import Cerveau (fichier externe ou fallback intégré) ──
 try:
-    from moteur_cerveau1 import cerveau1 as oracle_brain
+    from cerveau_1 import cerveau1 as oracle_brain   # ✅ FIX: nom réel du fichier
     CERVEAU_DISPONIBLE = True
 except ImportError:
-    # ══ CERVEAU INLINE FALLBACK ══
-    class _CerveauInline:
-        """Cerveau analytique intégré — utilisé si moteur_cerveau1.py est absent."""
-        def analyser_match(self, equipe_dom, equipe_ext, cotes, journee=1,
-                           rang_dom=10, rang_ext=10, serie_dom=0, serie_ext=0,
-                           forme_dom=None, forme_ext=None, match_precedent_dom=None):
-            c1, cx, c2 = cotes
-            # Forces de base (inverse des cotes)
-            f1 = 1/c1; fx = 1/cx; f2 = 1/c2
-            # Ajustement classement
-            diff = (rang_ext - rang_dom) * 0.018
-            f1 += diff; f2 -= diff
-            # Ajustement forme
-            if forme_dom:
-                pts = sum(3 if r=="V" else (1 if r=="N" else 0) for r in forme_dom[-5:])
-                f1 += pts * 0.012
-            if forme_ext:
-                pts = sum(3 if r=="V" else (1 if r=="N" else 0) for r in forme_ext[-5:])
-                f2 += pts * 0.012
-            # Série victoires
-            f1 += serie_dom * 0.025; f2 += serie_ext * 0.025
-            tot = f1 + fx + f2
-            p1 = f1/tot; px = fx/tot; p2 = f2/tot
-            if p1 > px and p1 > p2:
-                pred, conf, cote_c = "1", int(p1*100), c1
-                choix = f"{equipe_dom} (cote {c1})"
-            elif p2 > p1 and p2 > px:
-                pred, conf, cote_c = "2", int(p2*100), c2
-                choix = f"{equipe_ext} (cote {c2})"
-            else:
-                pred, conf, cote_c = "X", int(px*100), cx
-                choix = f"Nul (cote {cx})"
-            if conf >= 72:   label = "BANKER"
-            elif conf >= 54: label = "RISQUE CALCULÉ"
-            else:            label = "FUN"
-            # Score estimé simple
-            bd = max(1,round(p1*4)) if pred=="1" else (max(0,round(p1*2)) if pred=="2" else max(1,round(p1*2.5)))
-            be = max(0,round(p2*2)) if pred=="1" else (max(1,round(p2*4)) if pred=="2" else bd)
-            score_p = f"{min(bd,5)}:{min(be,5)}"
-            return {
-                "prediction": pred, "choix_expert": choix,
-                "indice_confiance": conf, "confiance": label,
-                "score_predit": score_p,
-                "proba": {"1": round(p1,3), "X": round(px,3), "2": round(p2,3)}
-            }
-        def calculer_performance_globale(self, history_saison):
-            total = bon = 0
-            for jdata in history_saison.values():
-                for r in jdata.get("res", []):
-                    try:
-                        sh, sa = map(int, r['s'].replace('-',':').split(':'))
-                        total += 1
-                    except: pass
-            return {"total_matchs": total, "taux_1n2": 0, "scores_exacts": 0, "moyenne_points": 0}
-    oracle_brain = _CerveauInline()
+    try:
+        from moteur_cerveau1 import cerveau1 as oracle_brain  # fallback ancien nom
+        CERVEAU_DISPONIBLE = True
+    except ImportError:
+        # ══ CERVEAU INLINE FALLBACK ══
+        class _CerveauInline:
+            """Cerveau analytique intégré — utilisé si moteur_cerveau1.py est absent."""
+            def analyser_match(self, equipe_dom, equipe_ext, cotes, journee=1,
+                               rang_dom=10, rang_ext=10, serie_dom=0, serie_ext=0,
+                               forme_dom=None, forme_ext=None, match_precedent_dom=None):
+                c1, cx, c2 = cotes
+                # Forces de base (inverse des cotes)
+                f1 = 1/c1; fx = 1/cx; f2 = 1/c2
+                # Ajustement classement
+                diff = (rang_ext - rang_dom) * 0.018
+                f1 += diff; f2 -= diff
+                # Ajustement forme
+                if forme_dom:
+                    pts = sum(3 if r=="V" else (1 if r=="N" else 0) for r in forme_dom[-5:])
+                    f1 += pts * 0.012
+                if forme_ext:
+                    pts = sum(3 if r=="V" else (1 if r=="N" else 0) for r in forme_ext[-5:])
+                    f2 += pts * 0.012
+                # Série victoires
+                f1 += serie_dom * 0.025; f2 += serie_ext * 0.025
+                tot = f1 + fx + f2
+                p1 = f1/tot; px = fx/tot; p2 = f2/tot
+                if p1 > px and p1 > p2:
+                    pred, conf, cote_c = "1", int(p1*100), c1
+                    choix = f"{equipe_dom} (cote {c1})"
+                elif p2 > p1 and p2 > px:
+                    pred, conf, cote_c = "2", int(p2*100), c2
+                    choix = f"{equipe_ext} (cote {c2})"
+                else:
+                    pred, conf, cote_c = "X", int(px*100), cx
+                    choix = f"Nul (cote {cx})"
+                if conf >= 72:   label = "BANKER"
+                elif conf >= 54: label = "RISQUE CALCULÉ"
+                else:            label = "FUN"
+                # Score estimé simple
+                bd = max(1,round(p1*4)) if pred=="1" else (max(0,round(p1*2)) if pred=="2" else max(1,round(p1*2.5)))
+                be = max(0,round(p2*2)) if pred=="1" else (max(1,round(p2*4)) if pred=="2" else bd)
+                score_p = f"{min(bd,5)}:{min(be,5)}"
+                return {
+                    "prediction": pred, "choix_expert": choix,
+                    "indice_confiance": conf, "confiance": label,
+                    "score_predit": score_p,
+                    "proba": {"1": round(p1,3), "X": round(px,3), "2": round(p2,3)}
+                }
+            def calculer_performance_globale(self, history_saison):
+                total = bon = 0
+                for jdata in history_saison.values():
+                    for r in jdata.get("res", []):
+                        try:
+                            sh, sa = map(int, r['s'].replace('-',':').split(':'))
+                            total += 1
+                        except: pass
+                return {"total_matchs": total, "taux_1n2": 0, "scores_exacts": 0, "moyenne_points": 0}
+        oracle_brain = _CerveauInline()
     CERVEAU_DISPONIBLE = False  # indique que c'est le fallback
 
 # ── Configuration ──
-st.set_page_config(page_title="Oracle Mahita V36", layout="wide", page_icon="🔮")
+st.set_page_config(page_title="Oracle Mahita V52", layout="wide", page_icon="🔮")
 
 # ── CSS ──
 st.markdown("""
@@ -992,11 +996,31 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 st.markdown(f"""
 <div class="main-header">
     <div class="logo-container">
-        <div class="logo-svg">{LOGO_SVG}</div>
+        <div class="logo-svg" style="width:34px;height:34px;">{LOGO_SVG}</div>
         <div>
-            <h1 class="header-title">ORACLE MAHITA</h1>
-            <div class="header-subtitle">V37.0 — IA Intégrée · Apprentissage Actif · OCR Bet261</div>
+            <h1 class="header-title" style="font-size:2.1em;letter-spacing:3px;">ORACLE MAHITA</h1>
+            <div class="header-subtitle">V52.0 — IA Intégrée · Apprentissage Actif · OCR Bet261</div>
         </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px;">
+        <span style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;
+            background:{'rgba(0,255,0,0.15)' if CERVEAU_DISPONIBLE else 'rgba(255,100,0,0.15)'};
+            border:1px solid {'#00FF00' if CERVEAU_DISPONIBLE else '#FF6400'};
+            color:{'#00FF00' if CERVEAU_DISPONIBLE else '#FF9900'};">
+            {'✅' if CERVEAU_DISPONIBLE else '⚠️'} Cerveau 1 {'Actif' if CERVEAU_DISPONIBLE else 'Fallback'}
+        </span>
+        <span style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;
+            background:{'rgba(0,255,0,0.15)' if IA_DISPONIBLE else 'rgba(128,128,128,0.15)'};
+            border:1px solid {'#00FF88' if IA_DISPONIBLE else '#666'};
+            color:{'#00FF88' if IA_DISPONIBLE else '#888'};">
+            {'✅' if IA_DISPONIBLE else '⭕'} IA Apprentissage {'Active' if IA_DISPONIBLE else 'Inactive'}
+        </span>
+        <span style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;
+            background:{'rgba(0,200,255,0.15)' if CHAT_IA_DISPONIBLE else 'rgba(128,128,128,0.15)'};
+            border:1px solid {'#00C8FF' if CHAT_IA_DISPONIBLE else '#666'};
+            color:{'#00C8FF' if CHAT_IA_DISPONIBLE else '#888'};">
+            {'✅' if CHAT_IA_DISPONIBLE else '⭕'} Chat IA {'Chargé' if CHAT_IA_DISPONIBLE else 'Absent'}
+        </span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -1764,6 +1788,25 @@ with tabs[3]:
                                     if hasattr(moteur_apprentissage,'analyser_pattern_equipe'):
                                         moteur_apprentissage.analyser_pattern_equipe(_mm['h'],"V" if _res=="1" else ("N" if _res=="X" else "D"),{"domicile":True})
                                         moteur_apprentissage.analyser_pattern_equipe(_mm['a'],"V" if _res=="2" else ("N" if _res=="X" else "D"),{"domicile":False})
+                                    # ✅ V53.1 — Suivi précision IA : enregistrer_prediction avec résultat réel
+                                    if hasattr(moteur_apprentissage, 'enregistrer_prediction'):
+                                        # Récupérer le prono sauvegardé pour ce match si disponible
+                                        _pro_j = st.session_state['history'][s_active].get(jk, {}).get("pro", [])
+                                        _pred_saved = _pro_j[_i] if _i < len(_pro_j) else {}
+                                        _prediction_ia = _pred_saved.get('prediction', None)
+                                        _confiance_ia  = _pred_saved.get('indice', 50)
+                                        _match_data = {"h": _mm['h'], "a": _mm['a'], "o": _co}
+                                        _facteurs_ia = {
+                                            "cote_favorite": "1" if _co[0] < _co[2] else "2",
+                                            "classement":    "1" if _rd < _re else "2"
+                                        }
+                                        moteur_apprentissage.enregistrer_prediction(
+                                            match_data=_match_data,
+                                            prediction=_prediction_ia or ("1" if _co[0]<_co[2] else "2"),
+                                            confiance=_confiance_ia,
+                                            resultat_reel=_res,
+                                            facteurs_utilises=_facteurs_ia
+                                        )
                                 except: pass
                             moteur_apprentissage.save()
                         except Exception as _e_ap: pass
@@ -1887,6 +1930,22 @@ with tabs[3]:
                                 if hasattr(moteur_apprentissage,'analyser_pattern_equipe'):
                                     moteur_apprentissage.analyser_pattern_equipe(_mm['h'],"V" if _rm=="1" else ("N" if _rm=="X" else "D"),{"domicile":True})
                                     moteur_apprentissage.analyser_pattern_equipe(_mm['a'],"V" if _rm=="2" else ("N" if _rm=="X" else "D"),{"domicile":False})
+                                # ✅ V53.1 — Suivi précision IA
+                                if hasattr(moteur_apprentissage, 'enregistrer_prediction'):
+                                    _pro_j2 = st.session_state['history'][s_active].get(jk, {}).get("pro", [])
+                                    _pred_s2 = _pro_j2[_im] if _im < len(_pro_j2) else {}
+                                    _pred_ia2 = _pred_s2.get('prediction', None)
+                                    _conf_ia2 = _pred_s2.get('indice', 50)
+                                    moteur_apprentissage.enregistrer_prediction(
+                                        match_data={"h": _mm['h'], "a": _mm['a'], "o": _com},
+                                        prediction=_pred_ia2 or ("1" if _com[0]<_com[2] else "2"),
+                                        confiance=_conf_ia2,
+                                        resultat_reel=_rm,
+                                        facteurs_utilises={
+                                            "cote_favorite": "1" if _com[0] < _com[2] else "2",
+                                            "classement":    "1" if _rdm < _rem else "2"
+                                        }
+                                    )
                             except: pass
                         moteur_apprentissage.save()
                     except: pass
@@ -2308,7 +2367,9 @@ with tabs[6]:
                 try:
                     sh, sa = map(int, res[i]['s'].replace('-', ':').split(':'))
                     res_reel = "1" if sh > sa else ("X" if sh == sa else "2")
-                    if p.get('p') == res_reel:
+                    # ✅ FIX: la clé est 'prediction' (pas 'p') depuis V52
+                    pred_stored = p.get('prediction') or p.get('p')
+                    if pred_stored == res_reel:
                         total_pronos_corrects += 1
                     total_pronos += 1
                 except: continue
@@ -2400,36 +2461,66 @@ with tabs[6]:
         # ── Patterns Classement / Équipes ──
         st.divider()
         st.markdown("#### 🏆 Patterns Classement & Équipes")
-        if hasattr(moteur_apprentissage, 'patterns_classement'):
-            _pcl = moteur_apprentissage.patterns_classement
-            if _pcl:
-                _pcl_data = []
-                for _pk, _pd in _pcl.items():
-                    if isinstance(_pd, dict) and _pd.get("total",0) >= 1:
-                        _t = _pd["total"]
-                        _pcl_data.append({
-                            "Pattern": _pk, "Occ.": _t,
-                            "1": f"{_pd.get('1',0)} ({_pd.get('1',0)/_t*100:.0f}%)",
-                            "X": f"{_pd.get('X',0)} ({_pd.get('X',0)/_t*100:.0f}%)",
-                            "2": f"{_pd.get('2',0)} ({_pd.get('2',0)/_t*100:.0f}%)"
-                        })
-                if _pcl_data:
-                    st.dataframe(pd.DataFrame(_pcl_data).sort_values("Occ.", ascending=False),
-                                 use_container_width=True, hide_index=True)
-                else:
-                    st.info("Pas encore de patterns classement.")
-            else:
-                st.info("Pas encore de patterns classement.")
+        # ✅ FIX: V53 stocke tout dans self.patterns — on filtre les clés classement
+        _pat_all = moteur_apprentissage.patterns if hasattr(moteur_apprentissage, 'patterns') else {}
+        # Clés classement: contiennent "Z" (zone) ou "dom_" ou "ext_" ou équipe connue
+        _KEYS_CATEGORIE = ("COTES_SERREES", "FAVORI_FORT", "FAVORI_MODERE", "MATCH_OUVERT")
+        _pat_classement_raw = {k: v for k, v in _pat_all.items()
+                               if isinstance(v, dict) and "total" in v
+                               and k not in _KEYS_CATEGORIE
+                               and not re.match(r'^\d', k)   # pas les cotes fines ex "2.0_3.5_3.5"
+                               }
+        # Aussi vérifier patterns_classement si attribut séparé existe
+        if hasattr(moteur_apprentissage, 'patterns_classement') and moteur_apprentissage.patterns_classement:
+            _pat_classement_raw.update(moteur_apprentissage.patterns_classement)
 
-        # ── Patterns Équipes ──
-        if hasattr(moteur_apprentissage, 'patterns_equipes'):
+        if _pat_classement_raw:
+            _pcl_data = []
+            for _pk, _pd in _pat_classement_raw.items():
+                if isinstance(_pd, dict) and _pd.get("total", 0) >= 1:
+                    _t = _pd["total"]
+                    _pcl_data.append({
+                        "Pattern": _pk, "Occ.": _t,
+                        "1": f"{_pd.get('1',0)} ({_pd.get('1',0)/_t*100:.0f}%)",
+                        "X": f"{_pd.get('X',0)} ({_pd.get('X',0)/_t*100:.0f}%)",
+                        "2": f"{_pd.get('2',0)} ({_pd.get('2',0)/_t*100:.0f}%)"
+                    })
+            if _pcl_data:
+                st.dataframe(pd.DataFrame(_pcl_data).sort_values("Occ.", ascending=False),
+                             use_container_width=True, hide_index=True)
+            else:
+                st.info("Enregistrez des résultats pour voir les patterns classement.")
+        else:
+            st.info("Pas encore de patterns classement & équipes. Enregistrez des résultats.")
+
+        # ── Patterns Équipes (domicile/extérieur) ──
+        _pat_equipes_raw = {}
+        if hasattr(moteur_apprentissage, 'patterns_equipes') and moteur_apprentissage.patterns_equipes:
+            _pat_equipes_raw = moteur_apprentissage.patterns_equipes
+        else:
+            # Chercher les patterns équipes dans self.patterns (clés = noms d'équipes)
+            _equipes_set = set(engine.teams_list)
+            for _k, _v in _pat_all.items():
+                if _k in _equipes_set and isinstance(_v, dict):
+                    _pat_equipes_raw[_k] = _v
+
+        if _pat_equipes_raw:
             st.divider()
             st.markdown("#### ⚽ Statistiques par Équipe (appris)")
-            _peq = moteur_apprentissage.patterns_equipes
-            if _peq:
-                _peq_data = []
-                for _eq, _ed in _peq.items():
-                    if isinstance(_ed, dict) and _ed.get("total",0) >= 1:
+            _peq_data = []
+            for _eq, _ed in _pat_equipes_raw.items():
+                if isinstance(_ed, dict):
+                    # Format V53 : {'domicile': {V,N,D,total}, 'exterieur': {V,N,D,total}}
+                    if "domicile" in _ed:
+                        _dom = _ed.get("domicile", {}); _ext = _ed.get("exterieur", {})
+                        _td = _dom.get("total", 0); _te = _ext.get("total", 0); _tt = _td + _te
+                        if _tt >= 1:
+                            _peq_data.append({
+                                "Équipe": _eq, "Matchs": _tt,
+                                "V Dom": f"{_dom.get('V',0)}/{_td}" if _td else "–",
+                                "V Ext": f"{_ext.get('V',0)}/{_te}" if _te else "–",
+                            })
+                    elif _ed.get("total", 0) >= 1:
                         _t = _ed["total"]
                         _peq_data.append({
                             "Équipe": _eq, "Matchs": _t,
@@ -2437,9 +2528,9 @@ with tabs[6]:
                             "Nuls":      f"{_ed.get('N',0)} ({_ed.get('N',0)/_t*100:.0f}%)",
                             "Défaites":  f"{_ed.get('D',0)} ({_ed.get('D',0)/_t*100:.0f}%)"
                         })
-                if _peq_data:
-                    _df_eq = pd.DataFrame(_peq_data).sort_values("Matchs", ascending=False)
-                    st.dataframe(_df_eq, use_container_width=True, hide_index=True)
+            if _peq_data:
+                st.dataframe(pd.DataFrame(_peq_data).sort_values("Matchs", ascending=False),
+                             use_container_width=True, hide_index=True)
 
         # ── Rapport complet si disponible ──
         if hasattr(moteur_apprentissage, 'generer_rapport_patterns'):
@@ -2688,6 +2779,34 @@ with tabs[7]:
                     st.rerun()
 
     # ══════════════════════════════════════════════════════
+    # STATUT CONNEXION IA (V53 FIX: affiché en haut, visible)
+    # ══════════════════════════════════════════════════════
+    _gk_ok = bool(st.session_state.get('groq_api_key_direct', ''))
+    _chat_conn = CHAT_IA_DISPONIBLE and moteur_ia_chat is not None and getattr(moteur_ia_chat, 'est_connecte', lambda: False)()
+    _groq_active = _gk_ok or _chat_conn
+
+    if _groq_active:
+        st.markdown("""
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;
+             background:rgba(0,255,136,0.1);border:1px solid #00FF88;border-radius:10px;margin-bottom:10px;">
+          <span style="font-size:18px;">🟢</span>
+          <div>
+            <span style="color:#00FF88;font-weight:700;font-size:14px;">Groq IA Connecté</span>
+            <span style="color:#888;font-size:12px;margin-left:10px;">Les réponses utilisent le modèle LLaMA-3.3-70b</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;
+             background:rgba(255,165,0,0.1);border:1px solid #FFA500;border-radius:10px;margin-bottom:10px;">
+          <span style="font-size:18px;">🟡</span>
+          <div>
+            <span style="color:#FFA500;font-weight:700;font-size:14px;">Mode Offline</span>
+            <span style="color:#888;font-size:12px;margin-left:10px;">Configurez votre clé Groq ci-dessous pour activer l'IA</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
+
+    # ══════════════════════════════════════════════════════
     # RENDU CHAT HTML
     # ══════════════════════════════════════════════════════
     _T = _THEMES[st.session_state['chat_theme']]
@@ -2734,21 +2853,7 @@ html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',s
 .typing span:nth-child(2){{animation-delay:.18s;}}
 .typing span:nth-child(3){{animation-delay:.36s;}}
 @keyframes bnc{{0%,80%,100%{{transform:scale(.65);opacity:.3}}40%{{transform:scale(1.15);opacity:1}}}}
-.bar{{display:flex;align-items:flex-end;gap:8px;padding:10px 12px;
-  background:{_T['bar_bg']};border-top:1px solid {_T['bar_bd']};flex-shrink:0;}}
-.inp{{flex:1;min-width:0;background:{_T['inp_bg']};border:1.5px solid {_T['inp_bd']};
-  border-radius:18px;padding:10px 16px;font-size:14px;color:{_T['bu_b_c']};outline:none;
-  transition:border-color .2s;resize:none;min-height:42px;max-height:120px;
-  overflow-y:auto;line-height:1.4;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}}
-.inp:focus{{border-color:{_T['inp_foc']};box-shadow:0 0 0 3px {_T['inp_fsh']};}}
-.inp::placeholder{{color:{_T['inp_ph']};}}
-.snd{{width:44px;height:44px;border-radius:50%;background:{_T['snd']};border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:20px;color:{_T['snd_c']};
-  font-weight:bold;box-shadow:0 3px 16px {_T['snd_sh']};transition:transform .15s;flex-shrink:0;margin-bottom:1px;}}
-.snd:hover{{transform:scale(1.08);}}
-.snd:active{{transform:scale(.9);}}
-.snd:disabled{{opacity:.35;cursor:default;transform:none;}}
+.bar{{display:none !important;}}
 @media(max-width:600px){{.root{{height:420px;}}}}
 </style></head><body>
 <div class="root">
@@ -2761,8 +2866,8 @@ html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',s
   </div>
   <div class="msgs" id="msgs"></div>
   <div class="bar">
-    <textarea class="inp" id="inp" placeholder="Écrivez votre message... (Entrée = envoyer, Maj+Entrée = nouvelle ligne)" rows="1"></textarea>
-    <button class="snd" id="snd" onclick="doSend()">&#10148;</button>
+    <textarea class="inp" id="inp" placeholder="Écrivez votre message..." rows="1"></textarea>
+    <button class="snd" id="snd">&#10148;</button>
   </div>
 </div>
 <script>
@@ -2813,41 +2918,20 @@ inp.addEventListener('keydown',function(e){{if(e.key==='Enter'&&!e.shiftKey){{e.
 renderAll();
 </script></body></html>"""
 
-    components.html(_CHAT_HTML, height=540, scrolling=False)
+    components.html(_CHAT_HTML, height=500, scrolling=False)
 
     st.markdown("---")
 
     # ══════════════════════════════════════════════════════
-    # FORMULAIRE NATIF STREAMLIT (toujours fonctionnel)
+    # INPUT NATIF STREAMLIT (V51 design — 100% fiable)
     # ══════════════════════════════════════════════════════
-    st.markdown("<p style='color:#00FF88;font-size:13px;margin-bottom:4px;'>💬 Ou tapez ici (100% fiable) :</p>", unsafe_allow_html=True)
-    with st.form("chat_form_v50", clear_on_submit=True):
-        _ui = st.text_input("msg", placeholder="Ex: Quelle équipe est la plus en forme ?", label_visibility="collapsed")
-        _fc1, _fc2, _fc3 = st.columns([3,1,1])
-        with _fc1: _submit  = st.form_submit_button("📤 Envoyer", use_container_width=True)
-        with _fc2: _clear   = st.form_submit_button("🗑️ Effacer", use_container_width=True)
-        with _fc3: _ctx_btn = st.form_submit_button("📋 Contexte", use_container_width=True)
-
-    if _clear:
-        st.session_state.chat_messages = []
-        save_session_messages(_sid, [])
-        save_chat_history([])
+    _chat_native = st.chat_input("💬 Posez votre question à Oracle Mahita IA...")
+    if _chat_native and _chat_native.strip():
+        st.session_state['_pending_chat_input'] = _chat_native.strip()
         st.rerun()
 
-    if _ctx_btn:
-        try:
-            _std3 = get_standings(st.session_state['history'][s_active], engine.teams_list)
-            _ctx3 = build_full_context(st.session_state['history'], s_active, _std3, next_j)
-            st.text_area("Contexte transmis à l'IA", _ctx3, height=200)
-        except Exception as _ex3:
-            st.error(f"Erreur : {_ex3}")
-
-    if _submit and _ui.strip():
-        st.session_state['_pending_chat_input'] = _ui.strip()
-        st.rerun()
-
-    # Config Groq — TOUJOURS ACCESSIBLE
-    with st.expander("🔑 Configuration Groq API", expanded=not st.session_state.get('groq_api_key_direct', '')):
+    # Config Groq — avec statut visible après connexion
+    with st.expander("🔑 Configuration Groq API", expanded=not _groq_active):
         _c1, _c2 = st.columns([3,1])
         with _c1:
             _default_key = st.session_state.get('groq_api_key_direct', '')
@@ -2856,21 +2940,19 @@ renderAll();
             _api_key = st.text_input("Clé API Groq",
                                      value=_default_key,
                                      type="password", placeholder="gsk_xxx...",
-                                     key="groq_key_input_v52")
+                                     key="groq_key_input_v53")
         with _c2:
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("🔗 Connecter", use_container_width=True, key="btn_groq_v52"):
+            if st.button("🔗 Connecter", use_container_width=True, key="btn_groq_v53"):
                 if _api_key:
                     os.environ["GROQ_API_KEY"] = _api_key
                     st.session_state['groq_api_key_direct'] = _api_key
-                    # Connecter aussi moteur_ia_chat si disponible
                     if CHAT_IA_DISPONIBLE and moteur_ia_chat is not None:
                         moteur_ia_chat.api_key = _api_key
                         try:
                             from groq import Groq
                             moteur_ia_chat.client = Groq(api_key=_api_key)
                         except: pass
-                    # Tester la connexion
                     try:
                         from groq import Groq as _GT
                         _GT(api_key=_api_key).chat.completions.create(
@@ -2878,19 +2960,17 @@ renderAll();
                             messages=[{"role":"user","content":"ok"}],
                             max_tokens=5
                         )
-                        st.success("✅ Groq connecté avec succès !")
+                        st.success("✅ Groq connecté avec succès ! Rechargez la page pour voir le badge vert.")
                     except Exception as _ge:
                         st.error(f"Erreur connexion : {_ge}")
                     st.rerun()
                 else:
                     st.warning("Entrez d'abord votre clé API Groq.")
         _sc1, _sc2, _sc3 = st.columns(3)
-        _gk_ok = bool(st.session_state.get('groq_api_key_direct', ''))
-        _chat_conn = CHAT_IA_DISPONIBLE and moteur_ia_chat is not None and getattr(moteur_ia_chat,'est_connecte',lambda:False)()
-        if _gk_ok or _chat_conn:
+        if _groq_active:
             _sc1.success("🟢 Groq actif")
         else:
-            _sc1.warning("🟡 Offline — configurez la clé")
+            _sc1.warning("🟡 Offline")
         _sia2 = moteur_apprentissage.get_stats_apprentissage() if (IA_DISPONIBLE and moteur_apprentissage) else {"total":0}
         _sc2.metric("Matchs appris", _sia2.get("total",0))
         _tr = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
