@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
-║           ORACLE MAHITA V37.0 — IA INTÉGRÉE                 ║
+║           ORACLE MAHITA V50.0 — IA INTÉGRÉE                 ║
 ║           OCR Bet261 · Apprentissage · Chat IA              ║
 ╚══════════════════════════════════════════════════════════════╝
 """
@@ -37,7 +37,7 @@ except ImportError:
     oracle_brain = None
 
 # ── Configuration ──
-st.set_page_config(page_title="Oracle Mahita V36", layout="wide", page_icon="🔮")
+st.set_page_config(page_title="Oracle Mahita V50", layout="wide", page_icon="🔮")
 
 # ── CSS ──
 st.markdown("""
@@ -188,7 +188,6 @@ def get_dernier_adversaire(history: dict, saison: str, equipe: str):
 # ===================== PERSISTENCE =====================
 DB_FILE = "oracle_history.json"
 CHAT_FILE = "oracle_chat_history.json"
-CHAT_SESSIONS_FILE = "oracle_chat_sessions.json"
 
 def load_db():
     if os.path.exists(DB_FILE):
@@ -220,9 +219,10 @@ def save_chat_history(messages):
     except Exception as e:
         pass
 
-# ── Multi-session chat ──
+# ── MULTI-SESSION CHAT ──
+CHAT_SESSIONS_FILE = "oracle_chat_sessions.json"
+
 def load_chat_sessions() -> dict:
-    """Charge toutes les sessions de chat. Format: {session_id: {title, created, messages}}"""
     if os.path.exists(CHAT_SESSIONS_FILE):
         try:
             with open(CHAT_SESSIONS_FILE, "r", encoding="utf-8") as f:
@@ -237,7 +237,6 @@ def save_chat_sessions(sessions: dict):
     except: pass
 
 def new_chat_session(title: str = "") -> str:
-    """Crée une nouvelle session et retourne son ID."""
     import datetime as _dtm
     sid = _dtm.datetime.now().strftime("%Y%m%d_%H%M%S")
     sessions = load_chat_sessions()
@@ -249,24 +248,10 @@ def new_chat_session(title: str = "") -> str:
     save_chat_sessions(sessions)
     return sid
 
-def get_or_create_active_session() -> str:
-    """Retourne l'ID de session active, en crée une si nécessaire."""
-    sessions = load_chat_sessions()
-    if st.session_state.get('active_chat_session') and st.session_state['active_chat_session'] in sessions:
-        return st.session_state['active_chat_session']
-    if sessions:
-        sid = sorted(sessions.keys())[-1]
-        st.session_state['active_chat_session'] = sid
-        return sid
-    sid = new_chat_session()
-    st.session_state['active_chat_session'] = sid
-    return sid
-
 def save_session_messages(sid: str, messages: list):
     sessions = load_chat_sessions()
     if sid in sessions:
         sessions[sid]["messages"] = messages
-        # Auto-titre basé sur le 1er message utilisateur
         if not sessions[sid].get("_titled") and messages:
             first_user = next((m["content"] for m in messages if m.get("role") == "user"), None)
             if first_user:
@@ -928,7 +913,7 @@ st.markdown(f"""
         <div class="logo-svg">{LOGO_SVG}</div>
         <div>
             <h1 class="header-title">ORACLE MAHITA</h1>
-            <div class="header-subtitle">V37.0 — IA Intégrée · Apprentissage Actif · OCR Bet261</div>
+            <div class="header-subtitle">V50.0 — IA Intégrée · Apprentissage Actif · OCR Bet261</div>
         </div>
     </div>
 </div>
@@ -2271,19 +2256,33 @@ import datetime as _dt
 
 with tabs[7]:
 
-    # ══════════════════════════════════════════════════════
-    # INIT session state
-    # ══════════════════════════════════════════════════════
+    # ── INIT ──
     if "chat_messages" not in st.session_state:
         st.session_state['chat_messages'] = load_chat_history()
     if 'active_chat_session' not in st.session_state:
         st.session_state['active_chat_session'] = None
+    if '_last_loaded_session' not in st.session_state:
+        st.session_state['_last_loaded_session'] = None
     if 'chat_theme' not in st.session_state:
         st.session_state['chat_theme'] = "🟢 Vert Oracle"
 
-    # ══════════════════════════════════════════════════════
-    # APPEL IA
-    # ══════════════════════════════════════════════════════
+    # ── GESTION SESSIONS ──
+    _all_sessions = load_chat_sessions()
+    # Créer une session si aucune n'existe
+    if not _all_sessions:
+        _first_sid = new_chat_session("Première conversation")
+        _all_sessions = load_chat_sessions()
+        st.session_state['active_chat_session'] = _first_sid
+    # Choisir la session active
+    if not st.session_state['active_chat_session'] or st.session_state['active_chat_session'] not in _all_sessions:
+        st.session_state['active_chat_session'] = sorted(_all_sessions.keys())[-1]
+    _sid = st.session_state['active_chat_session']
+    # Charger les messages de la session si on vient de changer
+    if st.session_state['_last_loaded_session'] != _sid:
+        st.session_state['chat_messages'] = load_session_messages(_sid)
+        st.session_state['_last_loaded_session'] = _sid
+
+    # ── APPEL IA ──
     def _call_ia(user_q: str):
         try:
             if IA_DISPONIBLE:
@@ -2300,200 +2299,104 @@ with tabs[7]:
                 return moteur_ia_chat.discuter(user_q)
         except Exception as _ex:
             return {"texte": f"Erreur IA : {_ex}", "source": "offline"}
-        return {"texte": "Mode offline.", "source": "offline"}
+        return {"texte": "Mode offline — IA non disponible.", "source": "offline"}
 
-    # ══════════════════════════════════════════════════════
-    # LIRE MESSAGE ENTRANT (query_params — envoyé par le HTML)
-    # ══════════════════════════════════════════════════════
-    _incoming = None
-    try:
-        _qraw = st.query_params.get("_ochat", None)
-        if _qraw:
-            # Streamlit décode automatiquement l'URL — pas besoin de décoder manuellement
-            _incoming = _qraw if isinstance(_qraw, str) else str(_qraw)
-            # Supprimer proprement le paramètre
-            _new_params = {k: v for k, v in st.query_params.items() if k != "_ochat"}
-            st.query_params.clear()
-            for k, v in _new_params.items():
-                st.query_params[k] = v
-    except Exception:
-        pass
-
-    if not _incoming and st.session_state.get('_pending_chat_input'):
-        _incoming = st.session_state.pop('_pending_chat_input')
-
-    # Obtenir la session active
-    _sid = get_or_create_active_session()
-    # Synchroniser chat_messages avec la session active
-    if st.session_state.get('_last_loaded_session') != _sid:
-        st.session_state['chat_messages'] = load_session_messages(_sid)
-        st.session_state['_last_loaded_session'] = _sid
-
-    # Traiter le message entrant
-    if _incoming:
-        _already = [m.get("content","") for m in st.session_state.get('chat_messages',[])[-3:] if m.get("role")=="user"]
-        if _incoming not in _already:
-            _ts = _dt.datetime.now().isoformat()
-            st.session_state.chat_messages.append({"role":"user","content":_incoming,"ts":_ts})
-            with st.spinner("🔮 Oracle réfléchit..."):
-                _rep = _call_ia(_incoming)
-            st.session_state.chat_messages.append({
-                "role": "assistant",
-                "content": _rep.get("texte", "Pas de réponse."),
-                "source": _rep.get("source", "offline"),
-                "ts": _dt.datetime.now().isoformat()
-            })
-            save_session_messages(_sid, st.session_state.chat_messages)
-            save_chat_history(st.session_state.chat_messages)
-            st.rerun()
-
-    # ══════════════════════════════════════════════════════
-    # THÈMES
-    # ══════════════════════════════════════════════════════
+    # ── THÈMES ──
     _THEMES = {
         "🟢 Vert Oracle": {
-            "hd": "linear-gradient(135deg,#00FF88,#7FFFD4)",
-            "hd_txt": "#002211", "hd_sub": "#003322", "dot": "#006644",
+            "hd": "linear-gradient(135deg,#00FF88,#7FFFD4)", "hd_txt": "#002211", "hd_sub": "#003322", "dot": "#006644",
             "msgs_bg": "#071410", "scroll": "#00FF88",
             "wel_bg": "rgba(0,255,136,.07)", "wel_bd": "rgba(0,255,136,.2)", "wel_c": "#7FFFD4",
             "bu_u": "linear-gradient(135deg,#00FF88,#00e07a)", "bu_u_c": "#001a0d", "bu_u_sh": "rgba(0,255,136,.4)",
             "av": "linear-gradient(135deg,#7FFFD4,#00FF88)",
             "bu_b_bg": "rgba(255,255,255,.07)", "bu_b_bd": "rgba(127,255,212,.2)", "bu_b_c": "#ffffff",
             "lbl": "#00FF88", "typ": "#7FFFD4",
-            "bar_bg": "#0a1e16", "bar_bd": "rgba(0,255,136,.15)",
-            "inp_bg": "rgba(255,255,255,.06)", "inp_bd": "rgba(0,255,136,.25)",
-            "inp_foc": "#00FF88", "inp_fsh": "rgba(0,255,136,.1)", "inp_ph": "rgba(127,255,212,.4)",
-            "snd": "linear-gradient(135deg,#00FF88,#7FFFD4)", "snd_c": "#001a0d", "snd_sh": "rgba(0,255,136,.5)",
-            "root_sh": "rgba(0,255,140,.2)", "root_bd": "rgba(0,255,140,.3)",
+            "root_sh": "rgba(0,255,140,.25)", "root_bd": "rgba(0,255,140,.35)",
         },
         "🔵 Bleu Professionnel": {
-            "hd": "linear-gradient(135deg,#1a73e8,#4fc3f7)",
-            "hd_txt": "#ffffff", "hd_sub": "#cce4ff", "dot": "#81d4fa",
+            "hd": "linear-gradient(135deg,#1a73e8,#4fc3f7)", "hd_txt": "#ffffff", "hd_sub": "#cce4ff", "dot": "#81d4fa",
             "msgs_bg": "#0d1b2a", "scroll": "#1a73e8",
             "wel_bg": "rgba(26,115,232,.08)", "wel_bd": "rgba(26,115,232,.25)", "wel_c": "#4fc3f7",
             "bu_u": "linear-gradient(135deg,#1a73e8,#1565c0)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(26,115,232,.4)",
             "av": "linear-gradient(135deg,#4fc3f7,#1a73e8)",
             "bu_b_bg": "rgba(255,255,255,.06)", "bu_b_bd": "rgba(79,195,247,.2)", "bu_b_c": "#e8f4fd",
             "lbl": "#4fc3f7", "typ": "#4fc3f7",
-            "bar_bg": "#0a1929", "bar_bd": "rgba(26,115,232,.2)",
-            "inp_bg": "rgba(255,255,255,.05)", "inp_bd": "rgba(26,115,232,.3)",
-            "inp_foc": "#4fc3f7", "inp_fsh": "rgba(79,195,247,.15)", "inp_ph": "rgba(79,195,247,.4)",
-            "snd": "linear-gradient(135deg,#1a73e8,#4fc3f7)", "snd_c": "#ffffff", "snd_sh": "rgba(26,115,232,.5)",
-            "root_sh": "rgba(26,115,232,.2)", "root_bd": "rgba(26,115,232,.35)",
+            "root_sh": "rgba(26,115,232,.25)", "root_bd": "rgba(26,115,232,.4)",
         },
         "🟣 Violet Premium": {
-            "hd": "linear-gradient(135deg,#7c3aed,#c084fc)",
-            "hd_txt": "#ffffff", "hd_sub": "#ede9fe", "dot": "#a78bfa",
+            "hd": "linear-gradient(135deg,#7c3aed,#c084fc)", "hd_txt": "#ffffff", "hd_sub": "#ede9fe", "dot": "#a78bfa",
             "msgs_bg": "#0f0a1e", "scroll": "#7c3aed",
             "wel_bg": "rgba(124,58,237,.08)", "wel_bd": "rgba(124,58,237,.25)", "wel_c": "#c084fc",
             "bu_u": "linear-gradient(135deg,#7c3aed,#6d28d9)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(124,58,237,.4)",
             "av": "linear-gradient(135deg,#c084fc,#7c3aed)",
             "bu_b_bg": "rgba(255,255,255,.06)", "bu_b_bd": "rgba(192,132,252,.2)", "bu_b_c": "#f3e8ff",
             "lbl": "#c084fc", "typ": "#c084fc",
-            "bar_bg": "#0c0818", "bar_bd": "rgba(124,58,237,.2)",
-            "inp_bg": "rgba(255,255,255,.05)", "inp_bd": "rgba(124,58,237,.3)",
-            "inp_foc": "#c084fc", "inp_fsh": "rgba(192,132,252,.15)", "inp_ph": "rgba(192,132,252,.4)",
-            "snd": "linear-gradient(135deg,#7c3aed,#c084fc)", "snd_c": "#ffffff", "snd_sh": "rgba(124,58,237,.5)",
-            "root_sh": "rgba(124,58,237,.2)", "root_bd": "rgba(124,58,237,.35)",
+            "root_sh": "rgba(124,58,237,.25)", "root_bd": "rgba(124,58,237,.4)",
         },
         "🟠 Orange Sport": {
-            "hd": "linear-gradient(135deg,#f97316,#fbbf24)",
-            "hd_txt": "#1a0a00", "hd_sub": "#431407", "dot": "#92400e",
+            "hd": "linear-gradient(135deg,#f97316,#fbbf24)", "hd_txt": "#1a0a00", "hd_sub": "#431407", "dot": "#92400e",
             "msgs_bg": "#1a0e00", "scroll": "#f97316",
             "wel_bg": "rgba(249,115,22,.08)", "wel_bd": "rgba(249,115,22,.25)", "wel_c": "#fbbf24",
             "bu_u": "linear-gradient(135deg,#f97316,#ea580c)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(249,115,22,.4)",
             "av": "linear-gradient(135deg,#fbbf24,#f97316)",
             "bu_b_bg": "rgba(255,255,255,.06)", "bu_b_bd": "rgba(251,191,36,.2)", "bu_b_c": "#fff7ed",
             "lbl": "#fbbf24", "typ": "#fbbf24",
-            "bar_bg": "#150b00", "bar_bd": "rgba(249,115,22,.2)",
-            "inp_bg": "rgba(255,255,255,.05)", "inp_bd": "rgba(249,115,22,.3)",
-            "inp_foc": "#fbbf24", "inp_fsh": "rgba(251,191,36,.15)", "inp_ph": "rgba(251,191,36,.4)",
-            "snd": "linear-gradient(135deg,#f97316,#fbbf24)", "snd_c": "#1a0a00", "snd_sh": "rgba(249,115,22,.5)",
-            "root_sh": "rgba(249,115,22,.2)", "root_bd": "rgba(249,115,22,.35)",
+            "root_sh": "rgba(249,115,22,.25)", "root_bd": "rgba(249,115,22,.4)",
         },
         "⚪ Blanc Élégant": {
-            "hd": "linear-gradient(135deg,#374151,#6b7280)",
-            "hd_txt": "#ffffff", "hd_sub": "#d1d5db", "dot": "#9ca3af",
+            "hd": "linear-gradient(135deg,#374151,#6b7280)", "hd_txt": "#ffffff", "hd_sub": "#d1d5db", "dot": "#9ca3af",
             "msgs_bg": "#f9fafb", "scroll": "#374151",
             "wel_bg": "rgba(55,65,81,.06)", "wel_bd": "rgba(55,65,81,.15)", "wel_c": "#374151",
             "bu_u": "linear-gradient(135deg,#374151,#1f2937)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(55,65,81,.3)",
             "av": "linear-gradient(135deg,#6b7280,#374151)",
             "bu_b_bg": "#ffffff", "bu_b_bd": "rgba(55,65,81,.15)", "bu_b_c": "#111827",
             "lbl": "#374151", "typ": "#6b7280",
-            "bar_bg": "#f3f4f6", "bar_bd": "rgba(55,65,81,.15)",
-            "inp_bg": "#ffffff", "inp_bd": "rgba(55,65,81,.2)",
-            "inp_foc": "#374151", "inp_fsh": "rgba(55,65,81,.1)", "inp_ph": "rgba(55,65,81,.4)",
-            "snd": "linear-gradient(135deg,#374151,#6b7280)", "snd_c": "#ffffff", "snd_sh": "rgba(55,65,81,.3)",
-            "root_sh": "rgba(55,65,81,.15)", "root_bd": "rgba(55,65,81,.2)",
+            "root_sh": "rgba(55,65,81,.15)", "root_bd": "rgba(55,65,81,.25)",
         },
     }
+    _T = _THEMES.get(st.session_state['chat_theme'], _THEMES["🟢 Vert Oracle"])
 
     # ══════════════════════════════════════════════════════
-    # BARRE DE CONTRÔLE (thème + nouvelle session)
+    # BARRE DE CONTRÔLE
     # ══════════════════════════════════════════════════════
-    _ctrl1, _ctrl2, _ctrl3 = st.columns([2, 2, 1])
-    with _ctrl1:
-        _sel_theme = st.selectbox(
-            "🎨 Thème", list(_THEMES.keys()),
+    _cc1, _cc2, _cc3 = st.columns([2, 2, 1])
+    with _cc1:
+        _sel_theme = st.selectbox("🎨", list(_THEMES.keys()),
             index=list(_THEMES.keys()).index(st.session_state['chat_theme'])
                   if st.session_state['chat_theme'] in _THEMES else 0,
-            key="chat_theme_sel_v50", label_visibility="collapsed"
-        )
+            key="theme_v50", label_visibility="collapsed")
         if _sel_theme != st.session_state['chat_theme']:
             st.session_state['chat_theme'] = _sel_theme
             st.rerun()
-
-    with _ctrl3:
-        if st.button("➕ Nouveau chat", key="btn_new_chat_v50", use_container_width=True):
-            _new_sid = new_chat_session()
-            st.session_state['active_chat_session'] = _new_sid
-            st.session_state['chat_messages'] = []
-            st.session_state['_last_loaded_session'] = _new_sid
-            st.rerun()
-
-    # ══════════════════════════════════════════════════════
-    # SÉLECTEUR DE SESSION (panneau latéral intégré)
-    # ══════════════════════════════════════════════════════
-    _all_sessions = load_chat_sessions()
-    if _all_sessions:
+    with _cc2:
         _sorted_sids = sorted(_all_sessions.keys(), reverse=True)
-        _session_labels = {
-            sid: f"💬 {_all_sessions[sid].get('title','Chat')} — {sid[6:8]}/{sid[4:6]}/{sid[0:4]} {sid[9:11]}:{sid[11:13]}"
+        _sess_labels = {
+            sid: f"💬 {_all_sessions[sid].get('title','Chat')[:30]}"
             for sid in _sorted_sids
         }
-        _current_idx = _sorted_sids.index(_sid) if _sid in _sorted_sids else 0
-        _chosen_label = st.selectbox(
-            "📂 Historique des chats",
-            options=list(_session_labels.values()),
-            index=_current_idx,
-            key="chat_session_sel_v50"
-        )
-        # Retrouver le sid depuis le label choisi
-        _chosen_sid = next((s for s, l in _session_labels.items() if l == _chosen_label), _sid)
+        _cur_idx = _sorted_sids.index(_sid) if _sid in _sorted_sids else 0
+        _chosen_lbl = st.selectbox("📂", list(_sess_labels.values()),
+            index=_cur_idx, key="sess_sel_v50", label_visibility="collapsed")
+        _chosen_sid = next((s for s, l in _sess_labels.items() if l == _chosen_lbl), _sid)
         if _chosen_sid != _sid:
             st.session_state['active_chat_session'] = _chosen_sid
             st.session_state['chat_messages'] = load_session_messages(_chosen_sid)
             st.session_state['_last_loaded_session'] = _chosen_sid
-            _sid = _chosen_sid
+            st.rerun()
+    with _cc3:
+        if st.button("➕ Nouveau", key="new_sess_v50", use_container_width=True):
+            _nsid = new_chat_session()
+            st.session_state['active_chat_session'] = _nsid
+            st.session_state['chat_messages'] = []
+            st.session_state['_last_loaded_session'] = _nsid
             st.rerun()
 
-        # Renommer la session courante
-        with st.expander("✏️ Renommer ce chat", expanded=False):
-            _rename_val = st.text_input("Nouveau titre", value=_all_sessions.get(_sid, {}).get("title", ""), key="rename_input_v50")
-            if st.button("💾 Enregistrer le nom", key="btn_rename_v50"):
-                _sess = load_chat_sessions()
-                if _sid in _sess:
-                    _sess[_sid]["title"] = _rename_val
-                    _sess[_sid]["_titled"] = True
-                    save_chat_sessions(_sess)
-                    st.rerun()
-
     # ══════════════════════════════════════════════════════
-    # RENDU CHAT HTML
+    # AFFICHAGE HTML — LECTURE SEULE (PAS D'INPUT DEDANS)
     # ══════════════════════════════════════════════════════
-    _T = _THEMES[st.session_state['chat_theme']]
     _msgs = st.session_state.get('chat_messages', [])
     _msgs_json = json.dumps(_msgs, ensure_ascii=False)
+    _sess_title = _all_sessions.get(_sid, {}).get('title', 'Chat')
 
     _CHAT_HTML = f"""<!DOCTYPE html>
 <html><head>
@@ -2501,16 +2404,19 @@ with tabs[7]:
 <style>
 *{{box-sizing:border-box;margin:0;padding:0;}}
 html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:transparent;}}
-.root{{display:flex;flex-direction:column;height:500px;border-radius:18px;overflow:hidden;
+.root{{display:flex;flex-direction:column;height:460px;border-radius:18px;overflow:hidden;
   box-shadow:0 0 40px {_T['root_sh']},0 8px 32px rgba(0,0,0,.4);
   border:1.5px solid {_T['root_bd']};}}
-.hd{{background:{_T['hd']};padding:13px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}}
-.hd-av{{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.3);
-  display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}}
+.hd{{background:{_T['hd']};padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}}
+.hd-av{{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.3);
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}}
 .hd-name{{color:{_T['hd_txt']};font-weight:800;font-size:15px;}}
-.hd-status{{color:{_T['hd_sub']};font-size:11px;margin-top:2px;display:flex;align-items:center;gap:5px;}}
-.dot{{width:8px;height:8px;border-radius:50%;background:{_T['dot']};animation:pulse 2s infinite;}}
+.hd-sub{{color:{_T['hd_sub']};font-size:11px;margin-top:2px;display:flex;align-items:center;gap:5px;}}
+.dot{{width:8px;height:8px;border-radius:50%;background:{_T['dot']};animation:pulse 2s infinite;display:inline-block;}}
 @keyframes pulse{{0%,100%{{opacity:1;transform:scale(1)}}50%{{opacity:.6;transform:scale(.85)}}}}
+.sess-badge{{background:rgba(255,255,255,.2);border-radius:10px;padding:2px 8px;font-size:10px;
+  color:{_T['hd_sub']};font-weight:600;margin-left:auto;max-width:120px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;}}
 .msgs{{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;
   background:{_T['msgs_bg']};scrollbar-width:thin;scrollbar-color:{_T['scroll']} {_T['msgs_bg']};}}
 .msgs::-webkit-scrollbar{{width:4px;}}
@@ -2526,45 +2432,20 @@ html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',s
 .av-b{{width:32px;height:32px;border-radius:50%;background:{_T['av']};
   display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-bottom:2px;}}
 .bu-b{{background:{_T['bu_b_bg']};border:1px solid {_T['bu_b_bd']};color:{_T['bu_b_c']};
-  padding:10px 15px;border-radius:20px 20px 20px 4px;max-width:82%;font-size:14px;
-  line-height:1.5;word-break:break-word;}}
+  padding:10px 15px;border-radius:20px 20px 20px 4px;max-width:82%;font-size:14px;line-height:1.5;word-break:break-word;}}
 .src-lbl{{font-size:10px;color:{_T['lbl']};font-weight:700;margin-bottom:4px;}}
-.bu-b .ts{{font-size:10px;color:rgba(127,200,180,.45);margin-top:4px;}}
-.typing{{display:flex;gap:5px;align-items:center;padding:4px 2px;}}
-.typing span{{width:9px;height:9px;border-radius:50%;background:{_T['typ']};opacity:.5;animation:bnc 1.1s infinite;}}
-.typing span:nth-child(2){{animation-delay:.18s;}}
-.typing span:nth-child(3){{animation-delay:.36s;}}
-@keyframes bnc{{0%,80%,100%{{transform:scale(.65);opacity:.3}}40%{{transform:scale(1.15);opacity:1}}}}
-.bar{{display:flex;align-items:flex-end;gap:8px;padding:10px 12px;
-  background:{_T['bar_bg']};border-top:1px solid {_T['bar_bd']};flex-shrink:0;}}
-.inp{{flex:1;min-width:0;background:{_T['inp_bg']};border:1.5px solid {_T['inp_bd']};
-  border-radius:18px;padding:10px 16px;font-size:14px;color:{_T['bu_b_c']};outline:none;
-  transition:border-color .2s;resize:none;min-height:42px;max-height:120px;
-  overflow-y:auto;line-height:1.4;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}}
-.inp:focus{{border-color:{_T['inp_foc']};box-shadow:0 0 0 3px {_T['inp_fsh']};}}
-.inp::placeholder{{color:{_T['inp_ph']};}}
-.snd{{width:44px;height:44px;border-radius:50%;background:{_T['snd']};border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:20px;color:{_T['snd_c']};
-  font-weight:bold;box-shadow:0 3px 16px {_T['snd_sh']};transition:transform .15s;flex-shrink:0;margin-bottom:1px;}}
-.snd:hover{{transform:scale(1.08);}}
-.snd:active{{transform:scale(.9);}}
-.snd:disabled{{opacity:.35;cursor:default;transform:none;}}
-@media(max-width:600px){{.root{{height:420px;}}}}
+.bu-b .ts{{font-size:10px;color:rgba(150,200,180,.5);margin-top:4px;}}
 </style></head><body>
 <div class="root">
   <div class="hd">
     <div class="hd-av">🔮</div>
-    <div style="flex:1;">
+    <div style="flex:1;min-width:0;">
       <div class="hd-name">Oracle Mahita IA</div>
-      <div class="hd-status"><span class="dot"></span> En ligne · Assistant pronostics</div>
+      <div class="hd-sub"><span class="dot"></span> En ligne · Assistant pronostics</div>
     </div>
+    <div class="sess-badge">{_sess_title[:25]}</div>
   </div>
   <div class="msgs" id="msgs"></div>
-  <div class="bar">
-    <textarea class="inp" id="inp" placeholder="Écrivez votre message... (Entrée = envoyer, Maj+Entrée = nouvelle ligne)" rows="1"></textarea>
-    <button class="snd" id="snd" onclick="doSend()">&#10148;</button>
-  </div>
 </div>
 <script>
 const MSGS={_msgs_json};
@@ -2575,7 +2456,7 @@ function fmt(ts){{
 }}
 function renderAll(){{
   const box=document.getElementById('msgs');
-  let h='<div class="welcome">🔮 Bonjour ! Posez-moi n\\'importe quelle question sur vos pronostics, classements ou résultats.</div>';
+  let h='<div class="welcome">🔮 Bonjour ! Posez-moi n\\'importe quelle question sur vos pronostics, classements ou résultats.<br><small style="opacity:.7">👇 Utilisez le champ de saisie ci-dessous pour écrire</small></div>';
   MSGS.forEach(function(m){{
     const t=fmt(m.ts||'');
     if(m.role==='user'){{
@@ -2589,73 +2470,94 @@ function renderAll(){{
   box.innerHTML=h;
   box.scrollTop=box.scrollHeight;
 }}
-const inp=document.getElementById('inp');
-inp.addEventListener('input',function(){{this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';}});
-function doSend(){{
-  const snd=document.getElementById('snd');
-  const text=inp.value.trim();
-  if(!text)return;
-  inp.value='';inp.style.height='auto';
-  inp.disabled=true;snd.disabled=true;
-  const box=document.getElementById('msgs');
-  box.innerHTML+='<div class="bw-u"><div class="bu-u">'+esc(text).replace(/\\n/g,'<br>')+'</div></div>';
-  box.innerHTML+='<div class="bw-b"><div class="av-b">🔮</div><div class="bu-b"><div class="typing"><span></span><span></span><span></span></div></div></div>';
-  box.scrollTop=box.scrollHeight;
-  // ✅ FIX : utiliser URLSearchParams directement sur la fenêtre parente sans double-encodage
-  try{{
-    const url=new URL(window.parent.location.href);
-    url.searchParams.set('_ochat', text);
-    window.parent.location.href=url.toString();
-  }}catch(err){{
-    inp.disabled=false;snd.disabled=false;
-  }}
-}}
-inp.addEventListener('keydown',function(e){{if(e.key==='Enter'&&!e.shiftKey){{e.preventDefault();doSend();}}}});
 renderAll();
 </script></body></html>"""
 
-    components.html(_CHAT_HTML, height=540, scrolling=False)
+    components.html(_CHAT_HTML, height=480, scrolling=False)
+
+    # ══════════════════════════════════════════════════════
+    # ✅ SAISIE NATIVE STREAMLIT — 100% FIABLE
+    # st.chat_input() est le widget officiel pour les chats.
+    # Il fonctionne toujours, sans JS, sans iframe tricks.
+    # ══════════════════════════════════════════════════════
+    _user_input = st.chat_input("💬 Écrivez votre message ici...", key="chat_input_v50")
+
+    if _user_input and _user_input.strip():
+        _q = _user_input.strip()
+        _ts = _dt.datetime.now().isoformat()
+        st.session_state.chat_messages.append({"role": "user", "content": _q, "ts": _ts})
+
+        with st.spinner("🔮 Oracle réfléchit..."):
+            _rep = _call_ia(_q)
+
+        st.session_state.chat_messages.append({
+            "role": "assistant",
+            "content": _rep.get("texte", "Pas de réponse."),
+            "source": _rep.get("source", "offline"),
+            "ts": _dt.datetime.now().isoformat()
+        })
+        # Sauvegarder dans la session et le fichier global
+        save_session_messages(_sid, st.session_state.chat_messages)
+        save_chat_history(st.session_state.chat_messages)
+        st.rerun()
 
     st.markdown("---")
 
-    # ══════════════════════════════════════════════════════
-    # FORMULAIRE NATIF STREAMLIT (toujours fonctionnel)
-    # ══════════════════════════════════════════════════════
-    st.markdown("<p style='color:#00FF88;font-size:13px;margin-bottom:4px;'>💬 Ou tapez ici (100% fiable) :</p>", unsafe_allow_html=True)
-    with st.form("chat_form_v50", clear_on_submit=True):
-        _ui = st.text_input("msg", placeholder="Ex: Quelle équipe est la plus en forme ?", label_visibility="collapsed")
-        _fc1, _fc2, _fc3 = st.columns([3,1,1])
-        with _fc1: _submit  = st.form_submit_button("📤 Envoyer", use_container_width=True)
-        with _fc2: _clear   = st.form_submit_button("🗑️ Effacer", use_container_width=True)
-        with _fc3: _ctx_btn = st.form_submit_button("📋 Contexte", use_container_width=True)
+    # ── Contrôles de session ──
+    _sc1, _sc2, _sc3, _sc4 = st.columns(4)
+    with _sc1:
+        if st.button("🗑️ Effacer ce chat", use_container_width=True, key="clr_v50"):
+            st.session_state.chat_messages = []
+            save_session_messages(_sid, [])
+            save_chat_history([])
+            st.rerun()
+    with _sc2:
+        if st.button("❌ Supprimer session", use_container_width=True, key="del_v50"):
+            _sess = load_chat_sessions()
+            if _sid in _sess: del _sess[_sid]
+            save_chat_sessions(_sess)
+            st.session_state['active_chat_session'] = None
+            st.session_state['chat_messages'] = []
+            st.session_state['_last_loaded_session'] = None
+            st.rerun()
+    with _sc3:
+        if st.button("💾 Exporter JSON", use_container_width=True, key="exp_v50"):
+            st.download_button("📥 Télécharger",
+                data=json.dumps(st.session_state.chat_messages, indent=2, ensure_ascii=False),
+                file_name=f"oracle_{_sess_title[:20].replace(' ','_')}.json", mime="application/json",
+                key="dl_v50")
+    with _sc4:
+        if st.button("📋 Voir contexte IA", use_container_width=True, key="ctx_v50"):
+            try:
+                _std3 = get_standings(st.session_state['history'][s_active], engine.teams_list)
+                _ctx3 = build_full_context(st.session_state['history'], s_active, _std3, next_j)
+                st.text_area("Contexte transmis à l'IA", _ctx3, height=200)
+            except Exception as _ex3:
+                st.error(f"Erreur : {_ex3}")
 
-    if _clear:
-        st.session_state.chat_messages = []
-        save_session_messages(_sid, [])
-        save_chat_history([])
-        st.rerun()
+    # ── Renommer session ──
+    with st.expander("✏️ Renommer ce chat", expanded=False):
+        _r1, _r2 = st.columns([3,1])
+        with _r1:
+            _rename_v = st.text_input("Titre", value=_all_sessions.get(_sid, {}).get("title", ""), key="rename_v50", label_visibility="collapsed")
+        with _r2:
+            if st.button("💾 OK", key="save_rename_v50", use_container_width=True):
+                _sess = load_chat_sessions()
+                if _sid in _sess:
+                    _sess[_sid]["title"] = _rename_v
+                    _sess[_sid]["_titled"] = True
+                    save_chat_sessions(_sess)
+                st.rerun()
 
-    if _ctx_btn:
-        try:
-            _std3 = get_standings(st.session_state['history'][s_active], engine.teams_list)
-            _ctx3 = build_full_context(st.session_state['history'], s_active, _std3, next_j)
-            st.text_area("Contexte transmis à l'IA", _ctx3, height=200)
-        except Exception as _ex3:
-            st.error(f"Erreur : {_ex3}")
-
-    if _submit and _ui.strip():
-        st.session_state['_pending_chat_input'] = _ui.strip()
-        st.rerun()
-
-    # Config Groq
+    # ── Config Groq ──
     with st.expander("🔑 Configuration Groq API", expanded=False):
-        _c1, _c2 = st.columns([3,1])
-        with _c1:
+        _gc1, _gc2 = st.columns([3,1])
+        with _gc1:
             _api_key = st.text_input("Clé API Groq",
-                                     value=getattr(moteur_ia_chat,'api_key','') if IA_DISPONIBLE else '',
-                                     type="password", placeholder="gsk_xxx...")
-        with _c2:
-            if st.button("🔗 Connecter", use_container_width=True, key="btn_groq_v50"):
+                value=getattr(moteur_ia_chat,'api_key','') if IA_DISPONIBLE else '',
+                type="password", placeholder="gsk_xxx...", key="groq_key_v50")
+        with _gc2:
+            if st.button("🔗 Connecter", use_container_width=True, key="groq_btn_v50"):
                 if _api_key and IA_DISPONIBLE:
                     os.environ["GROQ_API_KEY"] = _api_key
                     moteur_ia_chat.api_key = _api_key
@@ -2666,54 +2568,32 @@ renderAll();
                         st.rerun()
                     except Exception as _e:
                         st.error(f"Erreur : {_e}")
-        _sc1, _sc2, _sc3 = st.columns(3)
+        _gsc1, _gsc2, _gsc3 = st.columns(3)
         _conn = IA_DISPONIBLE and getattr(moteur_ia_chat,'est_connecte',lambda:False)()
-        _sc1.success("🟢 Groq actif") if _conn else _sc1.warning("🟡 Offline")
+        _gsc1.success("🟢 Groq actif") if _conn else _gsc1.warning("🟡 Offline")
         _sia = moteur_apprentissage.get_stats_apprentissage() if IA_DISPONIBLE else {"total":0}
-        _sc2.metric("Matchs appris", _sia.get("total",0))
+        _gsc2.metric("Matchs appris", _sia.get("total",0))
         _tr = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
-        _sc3.metric("Résultats", _tr)
+        _gsc3.metric("Résultats", _tr)
 
-    # Export + effacer session + supprimer session
-    _col1, _col2, _col3 = st.columns(3)
-    with _col1:
-        if st.button("💾 Exporter chat", use_container_width=True, key="btn_export_v50"):
-            _export_data = json.dumps(st.session_state.chat_messages, indent=2, ensure_ascii=False)
-            _sess_title = _all_sessions.get(_sid, {}).get("title", "chat")
-            st.download_button("📥 Télécharger JSON",
-                data=_export_data,
-                file_name=f"oracle_{_sess_title[:20].replace(' ','_')}.json",
-                mime="application/json")
-    with _col2:
-        if st.button("🗑️ Effacer ce chat", use_container_width=True, key="btn_clr_v50"):
-            st.session_state.chat_messages = []
-            save_session_messages(_sid, [])
-            save_chat_history([])
-            st.rerun()
-    with _col3:
-        if st.button("❌ Supprimer session", use_container_width=True, key="btn_del_v50"):
-            _sess = load_chat_sessions()
-            if _sid in _sess:
-                del _sess[_sid]
-                save_chat_sessions(_sess)
-            st.session_state['active_chat_session'] = None
-            st.session_state['chat_messages'] = []
-            st.session_state['_last_loaded_session'] = None
-            st.rerun()
-
-    # Suggestions
-    st.markdown("<p style='color:#00FF88;font-size:12px;margin:10px 0 4px 0;'>⚡ Suggestions :</p>", unsafe_allow_html=True)
-    _SUGGS = [
-        "Quelle équipe est la plus en forme ?",
-        "Qui est favori pour le titre ?",
-        "Meilleures cotes de la prochaine journée",
-        "Analyse les résultats récents",
-    ]
+    # ── Suggestions ──
+    st.markdown("<p style='color:#00FF88;font-size:12px;margin:10px 0 4px 0;'>⚡ Suggestions rapides :</p>", unsafe_allow_html=True)
+    _SUGGS = ["Quelle équipe est la plus en forme ?", "Qui est favori pour le titre ?",
+              "Meilleures cotes de la prochaine journée", "Analyse les résultats récents"]
     _sg2 = st.columns(2)
     for _si, _sg in enumerate(_SUGGS):
         with _sg2[_si % 2]:
             if st.button(_sg, key=f"sg50_{_si}", use_container_width=True):
-                st.session_state['_pending_chat_input'] = _sg
+                _ts2 = _dt.datetime.now().isoformat()
+                st.session_state.chat_messages.append({"role":"user","content":_sg,"ts":_ts2})
+                with st.spinner("🔮 Oracle réfléchit..."):
+                    _rep2 = _call_ia(_sg)
+                st.session_state.chat_messages.append({
+                    "role":"assistant","content":_rep2.get("texte","Pas de réponse."),
+                    "source":_rep2.get("source","offline"),"ts":_dt.datetime.now().isoformat()
+                })
+                save_session_messages(_sid, st.session_state.chat_messages)
+                save_chat_history(st.session_state.chat_messages)
                 st.rerun()
 
 # ===================== Sauvegarde Globale =====================
