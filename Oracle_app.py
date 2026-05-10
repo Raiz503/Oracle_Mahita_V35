@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
-║           ORACLE MAHITA V50.0 — IA INTÉGRÉE                 ║
+║           ORACLE MAHITA V37.0 — IA INTÉGRÉE                 ║
 ║           OCR Bet261 · Apprentissage · Chat IA              ║
 ╚══════════════════════════════════════════════════════════════╝
 """
@@ -24,11 +24,16 @@ from scipy.ndimage import uniform_filter1d
 
 # ── Import IA ──
 try:
-    from moteur_apprentissage import moteur_apprentissage
+    from moteur_apprentissage_v53 import moteur_apprentissage
     from moteur_ia_chat import moteur_ia_chat
     IA_DISPONIBLE = True
 except ImportError:
-    IA_DISPONIBLE = False
+    try:
+        from moteur_apprentissage import moteur_apprentissage
+        from moteur_ia_chat import moteur_ia_chat
+        IA_DISPONIBLE = True
+    except ImportError:
+        IA_DISPONIBLE = False
 
 # ── Import Cerveau I ──
 try:
@@ -37,7 +42,7 @@ except ImportError:
     oracle_brain = None
 
 # ── Configuration ──
-st.set_page_config(page_title="Oracle Mahita V50", layout="wide", page_icon="🔮")
+st.set_page_config(page_title="Oracle Mahita V36", layout="wide", page_icon="🔮")
 
 # ── CSS ──
 st.markdown("""
@@ -188,6 +193,7 @@ def get_dernier_adversaire(history: dict, saison: str, equipe: str):
 # ===================== PERSISTENCE =====================
 DB_FILE = "oracle_history.json"
 CHAT_FILE = "oracle_chat_history.json"
+CHAT_SESSIONS_FILE = "oracle_chat_sessions.json"
 
 def load_db():
     if os.path.exists(DB_FILE):
@@ -219,10 +225,9 @@ def save_chat_history(messages):
     except Exception as e:
         pass
 
-# ── MULTI-SESSION CHAT ──
-CHAT_SESSIONS_FILE = "oracle_chat_sessions.json"
-
+# ── Multi-session chat ──
 def load_chat_sessions() -> dict:
+    """Charge toutes les sessions de chat. Format: {session_id: {title, created, messages}}"""
     if os.path.exists(CHAT_SESSIONS_FILE):
         try:
             with open(CHAT_SESSIONS_FILE, "r", encoding="utf-8") as f:
@@ -237,6 +242,7 @@ def save_chat_sessions(sessions: dict):
     except: pass
 
 def new_chat_session(title: str = "") -> str:
+    """Crée une nouvelle session et retourne son ID."""
     import datetime as _dtm
     sid = _dtm.datetime.now().strftime("%Y%m%d_%H%M%S")
     sessions = load_chat_sessions()
@@ -248,10 +254,24 @@ def new_chat_session(title: str = "") -> str:
     save_chat_sessions(sessions)
     return sid
 
+def get_or_create_active_session() -> str:
+    """Retourne l'ID de session active, en crée une si nécessaire."""
+    sessions = load_chat_sessions()
+    if st.session_state.get('active_chat_session') and st.session_state['active_chat_session'] in sessions:
+        return st.session_state['active_chat_session']
+    if sessions:
+        sid = sorted(sessions.keys())[-1]
+        st.session_state['active_chat_session'] = sid
+        return sid
+    sid = new_chat_session()
+    st.session_state['active_chat_session'] = sid
+    return sid
+
 def save_session_messages(sid: str, messages: list):
     sessions = load_chat_sessions()
     if sid in sessions:
         sessions[sid]["messages"] = messages
+        # Auto-titre basé sur le 1er message utilisateur
         if not sessions[sid].get("_titled") and messages:
             first_user = next((m["content"] for m in messages if m.get("role") == "user"), None)
             if first_user:
@@ -913,7 +933,7 @@ st.markdown(f"""
         <div class="logo-svg">{LOGO_SVG}</div>
         <div>
             <h1 class="header-title">ORACLE MAHITA</h1>
-            <div class="header-subtitle">V50.0 — IA Intégrée · Apprentissage Actif · OCR Bet261</div>
+            <div class="header-subtitle">V37.0 — IA Intégrée · Apprentissage Actif · OCR Bet261</div>
         </div>
     </div>
 </div>
@@ -1215,40 +1235,48 @@ with tabs[2]:
                     match_precedent_dom=dernier_adv
                 )
 
-            # ═══ MOTEUR 2: IA Apprentissage (patterns cotes) ═══
+            # ═══ MOTEUR 2: IA Apprentissage V2.3 (tous patterns) ═══
             prediction_ia = None
             confiance_ia = 50
-            if IA_DISPONIBLE and patterns_cotes:
-                c1, cx, c2 = m['o']
-                pattern_key = f"{c1:.1f}_{cx:.1f}_{c2:.1f}"
-                pattern_proche = None
+            details_ia = "Non dispo"
 
-                for pk, pdata in patterns_cotes.items():
-                    if isinstance(pdata, dict) and "total" in pdata and pdata["total"] >= 3:
-                        try:
-                            pc1, pcx, pc2 = map(float, pk.split('_'))
-                            diff = abs(pc1-c1) + abs(pcx-cx) + abs(pc2-c2)
-                            if diff < 1.5:
-                                pattern_proche = pdata
-                                break
-                        except:
-                            continue
-
-                if pattern_proche:
-                    total = pattern_proche['total']
-                    p1 = pattern_proche.get('1', 0) / total
-                    pX = pattern_proche.get('X', 0) / total
-                    p2 = pattern_proche.get('2', 0) / total
-
-                    if p1 > pX and p1 > p2:
-                        prediction_ia = "1"
-                        confiance_ia = int(p1 * 100)
-                    elif p2 > p1 and p2 > pX:
-                        prediction_ia = "2"
-                        confiance_ia = int(p2 * 100)
-                    else:
-                        prediction_ia = "X"
-                        confiance_ia = int(pX * 100)
+            if IA_DISPONIBLE:
+                _c1p, _cxp, _c2p = m['o']
+                _rd_ia = int(standings[standings['Équipe'] == m['h']]['Rang'].values[0]) if not standings[standings['Équipe'] == m['h']].empty else 10
+                _re_ia = int(standings[standings['Équipe'] == m['a']]['Rang'].values[0]) if not standings[standings['Équipe'] == m['a']].empty else 10
+                _fd_ia = get_forme_equipe(st.session_state['history'], s_active, m['h'], 3)
+                _fe_ia = get_forme_equipe(st.session_state['history'], s_active, m['a'], 3)
+                def _calc_buts_ia(equipe, domicile=True):
+                    _bp, _bc, _n = [], [], 0
+                    for _jdata_ia in st.session_state['history'][s_active].values():
+                        for _match_ia in _jdata_ia.get("res", []):
+                            try:
+                                _sh_ia, _sa_ia = map(int, _match_ia['s'].replace('-', ':').split(':'))
+                                if domicile and _match_ia['h'] == equipe:
+                                    _bp.append(_sh_ia); _bc.append(_sa_ia); _n += 1
+                                elif not domicile and _match_ia['a'] == equipe:
+                                    _bp.append(_sa_ia); _bc.append(_sh_ia); _n += 1
+                            except: pass
+                    return (sum(_bp)/_n if _n else 1.5, sum(_bc)/_n if _n else 1.5)
+                _bpmd_ia, _bcmd_ia = _calc_buts_ia(m['h'], True)
+                _bpme_ia, _bcme_ia = _calc_buts_ia(m['a'], False)
+                _tad_ia = "favori" if _rd_ia <= 5 else ("medium" if _rd_ia <= 15 else "outsider")
+                _tae_ia = "favori" if _re_ia <= 5 else ("medium" if _re_ia <= 15 else "outsider")
+                _ctx_ia = {
+                    "rang_dom": _rd_ia, "rang_ext": _re_ia,
+                    "serie_dom": _fd_ia, "serie_ext": _fe_ia,
+                    "evolution_dom": "stable", "evolution_ext": "stable",
+                    "bp_moy_dom": _bpmd_ia, "bc_moy_dom": _bcmd_ia,
+                    "bp_moy_ext": _bpme_ia, "bc_moy_ext": _bcme_ia,
+                    "type_adv_dom": _tad_ia, "type_adv_ext": _tae_ia,
+                    "prob_forme": {"1": 33.3, "X": 33.3, "2": 33.3}
+                }
+                _pred_ia = moteur_apprentissage.predire_avec_apprentissage(
+                    {"h": m['h'], "a": m['a'], "o": m['o']}, _ctx_ia
+                )
+                prediction_ia = _pred_ia["prediction"]
+                confiance_ia = int(_pred_ia["confiance"])
+                details_ia = f"{prediction_ia} ({confiance_ia}%)"
 
             # ═══ MOTEUR 3: Analyse statistique (cotes + classement + forme) ═══
             cote_1, cote_x, cote_2 = m['o']
@@ -1610,29 +1638,45 @@ with tabs[3]:
                     st.session_state['history'][s_active][jk]["res"] = final_res
                     save_db(st.session_state['history'])
 
-                    # ── Apprentissage IA ──
+                    # ── Apprentissage IA V2.3 ──
                     if IA_DISPONIBLE:
-                        for i, m in enumerate(final_res):
+                        _hist_av = {jj: st.session_state['history'][s_active][jj]
+                            for jj in sorted(st.session_state['history'][s_active].keys())
+                            if (int(re.search(r'\d+', jj).group()) if re.search(r'\d+', jj) else 0) < j_res}
+                        _std_av = get_standings(_hist_av, engine.teams_list)
+                        _se = {t: {"bp_dom": [], "bc_dom": [], "bp_ext": [], "bc_ext": []} for t in engine.teams_list}
+                        for _jd in _hist_av.values():
+                            for _mm in _jd.get("res", []):
+                                try:
+                                    _sh2, _sa2 = map(int, _mm['s'].replace('-', ':').split(':'))
+                                    if _mm['h'] in _se: _se[_mm['h']]["bp_dom"].append(_sh2); _se[_mm['h']]["bc_dom"].append(_sa2)
+                                    if _mm['a'] in _se: _se[_mm['a']]["bp_ext"].append(_sa2); _se[_mm['a']]["bc_ext"].append(_sh2)
+                                except: pass
+                        def _moy_b(lst): return sum(lst)/len(lst) if lst else 1.5
+                        for _i2, _mm2 in enumerate(final_res):
                             try:
-                                sh, sa = map(int, m['s'].replace('-', ':').split(':'))
-                                resultat = "1" if sh > sa else ("X" if sh == sa else "2")
-                                cotes = cal_ref[i].get('o', [2.0, 3.0, 3.0]) if cal_ref and i < len(cal_ref) else [2.0, 3.0, 3.0]
-
-                                moteur_apprentissage.analyser_pattern_cotes(cotes[0], cotes[1], cotes[2], resultat)
-                                moteur_apprentissage.analyser_pattern_equipe(
-                                    m['h'],
-                                    "V" if resultat=="1" else ("N" if resultat=="X" else "D"),
-                                    {"domicile": True}
-                                )
-                                moteur_apprentissage.analyser_pattern_equipe(
-                                    m['a'],
-                                    "V" if resultat=="2" else ("N" if resultat=="X" else "D"),
-                                    {"domicile": False}
-                                )
-                            except:
-                                pass
+                                _sh3, _sa3 = map(int, _mm2['s'].replace('-', ':').split(':'))
+                                _r2 = "1" if _sh3 > _sa3 else ("X" if _sh3 == _sa3 else "2")
+                                _co = cal_ref[_i2].get('o', [2.0, 3.0, 3.0]) if cal_ref and _i2 < len(cal_ref) else [2.0, 3.0, 3.0]
+                                _rd2 = int(_std_av[_std_av['Équipe'] == _mm2['h']]['Rang'].values[0]) if not _std_av[_std_av['Équipe'] == _mm2['h']].empty else 10
+                                _re2 = int(_std_av[_std_av['Équipe'] == _mm2['a']]['Rang'].values[0]) if not _std_av[_std_av['Équipe'] == _mm2['a']].empty else 10
+                                _fd2 = get_forme_equipe(st.session_state['history'], s_active, _mm2['h'], 3)
+                                _fe2 = get_forme_equipe(st.session_state['history'], s_active, _mm2['a'], 3)
+                                _bpmd2 = _moy_b(_se[_mm2['h']]["bp_dom"]); _bcmd2 = _moy_b(_se[_mm2['h']]["bc_dom"])
+                                _bpme2 = _moy_b(_se[_mm2['a']]["bp_ext"]); _bcme2 = _moy_b(_se[_mm2['a']]["bc_ext"])
+                                _tad2 = "favori" if _rd2 <= 5 else ("medium" if _rd2 <= 15 else "outsider")
+                                _tae2 = "favori" if _re2 <= 5 else ("medium" if _re2 <= 15 else "outsider")
+                                moteur_apprentissage.analyser_pattern_cotes(_co[0], _co[1], _co[2], _r2)
+                                moteur_apprentissage.analyser_pattern_classement(_mm2['h'], _mm2['a'], _rd2, _re2, _r2)
+                                moteur_apprentissage.analyser_pattern_force(_mm2['h'], _mm2['a'], _rd2, _re2, _r2)
+                                moteur_apprentissage.analyser_pattern_lieu_rang(_mm2['h'], _mm2['a'], _rd2, _re2, _r2)
+                                moteur_apprentissage.analyser_pattern_serie_forme(_mm2['h'], _mm2['a'], _fd2, _fe2, _r2)
+                                moteur_apprentissage.analyser_pattern_serie_rang(_mm2['h'], _mm2['a'], "stable", "stable", _r2)
+                                moteur_apprentissage.analyser_pattern_tendance_buts(_mm2['h'], _mm2['a'], _bpmd2, _bcmd2, _bpme2, _bcme2, _tad2, _tae2, _r2)
+                                moteur_apprentissage.analyser_pattern_equipe(_mm2['h'], "V" if _r2=="1" else ("N" if _r2=="X" else "D"), {"domicile": True})
+                                moteur_apprentissage.analyser_pattern_equipe(_mm2['a'], "V" if _r2=="2" else ("N" if _r2=="X" else "D"), {"domicile": False})
+                            except: pass
                         moteur_apprentissage.save()
-                        custom_notify("🧠 IA : Patterns mis à jour !", "#7FFFD4")
 
                     # Nettoyer session
                     for key in ['ocr_res_matchs', 'ocr_res_img']:
@@ -1729,23 +1773,46 @@ with tabs[3]:
                 st.session_state['history'][s_active][jk]["res"] = final_res_manual
                 save_db(st.session_state['history'])
 
-                # ── Apprentissage IA sur résultats manuels aussi ──
+                # ── Apprentissage IA V2.3 sur résultats manuels ──
                 if IA_DISPONIBLE:
-                    cal_ref_m = st.session_state['history'][s_active].get(jk, {}).get("cal", [])
-                    for i, m in enumerate(final_res_manual):
+                    _hist_av_m = {jj: st.session_state['history'][s_active][jj]
+                        for jj in sorted(st.session_state['history'][s_active].keys())
+                        if (int(re.search(r'\d+', jj).group()) if re.search(r'\d+', jj) else 0) < j_res}
+                    _std_av_m = get_standings(_hist_av_m, engine.teams_list)
+                    _se_m = {t: {"bp_dom": [], "bc_dom": [], "bp_ext": [], "bc_ext": []} for t in engine.teams_list}
+                    for _jd_m in _hist_av_m.values():
+                        for _mmm in _jd_m.get("res", []):
+                            try:
+                                _sh4, _sa4 = map(int, _mmm['s'].replace('-', ':').split(':'))
+                                if _mmm['h'] in _se_m: _se_m[_mmm['h']]["bp_dom"].append(_sh4); _se_m[_mmm['h']]["bc_dom"].append(_sa4)
+                                if _mmm['a'] in _se_m: _se_m[_mmm['a']]["bp_ext"].append(_sa4); _se_m[_mmm['a']]["bc_ext"].append(_sh4)
+                            except: pass
+                    def _moy_m(lst): return sum(lst)/len(lst) if lst else 1.5
+                    _cal_m = st.session_state['history'][s_active].get(jk, {}).get("cal", [])
+                    for _im, _mm_m in enumerate(final_res_manual):
                         try:
-                            sh, sa = map(int, m['s'].replace('-', ':').split(':'))
-                            resultat = "1" if sh > sa else ("X" if sh == sa else "2")
-                            cotes = cal_ref_m[i].get('o', [2.0, 3.0, 3.0]) if cal_ref_m and i < len(cal_ref_m) else [2.0, 3.0, 3.0]
-                            moteur_apprentissage.analyser_pattern_cotes(cotes[0], cotes[1], cotes[2], resultat)
-                            moteur_apprentissage.analyser_pattern_equipe(
-                                m['h'], "V" if resultat=="1" else ("N" if resultat=="X" else "D"), {"domicile": True})
-                            moteur_apprentissage.analyser_pattern_equipe(
-                                m['a'], "V" if resultat=="2" else ("N" if resultat=="X" else "D"), {"domicile": False})
-                        except:
-                            pass
+                            _sh5, _sa5 = map(int, _mm_m['s'].replace('-', ':').split(':'))
+                            _rm = "1" if _sh5 > _sa5 else ("X" if _sh5 == _sa5 else "2")
+                            _com = _cal_m[_im].get('o', [2.0, 3.0, 3.0]) if _cal_m and _im < len(_cal_m) else [2.0, 3.0, 3.0]
+                            _rdm = int(_std_av_m[_std_av_m['Équipe'] == _mm_m['h']]['Rang'].values[0]) if not _std_av_m[_std_av_m['Équipe'] == _mm_m['h']].empty else 10
+                            _rem = int(_std_av_m[_std_av_m['Équipe'] == _mm_m['a']]['Rang'].values[0]) if not _std_av_m[_std_av_m['Équipe'] == _mm_m['a']].empty else 10
+                            _fdm = get_forme_equipe(st.session_state['history'], s_active, _mm_m['h'], 3)
+                            _fem = get_forme_equipe(st.session_state['history'], s_active, _mm_m['a'], 3)
+                            _bpmdm = _moy_m(_se_m[_mm_m['h']]["bp_dom"]); _bcmdm = _moy_m(_se_m[_mm_m['h']]["bc_dom"])
+                            _bpmem = _moy_m(_se_m[_mm_m['a']]["bp_ext"]); _bcmem = _moy_m(_se_m[_mm_m['a']]["bc_ext"])
+                            _tadm = "favori" if _rdm <= 5 else ("medium" if _rdm <= 15 else "outsider")
+                            _taem = "favori" if _rem <= 5 else ("medium" if _rem <= 15 else "outsider")
+                            moteur_apprentissage.analyser_pattern_cotes(_com[0], _com[1], _com[2], _rm)
+                            moteur_apprentissage.analyser_pattern_classement(_mm_m['h'], _mm_m['a'], _rdm, _rem, _rm)
+                            moteur_apprentissage.analyser_pattern_force(_mm_m['h'], _mm_m['a'], _rdm, _rem, _rm)
+                            moteur_apprentissage.analyser_pattern_lieu_rang(_mm_m['h'], _mm_m['a'], _rdm, _rem, _rm)
+                            moteur_apprentissage.analyser_pattern_serie_forme(_mm_m['h'], _mm_m['a'], _fdm, _fem, _rm)
+                            moteur_apprentissage.analyser_pattern_serie_rang(_mm_m['h'], _mm_m['a'], "stable", "stable", _rm)
+                            moteur_apprentissage.analyser_pattern_tendance_buts(_mm_m['h'], _mm_m['a'], _bpmdm, _bcmdm, _bpmem, _bcmem, _tadm, _taem, _rm)
+                            moteur_apprentissage.analyser_pattern_equipe(_mm_m['h'], "V" if _rm=="1" else ("N" if _rm=="X" else "D"), {"domicile": True})
+                            moteur_apprentissage.analyser_pattern_equipe(_mm_m['a'], "V" if _rm=="2" else ("N" if _rm=="X" else "D"), {"domicile": False})
+                        except: pass
                     moteur_apprentissage.save()
-
                 if 'tmp_res' in st.session_state:
                     del st.session_state['tmp_res']
                 
@@ -2218,17 +2285,36 @@ with tabs[6]:
         else:
             st.info("Aucun résultat enregistré pour cette saison. Commencez par importer un calendrier et des résultats !")
 
-    # Stats IA Apprentissage
+    # Stats IA Apprentissage V2.3
     if IA_DISPONIBLE:
         st.divider()
-        st.markdown("### 🧠 Performance IA Apprentissage")
+        st.markdown("### 🧠 Performance IA Apprentissage V2.3")
         stats_ia = moteur_apprentissage.get_stats_apprentissage()
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Matchs appris", stats_ia.get("total", 0))
-        c2.metric("Taux réussite IA", f"{stats_ia.get('taux_reussite', 0):.1f}%")
-        c3.metric("Patterns découverts", stats_ia.get("patterns_connus", 0))
-        
-        # Patterns détectés (même si 0 matchs appris formellement)
+        _pc1, _pc2, _pc3, _pc4 = st.columns(4)
+        _pc1.metric("Matchs appris", stats_ia.get("total", 0))
+        _pc2.metric("Taux réussite IA", f"{stats_ia.get('taux_reussite', 0):.1f}%")
+        _pc3.metric("Taux 1N2", f"{stats_ia.get('taux_1n2', 0):.1f}%")
+        _pc4.metric("Patterns découverts", stats_ia.get("patterns_connus", 0))
+
+        # Facteurs classés V2.3
+        if hasattr(moteur_apprentissage, 'get_facteurs_classes'):
+            st.divider()
+            st.markdown("#### 🏆 Classement des Facteurs IA (V2.3)")
+            _facteurs = moteur_apprentissage.get_facteurs_classes()
+            if _facteurs:
+                _df_fac = pd.DataFrame(_facteurs)
+                _df_fac.columns = ["Facteur", "Taux (%)", "Poids actuel", "Observations"]
+                st.dataframe(_df_fac, use_container_width=True, hide_index=True)
+
+        # Rapport patterns V2.3
+        if hasattr(moteur_apprentissage, 'generer_rapport_patterns'):
+            st.divider()
+            st.markdown("#### 📊 Rapport Complet des Patterns V2.3")
+            if st.button("📋 Générer le rapport patterns", key="btn_rapport_patterns"):
+                _rapport = moteur_apprentissage.generer_rapport_patterns()
+                st.code(_rapport, language=None)
+
+        # Patterns détectés (tableau)
         st.divider()
         st.markdown("#### 📊 Patterns de Cotes (données historiques)")
         if moteur_apprentissage.patterns:
@@ -2237,14 +2323,15 @@ with tabs[6]:
                 if isinstance(d, dict) and "total" in d and d["total"] >= 1:
                     total = d["total"]
                     pattern_data.append({
-                        "Pattern Cotes": p,
-                        "Occurrences": total,
+                        "Pattern": p,
+                        "Occ.": total,
                         "1": f"{d.get('1',0)} ({d.get('1',0)/total*100:.0f}%)",
                         "X": f"{d.get('X',0)} ({d.get('X',0)/total*100:.0f}%)",
                         "2": f"{d.get('2',0)} ({d.get('2',0)/total*100:.0f}%)"
                     })
             if pattern_data:
-                st.dataframe(pd.DataFrame(pattern_data), use_container_width=True, hide_index=True)
+                _df_patt = pd.DataFrame(pattern_data).sort_values("Occ.", ascending=False)
+                st.dataframe(_df_patt, use_container_width=True, hide_index=True)
             else:
                 st.info("Enregistrez des résultats pour voir les patterns !")
         else:
@@ -2256,33 +2343,19 @@ import datetime as _dt
 
 with tabs[7]:
 
-    # ── INIT ──
+    # ══════════════════════════════════════════════════════
+    # INIT session state
+    # ══════════════════════════════════════════════════════
     if "chat_messages" not in st.session_state:
         st.session_state['chat_messages'] = load_chat_history()
     if 'active_chat_session' not in st.session_state:
         st.session_state['active_chat_session'] = None
-    if '_last_loaded_session' not in st.session_state:
-        st.session_state['_last_loaded_session'] = None
     if 'chat_theme' not in st.session_state:
         st.session_state['chat_theme'] = "🟢 Vert Oracle"
 
-    # ── GESTION SESSIONS ──
-    _all_sessions = load_chat_sessions()
-    # Créer une session si aucune n'existe
-    if not _all_sessions:
-        _first_sid = new_chat_session("Première conversation")
-        _all_sessions = load_chat_sessions()
-        st.session_state['active_chat_session'] = _first_sid
-    # Choisir la session active
-    if not st.session_state['active_chat_session'] or st.session_state['active_chat_session'] not in _all_sessions:
-        st.session_state['active_chat_session'] = sorted(_all_sessions.keys())[-1]
-    _sid = st.session_state['active_chat_session']
-    # Charger les messages de la session si on vient de changer
-    if st.session_state['_last_loaded_session'] != _sid:
-        st.session_state['chat_messages'] = load_session_messages(_sid)
-        st.session_state['_last_loaded_session'] = _sid
-
-    # ── APPEL IA ──
+    # ══════════════════════════════════════════════════════
+    # APPEL IA
+    # ══════════════════════════════════════════════════════
     def _call_ia(user_q: str):
         try:
             if IA_DISPONIBLE:
@@ -2299,104 +2372,188 @@ with tabs[7]:
                 return moteur_ia_chat.discuter(user_q)
         except Exception as _ex:
             return {"texte": f"Erreur IA : {_ex}", "source": "offline"}
-        return {"texte": "Mode offline — IA non disponible.", "source": "offline"}
+        return {"texte": "Mode offline.", "source": "offline"}
 
-    # ── THÈMES ──
+    # ══════════════════════════════════════════════════════
+    # LIRE MESSAGE ENTRANT — st.chat_input (natif, 100% fiable)
+    # ══════════════════════════════════════════════════════
+    _incoming = None
+    # 1) Vérifier st.chat_input (défini plus bas — le résultat est disponible ici via session_state)
+    if st.session_state.get('_pending_chat_input'):
+        _incoming = st.session_state.pop('_pending_chat_input')
+
+    # Obtenir la session active
+    _sid = get_or_create_active_session()
+    # Synchroniser chat_messages avec la session active
+    if st.session_state.get('_last_loaded_session') != _sid:
+        st.session_state['chat_messages'] = load_session_messages(_sid)
+        st.session_state['_last_loaded_session'] = _sid
+
+    # Traiter le message entrant
+    if _incoming:
+        _already = [m.get("content","") for m in st.session_state.get('chat_messages',[])[-3:] if m.get("role")=="user"]
+        if _incoming not in _already:
+            _ts = _dt.datetime.now().isoformat()
+            st.session_state.chat_messages.append({"role":"user","content":_incoming,"ts":_ts})
+            with st.spinner("🔮 Oracle réfléchit..."):
+                _rep = _call_ia(_incoming)
+            st.session_state.chat_messages.append({
+                "role": "assistant",
+                "content": _rep.get("texte", "Pas de réponse."),
+                "source": _rep.get("source", "offline"),
+                "ts": _dt.datetime.now().isoformat()
+            })
+            save_session_messages(_sid, st.session_state.chat_messages)
+            save_chat_history(st.session_state.chat_messages)
+            st.rerun()
+
+    # ══════════════════════════════════════════════════════
+    # THÈMES
+    # ══════════════════════════════════════════════════════
     _THEMES = {
         "🟢 Vert Oracle": {
-            "hd": "linear-gradient(135deg,#00FF88,#7FFFD4)", "hd_txt": "#002211", "hd_sub": "#003322", "dot": "#006644",
+            "hd": "linear-gradient(135deg,#00FF88,#7FFFD4)",
+            "hd_txt": "#002211", "hd_sub": "#003322", "dot": "#006644",
             "msgs_bg": "#071410", "scroll": "#00FF88",
             "wel_bg": "rgba(0,255,136,.07)", "wel_bd": "rgba(0,255,136,.2)", "wel_c": "#7FFFD4",
             "bu_u": "linear-gradient(135deg,#00FF88,#00e07a)", "bu_u_c": "#001a0d", "bu_u_sh": "rgba(0,255,136,.4)",
             "av": "linear-gradient(135deg,#7FFFD4,#00FF88)",
             "bu_b_bg": "rgba(255,255,255,.07)", "bu_b_bd": "rgba(127,255,212,.2)", "bu_b_c": "#ffffff",
             "lbl": "#00FF88", "typ": "#7FFFD4",
-            "root_sh": "rgba(0,255,140,.25)", "root_bd": "rgba(0,255,140,.35)",
+            "bar_bg": "#0a1e16", "bar_bd": "rgba(0,255,136,.15)",
+            "inp_bg": "rgba(255,255,255,.06)", "inp_bd": "rgba(0,255,136,.25)",
+            "inp_foc": "#00FF88", "inp_fsh": "rgba(0,255,136,.1)", "inp_ph": "rgba(127,255,212,.4)",
+            "snd": "linear-gradient(135deg,#00FF88,#7FFFD4)", "snd_c": "#001a0d", "snd_sh": "rgba(0,255,136,.5)",
+            "root_sh": "rgba(0,255,140,.2)", "root_bd": "rgba(0,255,140,.3)",
         },
         "🔵 Bleu Professionnel": {
-            "hd": "linear-gradient(135deg,#1a73e8,#4fc3f7)", "hd_txt": "#ffffff", "hd_sub": "#cce4ff", "dot": "#81d4fa",
+            "hd": "linear-gradient(135deg,#1a73e8,#4fc3f7)",
+            "hd_txt": "#ffffff", "hd_sub": "#cce4ff", "dot": "#81d4fa",
             "msgs_bg": "#0d1b2a", "scroll": "#1a73e8",
             "wel_bg": "rgba(26,115,232,.08)", "wel_bd": "rgba(26,115,232,.25)", "wel_c": "#4fc3f7",
             "bu_u": "linear-gradient(135deg,#1a73e8,#1565c0)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(26,115,232,.4)",
             "av": "linear-gradient(135deg,#4fc3f7,#1a73e8)",
             "bu_b_bg": "rgba(255,255,255,.06)", "bu_b_bd": "rgba(79,195,247,.2)", "bu_b_c": "#e8f4fd",
             "lbl": "#4fc3f7", "typ": "#4fc3f7",
-            "root_sh": "rgba(26,115,232,.25)", "root_bd": "rgba(26,115,232,.4)",
+            "bar_bg": "#0a1929", "bar_bd": "rgba(26,115,232,.2)",
+            "inp_bg": "rgba(255,255,255,.05)", "inp_bd": "rgba(26,115,232,.3)",
+            "inp_foc": "#4fc3f7", "inp_fsh": "rgba(79,195,247,.15)", "inp_ph": "rgba(79,195,247,.4)",
+            "snd": "linear-gradient(135deg,#1a73e8,#4fc3f7)", "snd_c": "#ffffff", "snd_sh": "rgba(26,115,232,.5)",
+            "root_sh": "rgba(26,115,232,.2)", "root_bd": "rgba(26,115,232,.35)",
         },
         "🟣 Violet Premium": {
-            "hd": "linear-gradient(135deg,#7c3aed,#c084fc)", "hd_txt": "#ffffff", "hd_sub": "#ede9fe", "dot": "#a78bfa",
+            "hd": "linear-gradient(135deg,#7c3aed,#c084fc)",
+            "hd_txt": "#ffffff", "hd_sub": "#ede9fe", "dot": "#a78bfa",
             "msgs_bg": "#0f0a1e", "scroll": "#7c3aed",
             "wel_bg": "rgba(124,58,237,.08)", "wel_bd": "rgba(124,58,237,.25)", "wel_c": "#c084fc",
             "bu_u": "linear-gradient(135deg,#7c3aed,#6d28d9)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(124,58,237,.4)",
             "av": "linear-gradient(135deg,#c084fc,#7c3aed)",
             "bu_b_bg": "rgba(255,255,255,.06)", "bu_b_bd": "rgba(192,132,252,.2)", "bu_b_c": "#f3e8ff",
             "lbl": "#c084fc", "typ": "#c084fc",
-            "root_sh": "rgba(124,58,237,.25)", "root_bd": "rgba(124,58,237,.4)",
+            "bar_bg": "#0c0818", "bar_bd": "rgba(124,58,237,.2)",
+            "inp_bg": "rgba(255,255,255,.05)", "inp_bd": "rgba(124,58,237,.3)",
+            "inp_foc": "#c084fc", "inp_fsh": "rgba(192,132,252,.15)", "inp_ph": "rgba(192,132,252,.4)",
+            "snd": "linear-gradient(135deg,#7c3aed,#c084fc)", "snd_c": "#ffffff", "snd_sh": "rgba(124,58,237,.5)",
+            "root_sh": "rgba(124,58,237,.2)", "root_bd": "rgba(124,58,237,.35)",
         },
         "🟠 Orange Sport": {
-            "hd": "linear-gradient(135deg,#f97316,#fbbf24)", "hd_txt": "#1a0a00", "hd_sub": "#431407", "dot": "#92400e",
+            "hd": "linear-gradient(135deg,#f97316,#fbbf24)",
+            "hd_txt": "#1a0a00", "hd_sub": "#431407", "dot": "#92400e",
             "msgs_bg": "#1a0e00", "scroll": "#f97316",
             "wel_bg": "rgba(249,115,22,.08)", "wel_bd": "rgba(249,115,22,.25)", "wel_c": "#fbbf24",
             "bu_u": "linear-gradient(135deg,#f97316,#ea580c)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(249,115,22,.4)",
             "av": "linear-gradient(135deg,#fbbf24,#f97316)",
             "bu_b_bg": "rgba(255,255,255,.06)", "bu_b_bd": "rgba(251,191,36,.2)", "bu_b_c": "#fff7ed",
             "lbl": "#fbbf24", "typ": "#fbbf24",
-            "root_sh": "rgba(249,115,22,.25)", "root_bd": "rgba(249,115,22,.4)",
+            "bar_bg": "#150b00", "bar_bd": "rgba(249,115,22,.2)",
+            "inp_bg": "rgba(255,255,255,.05)", "inp_bd": "rgba(249,115,22,.3)",
+            "inp_foc": "#fbbf24", "inp_fsh": "rgba(251,191,36,.15)", "inp_ph": "rgba(251,191,36,.4)",
+            "snd": "linear-gradient(135deg,#f97316,#fbbf24)", "snd_c": "#1a0a00", "snd_sh": "rgba(249,115,22,.5)",
+            "root_sh": "rgba(249,115,22,.2)", "root_bd": "rgba(249,115,22,.35)",
         },
         "⚪ Blanc Élégant": {
-            "hd": "linear-gradient(135deg,#374151,#6b7280)", "hd_txt": "#ffffff", "hd_sub": "#d1d5db", "dot": "#9ca3af",
+            "hd": "linear-gradient(135deg,#374151,#6b7280)",
+            "hd_txt": "#ffffff", "hd_sub": "#d1d5db", "dot": "#9ca3af",
             "msgs_bg": "#f9fafb", "scroll": "#374151",
             "wel_bg": "rgba(55,65,81,.06)", "wel_bd": "rgba(55,65,81,.15)", "wel_c": "#374151",
             "bu_u": "linear-gradient(135deg,#374151,#1f2937)", "bu_u_c": "#ffffff", "bu_u_sh": "rgba(55,65,81,.3)",
             "av": "linear-gradient(135deg,#6b7280,#374151)",
             "bu_b_bg": "#ffffff", "bu_b_bd": "rgba(55,65,81,.15)", "bu_b_c": "#111827",
             "lbl": "#374151", "typ": "#6b7280",
-            "root_sh": "rgba(55,65,81,.15)", "root_bd": "rgba(55,65,81,.25)",
+            "bar_bg": "#f3f4f6", "bar_bd": "rgba(55,65,81,.15)",
+            "inp_bg": "#ffffff", "inp_bd": "rgba(55,65,81,.2)",
+            "inp_foc": "#374151", "inp_fsh": "rgba(55,65,81,.1)", "inp_ph": "rgba(55,65,81,.4)",
+            "snd": "linear-gradient(135deg,#374151,#6b7280)", "snd_c": "#ffffff", "snd_sh": "rgba(55,65,81,.3)",
+            "root_sh": "rgba(55,65,81,.15)", "root_bd": "rgba(55,65,81,.2)",
         },
     }
-    _T = _THEMES.get(st.session_state['chat_theme'], _THEMES["🟢 Vert Oracle"])
 
     # ══════════════════════════════════════════════════════
-    # BARRE DE CONTRÔLE
+    # BARRE DE CONTRÔLE (thème + nouvelle session)
     # ══════════════════════════════════════════════════════
-    _cc1, _cc2, _cc3 = st.columns([2, 2, 1])
-    with _cc1:
-        _sel_theme = st.selectbox("🎨", list(_THEMES.keys()),
+    _ctrl1, _ctrl2, _ctrl3 = st.columns([2, 2, 1])
+    with _ctrl1:
+        _sel_theme = st.selectbox(
+            "🎨 Thème", list(_THEMES.keys()),
             index=list(_THEMES.keys()).index(st.session_state['chat_theme'])
                   if st.session_state['chat_theme'] in _THEMES else 0,
-            key="theme_v50", label_visibility="collapsed")
+            key="chat_theme_sel_v50", label_visibility="collapsed"
+        )
         if _sel_theme != st.session_state['chat_theme']:
             st.session_state['chat_theme'] = _sel_theme
             st.rerun()
-    with _cc2:
+
+    with _ctrl3:
+        if st.button("➕ Nouveau chat", key="btn_new_chat_v50", use_container_width=True):
+            _new_sid = new_chat_session()
+            st.session_state['active_chat_session'] = _new_sid
+            st.session_state['chat_messages'] = []
+            st.session_state['_last_loaded_session'] = _new_sid
+            st.rerun()
+
+    # ══════════════════════════════════════════════════════
+    # SÉLECTEUR DE SESSION (panneau latéral intégré)
+    # ══════════════════════════════════════════════════════
+    _all_sessions = load_chat_sessions()
+    if _all_sessions:
         _sorted_sids = sorted(_all_sessions.keys(), reverse=True)
-        _sess_labels = {
-            sid: f"💬 {_all_sessions[sid].get('title','Chat')[:30]}"
+        _session_labels = {
+            sid: f"💬 {_all_sessions[sid].get('title','Chat')} — {sid[6:8]}/{sid[4:6]}/{sid[0:4]} {sid[9:11]}:{sid[11:13]}"
             for sid in _sorted_sids
         }
-        _cur_idx = _sorted_sids.index(_sid) if _sid in _sorted_sids else 0
-        _chosen_lbl = st.selectbox("📂", list(_sess_labels.values()),
-            index=_cur_idx, key="sess_sel_v50", label_visibility="collapsed")
-        _chosen_sid = next((s for s, l in _sess_labels.items() if l == _chosen_lbl), _sid)
+        _current_idx = _sorted_sids.index(_sid) if _sid in _sorted_sids else 0
+        _chosen_label = st.selectbox(
+            "📂 Historique des chats",
+            options=list(_session_labels.values()),
+            index=_current_idx,
+            key="chat_session_sel_v50"
+        )
+        # Retrouver le sid depuis le label choisi
+        _chosen_sid = next((s for s, l in _session_labels.items() if l == _chosen_label), _sid)
         if _chosen_sid != _sid:
             st.session_state['active_chat_session'] = _chosen_sid
             st.session_state['chat_messages'] = load_session_messages(_chosen_sid)
             st.session_state['_last_loaded_session'] = _chosen_sid
-            st.rerun()
-    with _cc3:
-        if st.button("➕ Nouveau", key="new_sess_v50", use_container_width=True):
-            _nsid = new_chat_session()
-            st.session_state['active_chat_session'] = _nsid
-            st.session_state['chat_messages'] = []
-            st.session_state['_last_loaded_session'] = _nsid
+            _sid = _chosen_sid
             st.rerun()
 
+        # Renommer la session courante
+        with st.expander("✏️ Renommer ce chat", expanded=False):
+            _rename_val = st.text_input("Nouveau titre", value=_all_sessions.get(_sid, {}).get("title", ""), key="rename_input_v50")
+            if st.button("💾 Enregistrer le nom", key="btn_rename_v50"):
+                _sess = load_chat_sessions()
+                if _sid in _sess:
+                    _sess[_sid]["title"] = _rename_val
+                    _sess[_sid]["_titled"] = True
+                    save_chat_sessions(_sess)
+                    st.rerun()
+
     # ══════════════════════════════════════════════════════
-    # AFFICHAGE HTML — LECTURE SEULE (PAS D'INPUT DEDANS)
+    # RENDU CHAT HTML
     # ══════════════════════════════════════════════════════
+    _T = _THEMES[st.session_state['chat_theme']]
     _msgs = st.session_state.get('chat_messages', [])
     _msgs_json = json.dumps(_msgs, ensure_ascii=False)
-    _sess_title = _all_sessions.get(_sid, {}).get('title', 'Chat')
 
     _CHAT_HTML = f"""<!DOCTYPE html>
 <html><head>
@@ -2404,19 +2561,16 @@ with tabs[7]:
 <style>
 *{{box-sizing:border-box;margin:0;padding:0;}}
 html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:transparent;}}
-.root{{display:flex;flex-direction:column;height:460px;border-radius:18px;overflow:hidden;
+.root{{display:flex;flex-direction:column;height:500px;border-radius:18px;overflow:hidden;
   box-shadow:0 0 40px {_T['root_sh']},0 8px 32px rgba(0,0,0,.4);
   border:1.5px solid {_T['root_bd']};}}
-.hd{{background:{_T['hd']};padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}}
-.hd-av{{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.3);
-  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}}
+.hd{{background:{_T['hd']};padding:13px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;}}
+.hd-av{{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.3);
+  display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}}
 .hd-name{{color:{_T['hd_txt']};font-weight:800;font-size:15px;}}
-.hd-sub{{color:{_T['hd_sub']};font-size:11px;margin-top:2px;display:flex;align-items:center;gap:5px;}}
-.dot{{width:8px;height:8px;border-radius:50%;background:{_T['dot']};animation:pulse 2s infinite;display:inline-block;}}
+.hd-status{{color:{_T['hd_sub']};font-size:11px;margin-top:2px;display:flex;align-items:center;gap:5px;}}
+.dot{{width:8px;height:8px;border-radius:50%;background:{_T['dot']};animation:pulse 2s infinite;}}
 @keyframes pulse{{0%,100%{{opacity:1;transform:scale(1)}}50%{{opacity:.6;transform:scale(.85)}}}}
-.sess-badge{{background:rgba(255,255,255,.2);border-radius:10px;padding:2px 8px;font-size:10px;
-  color:{_T['hd_sub']};font-weight:600;margin-left:auto;max-width:120px;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap;}}
 .msgs{{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;
   background:{_T['msgs_bg']};scrollbar-width:thin;scrollbar-color:{_T['scroll']} {_T['msgs_bg']};}}
 .msgs::-webkit-scrollbar{{width:4px;}}
@@ -2432,20 +2586,46 @@ html,body{{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',s
 .av-b{{width:32px;height:32px;border-radius:50%;background:{_T['av']};
   display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-bottom:2px;}}
 .bu-b{{background:{_T['bu_b_bg']};border:1px solid {_T['bu_b_bd']};color:{_T['bu_b_c']};
-  padding:10px 15px;border-radius:20px 20px 20px 4px;max-width:82%;font-size:14px;line-height:1.5;word-break:break-word;}}
+  padding:10px 15px;border-radius:20px 20px 20px 4px;max-width:82%;font-size:14px;
+  line-height:1.5;word-break:break-word;}}
 .src-lbl{{font-size:10px;color:{_T['lbl']};font-weight:700;margin-bottom:4px;}}
-.bu-b .ts{{font-size:10px;color:rgba(150,200,180,.5);margin-top:4px;}}
+.bu-b .ts{{font-size:10px;color:rgba(127,200,180,.45);margin-top:4px;}}
+.typing{{display:flex;gap:5px;align-items:center;padding:4px 2px;}}
+.typing span{{width:9px;height:9px;border-radius:50%;background:{_T['typ']};opacity:.5;animation:bnc 1.1s infinite;}}
+.typing span:nth-child(2){{animation-delay:.18s;}}
+.typing span:nth-child(3){{animation-delay:.36s;}}
+@keyframes bnc{{0%,80%,100%{{transform:scale(.65);opacity:.3}}40%{{transform:scale(1.15);opacity:1}}}}
+.bar{{display:flex;align-items:flex-end;gap:8px;padding:10px 12px;
+  background:{_T['bar_bg']};border-top:1px solid {_T['bar_bd']};flex-shrink:0;}}
+.inp{{flex:1;min-width:0;background:{_T['inp_bg']};border:1.5px solid {_T['inp_bd']};
+  border-radius:18px;padding:10px 16px;font-size:14px;color:{_T['bu_b_c']};outline:none;
+  transition:border-color .2s;resize:none;min-height:42px;max-height:120px;
+  overflow-y:auto;line-height:1.4;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}}
+.inp:focus{{border-color:{_T['inp_foc']};box-shadow:0 0 0 3px {_T['inp_fsh']};}}
+.inp::placeholder{{color:{_T['inp_ph']};}}
+.snd{{width:44px;height:44px;border-radius:50%;background:{_T['snd']};border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:20px;color:{_T['snd_c']};
+  font-weight:bold;box-shadow:0 3px 16px {_T['snd_sh']};transition:transform .15s;flex-shrink:0;margin-bottom:1px;}}
+.snd:hover{{transform:scale(1.08);}}
+.snd:active{{transform:scale(.9);}}
+.snd:disabled{{opacity:.35;cursor:default;transform:none;}}
+@media(max-width:600px){{.root{{height:420px;}}}}
+.bar{{display:none !important;}}
 </style></head><body>
 <div class="root">
   <div class="hd">
     <div class="hd-av">🔮</div>
-    <div style="flex:1;min-width:0;">
+    <div style="flex:1;">
       <div class="hd-name">Oracle Mahita IA</div>
-      <div class="hd-sub"><span class="dot"></span> En ligne · Assistant pronostics</div>
+      <div class="hd-status"><span class="dot"></span> En ligne · Assistant pronostics</div>
     </div>
-    <div class="sess-badge">{_sess_title[:25]}</div>
   </div>
   <div class="msgs" id="msgs"></div>
+  <div class="bar">
+    <textarea class="inp" id="inp" placeholder="Écrivez votre message... (Entrée = envoyer, Maj+Entrée = nouvelle ligne)" rows="1"></textarea>
+    <button class="snd" id="snd" onclick="doSend()">&#10148;</button>
+  </div>
 </div>
 <script>
 const MSGS={_msgs_json};
@@ -2456,7 +2636,7 @@ function fmt(ts){{
 }}
 function renderAll(){{
   const box=document.getElementById('msgs');
-  let h='<div class="welcome">🔮 Bonjour ! Posez-moi n\\'importe quelle question sur vos pronostics, classements ou résultats.<br><small style="opacity:.7">👇 Utilisez le champ de saisie ci-dessous pour écrire</small></div>';
+  let h='<div class="welcome">🔮 Bonjour ! Posez-moi n\\'importe quelle question sur vos pronostics, classements ou résultats.</div>';
   MSGS.forEach(function(m){{
     const t=fmt(m.ts||'');
     if(m.role==='user'){{
@@ -2470,94 +2650,37 @@ function renderAll(){{
   box.innerHTML=h;
   box.scrollTop=box.scrollHeight;
 }}
+const inp=document.getElementById('inp');
+inp.addEventListener('input',function(){{this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';}});
+function doSend(){{
+  // ⚠️ DÉSACTIVÉ : utiliser le champ natif Streamlit ci-dessous
+}}
+inp.addEventListener('keydown',function(e){{if(e.key==='Enter'&&!e.shiftKey){{e.preventDefault();}}}});
 renderAll();
 </script></body></html>"""
 
+    # Réduire hauteur puisque la barre est désactivée dans le HTML
     components.html(_CHAT_HTML, height=480, scrolling=False)
-
-    # ══════════════════════════════════════════════════════
-    # ✅ SAISIE NATIVE STREAMLIT — 100% FIABLE
-    # st.chat_input() est le widget officiel pour les chats.
-    # Il fonctionne toujours, sans JS, sans iframe tricks.
-    # ══════════════════════════════════════════════════════
-    _user_input = st.chat_input("💬 Écrivez votre message ici...", key="chat_input_v50")
-
-    if _user_input and _user_input.strip():
-        _q = _user_input.strip()
-        _ts = _dt.datetime.now().isoformat()
-        st.session_state.chat_messages.append({"role": "user", "content": _q, "ts": _ts})
-
-        with st.spinner("🔮 Oracle réfléchit..."):
-            _rep = _call_ia(_q)
-
-        st.session_state.chat_messages.append({
-            "role": "assistant",
-            "content": _rep.get("texte", "Pas de réponse."),
-            "source": _rep.get("source", "offline"),
-            "ts": _dt.datetime.now().isoformat()
-        })
-        # Sauvegarder dans la session et le fichier global
-        save_session_messages(_sid, st.session_state.chat_messages)
-        save_chat_history(st.session_state.chat_messages)
-        st.rerun()
 
     st.markdown("---")
 
-    # ── Contrôles de session ──
-    _sc1, _sc2, _sc3, _sc4 = st.columns(4)
-    with _sc1:
-        if st.button("🗑️ Effacer ce chat", use_container_width=True, key="clr_v50"):
-            st.session_state.chat_messages = []
-            save_session_messages(_sid, [])
-            save_chat_history([])
-            st.rerun()
-    with _sc2:
-        if st.button("❌ Supprimer session", use_container_width=True, key="del_v50"):
-            _sess = load_chat_sessions()
-            if _sid in _sess: del _sess[_sid]
-            save_chat_sessions(_sess)
-            st.session_state['active_chat_session'] = None
-            st.session_state['chat_messages'] = []
-            st.session_state['_last_loaded_session'] = None
-            st.rerun()
-    with _sc3:
-        if st.button("💾 Exporter JSON", use_container_width=True, key="exp_v50"):
-            st.download_button("📥 Télécharger",
-                data=json.dumps(st.session_state.chat_messages, indent=2, ensure_ascii=False),
-                file_name=f"oracle_{_sess_title[:20].replace(' ','_')}.json", mime="application/json",
-                key="dl_v50")
-    with _sc4:
-        if st.button("📋 Voir contexte IA", use_container_width=True, key="ctx_v50"):
-            try:
-                _std3 = get_standings(st.session_state['history'][s_active], engine.teams_list)
-                _ctx3 = build_full_context(st.session_state['history'], s_active, _std3, next_j)
-                st.text_area("Contexte transmis à l'IA", _ctx3, height=200)
-            except Exception as _ex3:
-                st.error(f"Erreur : {_ex3}")
+    # ══════════════════════════════════════════════════════
+    # CHAT INPUT NATIF STREAMLIT (100% fiable, remplace le HTML input)
+    # ══════════════════════════════════════════════════════
+    _chat_native = st.chat_input("💬 Posez votre question à Oracle Mahita IA...")
+    if _chat_native and _chat_native.strip():
+        st.session_state['_pending_chat_input'] = _chat_native.strip()
+        st.rerun()
 
-    # ── Renommer session ──
-    with st.expander("✏️ Renommer ce chat", expanded=False):
-        _r1, _r2 = st.columns([3,1])
-        with _r1:
-            _rename_v = st.text_input("Titre", value=_all_sessions.get(_sid, {}).get("title", ""), key="rename_v50", label_visibility="collapsed")
-        with _r2:
-            if st.button("💾 OK", key="save_rename_v50", use_container_width=True):
-                _sess = load_chat_sessions()
-                if _sid in _sess:
-                    _sess[_sid]["title"] = _rename_v
-                    _sess[_sid]["_titled"] = True
-                    save_chat_sessions(_sess)
-                st.rerun()
-
-    # ── Config Groq ──
+    # Config Groq
     with st.expander("🔑 Configuration Groq API", expanded=False):
-        _gc1, _gc2 = st.columns([3,1])
-        with _gc1:
+        _c1, _c2 = st.columns([3,1])
+        with _c1:
             _api_key = st.text_input("Clé API Groq",
-                value=getattr(moteur_ia_chat,'api_key','') if IA_DISPONIBLE else '',
-                type="password", placeholder="gsk_xxx...", key="groq_key_v50")
-        with _gc2:
-            if st.button("🔗 Connecter", use_container_width=True, key="groq_btn_v50"):
+                                     value=getattr(moteur_ia_chat,'api_key','') if IA_DISPONIBLE else '',
+                                     type="password", placeholder="gsk_xxx...")
+        with _c2:
+            if st.button("🔗 Connecter", use_container_width=True, key="btn_groq_v50"):
                 if _api_key and IA_DISPONIBLE:
                     os.environ["GROQ_API_KEY"] = _api_key
                     moteur_ia_chat.api_key = _api_key
@@ -2568,32 +2691,54 @@ renderAll();
                         st.rerun()
                     except Exception as _e:
                         st.error(f"Erreur : {_e}")
-        _gsc1, _gsc2, _gsc3 = st.columns(3)
+        _sc1, _sc2, _sc3 = st.columns(3)
         _conn = IA_DISPONIBLE and getattr(moteur_ia_chat,'est_connecte',lambda:False)()
-        _gsc1.success("🟢 Groq actif") if _conn else _gsc1.warning("🟡 Offline")
+        _sc1.success("🟢 Groq actif") if _conn else _sc1.warning("🟡 Offline")
         _sia = moteur_apprentissage.get_stats_apprentissage() if IA_DISPONIBLE else {"total":0}
-        _gsc2.metric("Matchs appris", _sia.get("total",0))
+        _sc2.metric("Matchs appris", _sia.get("total",0))
         _tr = sum(len(jd.get("res",[])) for sd in st.session_state['history'].values() for jd in sd.values())
-        _gsc3.metric("Résultats", _tr)
+        _sc3.metric("Résultats", _tr)
 
-    # ── Suggestions ──
-    st.markdown("<p style='color:#00FF88;font-size:12px;margin:10px 0 4px 0;'>⚡ Suggestions rapides :</p>", unsafe_allow_html=True)
-    _SUGGS = ["Quelle équipe est la plus en forme ?", "Qui est favori pour le titre ?",
-              "Meilleures cotes de la prochaine journée", "Analyse les résultats récents"]
+    # Export + effacer session + supprimer session
+    _col1, _col2, _col3 = st.columns(3)
+    with _col1:
+        if st.button("💾 Exporter chat", use_container_width=True, key="btn_export_v50"):
+            _export_data = json.dumps(st.session_state.chat_messages, indent=2, ensure_ascii=False)
+            _sess_title = _all_sessions.get(_sid, {}).get("title", "chat")
+            st.download_button("📥 Télécharger JSON",
+                data=_export_data,
+                file_name=f"oracle_{_sess_title[:20].replace(' ','_')}.json",
+                mime="application/json")
+    with _col2:
+        if st.button("🗑️ Effacer ce chat", use_container_width=True, key="btn_clr_v50"):
+            st.session_state.chat_messages = []
+            save_session_messages(_sid, [])
+            save_chat_history([])
+            st.rerun()
+    with _col3:
+        if st.button("❌ Supprimer session", use_container_width=True, key="btn_del_v50"):
+            _sess = load_chat_sessions()
+            if _sid in _sess:
+                del _sess[_sid]
+                save_chat_sessions(_sess)
+            st.session_state['active_chat_session'] = None
+            st.session_state['chat_messages'] = []
+            st.session_state['_last_loaded_session'] = None
+            st.rerun()
+
+    # Suggestions
+    st.markdown("<p style='color:#00FF88;font-size:12px;margin:10px 0 4px 0;'>⚡ Suggestions :</p>", unsafe_allow_html=True)
+    _SUGGS = [
+        "Quelle équipe est la plus en forme ?",
+        "Qui est favori pour le titre ?",
+        "Meilleures cotes de la prochaine journée",
+        "Analyse les résultats récents",
+    ]
     _sg2 = st.columns(2)
     for _si, _sg in enumerate(_SUGGS):
         with _sg2[_si % 2]:
             if st.button(_sg, key=f"sg50_{_si}", use_container_width=True):
-                _ts2 = _dt.datetime.now().isoformat()
-                st.session_state.chat_messages.append({"role":"user","content":_sg,"ts":_ts2})
-                with st.spinner("🔮 Oracle réfléchit..."):
-                    _rep2 = _call_ia(_sg)
-                st.session_state.chat_messages.append({
-                    "role":"assistant","content":_rep2.get("texte","Pas de réponse."),
-                    "source":_rep2.get("source","offline"),"ts":_dt.datetime.now().isoformat()
-                })
-                save_session_messages(_sid, st.session_state.chat_messages)
-                save_chat_history(st.session_state.chat_messages)
+                st.session_state['_pending_chat_input'] = _sg
                 st.rerun()
 
 # ===================== Sauvegarde Globale =====================
