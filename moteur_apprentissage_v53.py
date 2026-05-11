@@ -28,6 +28,8 @@ class MoteurApprentissage:
             "scores_exacts": 0
         })
         self.perf_facteurs = self.data.get("perf_facteurs", self._init_perf_facteurs())
+        # ✅ V53.2 — Anti-doublons : journées déjà apprises {saison_jkey, ...}
+        self.journees_apprises: set = set(self.data.get("journees_apprises", []))
 
     def _init_poids(self) -> Dict:
         return {
@@ -53,6 +55,18 @@ class MoteurApprentissage:
         return {f: {"correct": 0, "total": 0} for f in facteurs}
 
     def _load(self) -> Dict:
+        # 1. Essai chargement depuis GitHub (données persistantes)
+        try:
+            from db_persistante import load_ia_memory
+            data_gh = load_ia_memory()
+            if data_gh:
+                # Synchroniser le fichier local
+                with open(DB_APPRENTISSAGE, "w", encoding="utf-8") as f:
+                    json.dump(data_gh, f, indent=4, ensure_ascii=False)
+                return data_gh
+        except Exception:
+            pass
+        # 2. Fallback fichier local
         if os.path.exists(DB_APPRENTISSAGE):
             try:
                 with open(DB_APPRENTISSAGE, "r", encoding="utf-8") as f:
@@ -67,10 +81,45 @@ class MoteurApprentissage:
             "poids":                  self.poids,
             "historique_predictions": self.historique_predictions[-500:],
             "stats_globales":         self.stats_globales,
-            "perf_facteurs":          self.perf_facteurs
+            "perf_facteurs":          self.perf_facteurs,
+            "journees_apprises":      list(self.journees_apprises)
         }
+        # 1. Sauvegarde locale (immédiate)
         with open(DB_APPRENTISSAGE, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=4, ensure_ascii=False)
+        # 2. Sauvegarde GitHub persistante (si configuré)
+        try:
+            from db_persistante import save_ia_memory
+            save_ia_memory(self.data)
+        except Exception:
+            pass  # Graceful fallback — données locales toujours disponibles
+
+    # ═══════════════════════════════════════════════════════════
+    #  ✅ V53.2 — GESTION ANTI-DOUBLONS JOURNÉES
+    # ═══════════════════════════════════════════════════════════
+
+    def _cle_journee(self, saison: str, journee_key: str) -> str:
+        """Crée une clé unique {saison}::{journee} pour identifier une journée."""
+        return f"{saison}::{journee_key}"
+
+    def est_journee_apprise(self, saison: str, journee_key: str) -> bool:
+        """Retourne True si cette journée a déjà été apprise."""
+        return self._cle_journee(saison, journee_key) in self.journees_apprises
+
+    def marquer_journee_apprise(self, saison: str, journee_key: str):
+        """Marque une journée comme apprise après apprentissage réussi."""
+        self.journees_apprises.add(self._cle_journee(saison, journee_key))
+
+    def effacer_journee_apprise(self, saison: str, journee_key: str):
+        """
+        Supprime le marquage d'une journée — à appeler quand les résultats
+        d'une journée sont effacés, permettant un réapprentissage propre.
+        """
+        self.journees_apprises.discard(self._cle_journee(saison, journee_key))
+
+    def get_journees_apprises(self) -> List[str]:
+        """Retourne la liste triée des journées déjà apprises."""
+        return sorted(self.journees_apprises)
 
     # ═══════════════════════════════════════════════════════════
     #  HELPERS
