@@ -7,7 +7,6 @@
 
 import streamlit as st
 import pandas as pd
-import easyocr
 import re
 import json
 import os
@@ -17,6 +16,14 @@ import numpy as np
 import io
 import math
 from typing import List, Dict
+
+# ✅ V57 — easyocr chargé en lazy (import différé) pour éviter le crash au démarrage
+try:
+    import easyocr as _easyocr_module
+    EASYOCR_DISPONIBLE = True
+except ImportError:
+    EASYOCR_DISPONIBLE = False
+    _easyocr_module = None
 
 # ✅ V54 — Authentification (optionnel : si auth_oracle.py absent, auth désactivée)
 try:
@@ -128,7 +135,7 @@ except ImportError:
     CERVEAU_DISPONIBLE = False  # indique que c'est le fallback
 
 # ── Configuration ──
-st.set_page_config(page_title="Oracle Mahita V56", layout="wide", page_icon="🔮")
+st.set_page_config(page_title="Oracle Mahita V57", layout="wide", page_icon="🔮")
 
 # ✅ V54 — AUTHENTIFICATION : bloque l'accès si non connecté
 # Si auth_oracle.py absent → cette ligne ne fait rien (accès libre)
@@ -252,31 +259,37 @@ def load_db():
     """Chargement avec priorité GitHub si db_persistante disponible."""
     try:
         from db_persistante import load_db as _gh_load
-        return _gh_load()
-    except ImportError:
+        result = _gh_load()
+        if isinstance(result, dict):
+            return result
+    except Exception:
+        # ImportError si module absent, ou toute autre erreur (réseau, JSON…)
         pass
-    # Fallback local
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except: return {}
+    # Fallback local (fichier oracle_history.json ou oracle_data.json)
+    for fname in [DB_FILE, "oracle_data.json"]:
+        if os.path.exists(fname):
+            try:
+                with open(fname, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                continue
     return {}
 
 def save_db(data):
     """Sauvegarde locale + commit GitHub si db_persistante disponible."""
-    # Toujours sauvegarder localement
+    # 1. Sauvegarde locale immédiate
     try:
         with open(DB_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
         st.error(f"Erreur de sauvegarde locale : {e}")
-    # Sauvegarde GitHub (si module disponible)
+    # 2. Sauvegarde GitHub (si db_persistante.py présent et configuré)
     try:
         from db_persistante import save_db as _gh_save
         _gh_save(data)
-    except ImportError:
-        pass  # Module absent → mode local uniquement
+    except Exception:
+        # Module absent ou erreur réseau → mode local uniquement, pas de crash
+        pass
 
 def load_chat_history():
     if os.path.exists(CHAT_FILE):
@@ -465,9 +478,14 @@ if IA_DISPONIBLE and not st.session_state.get('_ia_history_loaded'):
 # ===================== OCR ENGINE =====================
 @st.cache_resource
 def load_ocr():
-    return easyocr.Reader(['en', 'fr'], gpu=False)
+    """Charge EasyOCR de manière différée — appelé uniquement au 1er scan OCR."""
+    if not EASYOCR_DISPONIBLE:
+        raise RuntimeError("easyocr non installé. Ajoutez 'easyocr' dans requirements.txt")
+    return _easyocr_module.Reader(['en', 'fr'], gpu=False)
 
-reader = load_ocr()
+def get_reader():
+    """Retourne le reader OCR (chargement lazy au 1er appel)."""
+    return load_ocr()
 
 class OracleEngine:
     def __init__(self):
@@ -594,7 +612,7 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
 
             try:
                 cote_array = np.array(zone_cote)
-                res = reader.readtext(cote_array, detail=0, paragraph=False)
+                res = get_reader().readtext(cote_array, detail=0, paragraph=False)
                 if res:
                     texte = ' '.join(res).strip()
                     texte = texte.replace(',', '.').replace(' ', '')
@@ -646,7 +664,7 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
             zone_noms_contraste = np.array(enhancer.enhance(2.5))
             
             # OCR avec détail complet
-            res_noms = reader.readtext(zone_noms_contraste, detail=1, paragraph=False)
+            res_noms = get_reader().readtext(zone_noms_contraste, detail=1, paragraph=False)
             
             if debug:
                 print(f"\n--- Match {i+1} ---")
@@ -807,7 +825,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             enhancer = ImageEnhance.Contrast(centre_pil)
             centre_contraste = np.array(enhancer.enhance(3.0))
 
-            res_centre = reader.readtext(centre_contraste, detail=1, paragraph=False)
+            res_centre = get_reader().readtext(centre_contraste, detail=1, paragraph=False)
 
             if debug:
                 print(f"\n--- Match {i+1} CENTRE (score) ---")
@@ -835,7 +853,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             enhancer = ImageEnhance.Contrast(mt_pil)
             mt_contraste = np.array(enhancer.enhance(3.0))
 
-            res_mt = reader.readtext(mt_contraste, detail=1, paragraph=False)
+            res_mt = get_reader().readtext(mt_contraste, detail=1, paragraph=False)
 
             if debug:
                 print(f"\n--- Match {i+1} MT ---")
@@ -868,7 +886,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             enhancer = ImageEnhance.Contrast(nom_g_pil)
             nom_g_contraste = np.array(enhancer.enhance(2.5))
 
-            res_nom_g = reader.readtext(nom_g_contraste, detail=1, paragraph=False)
+            res_nom_g = get_reader().readtext(nom_g_contraste, detail=1, paragraph=False)
 
             if debug:
                 print(f"\n--- Match {i+1} NOM GAUCHE ---")
@@ -900,7 +918,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             enhancer = ImageEnhance.Contrast(nom_d_pil)
             nom_d_contraste = np.array(enhancer.enhance(2.5))
 
-            res_nom_d = reader.readtext(nom_d_contraste, detail=1, paragraph=False)
+            res_nom_d = get_reader().readtext(nom_d_contraste, detail=1, paragraph=False)
 
             if debug:
                 print(f"\n--- Match {i+1} NOM DROITE ---")
@@ -941,7 +959,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                 pil_big = pil_padded.resize((pil_padded.width * 3, pil_padded.height * 3), Image.LANCZOS)
                 enhanced = np.array(ImageEnhance.Contrast(pil_big).enhance(2.5))
 
-                res = reader.readtext(enhanced, detail=1, paragraph=False)
+                res = get_reader().readtext(enhanced, detail=1, paragraph=False)
 
                 if debug:
                     print(f"\n--- {label} ---")
@@ -1066,7 +1084,7 @@ def ocr_resultats_rapide(image_bytes, debug=False):
 
         # ─── APPEL 1 : image entière contrastée — grand texte (noms, scores, MT) ───
         img_enhanced = np.array(ImageEnhance.Contrast(img).enhance(2.2))
-        all_texts = reader.readtext(img_enhanced, detail=1, paragraph=False)
+        all_texts = get_reader().readtext(img_enhanced, detail=1, paragraph=False)
 
         # ─── APPEL 2 : image ×1.5 — petit texte (minutes buteurs) ───
         # FIX C: Scale réduit de ×2 à ×1.5 : sur 800px → 1200px (au lieu de 2160px)
@@ -1075,7 +1093,7 @@ def ocr_resultats_rapide(image_bytes, debug=False):
         _big_h = int(h_img * SCALE)
         img_big = img.resize((_big_w, _big_h), Image.LANCZOS)
         img_big_arr = np.array(ImageEnhance.Contrast(img_big).enhance(2.5))
-        all_texts_big_raw = reader.readtext(img_big_arr, detail=1, paragraph=False)
+        all_texts_big_raw = get_reader().readtext(img_big_arr, detail=1, paragraph=False)
         # Ramener les coordonnées à l'échelle originale
         all_texts_big = [([[p[0]/SCALE, p[1]/SCALE] for p in bbox], text, prob)
                      for bbox, text, prob in all_texts_big_raw]
@@ -1203,7 +1221,7 @@ def ocr_resultats_rapide(image_bytes, debug=False):
 
 # ===================== SIDEBAR — STATUT SYNC =====================
 with st.sidebar:
-    st.markdown("### 🔮 Oracle Mahita V56")
+    st.markdown("### 🔮 Oracle Mahita V57")
     # ✅ V54 — Widget utilisateur connecté (nom, rôle, déconnexion)
     if AUTH_DISPONIBLE:
         afficher_widget_utilisateur()
@@ -1222,7 +1240,7 @@ with st.sidebar:
                     st.rerun()
                 except Exception as _e:
                     st.error(f"Erreur resync : {_e}")
-    except ImportError:
+    except Exception:
         st.markdown("""
         <div style="padding:8px;background:rgba(255,165,0,0.1);border:1px solid #FFA500;
              border-radius:8px;font-size:11px;color:#FFA500;">
@@ -1256,7 +1274,7 @@ st.markdown(f"""
                     ORACLE MAHITA
                 </span>
                 <span style="font-family:'Orbitron',sans-serif;font-size:0.75em;font-weight:700;
-                    color:#00FF88;white-space:nowrap;">V56.0</span>
+                    color:#00FF88;white-space:nowrap;">V57.0</span>
                 <span style="color:#555;font-size:0.65em;letter-spacing:1px;white-space:nowrap;overflow:hidden;">
                     IA Intégrée &middot; Apprentissage Actif
                 </span>
