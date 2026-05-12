@@ -4,92 +4,92 @@
       "cal": [
         {
           "h": "Leeds",
-          "a": "Brighton",
+          "a": "Newcastle",
           "o": [
-            6.25,
-            5.04,
-            1.43
+            7.29,
+            5.15,
+            1.37
           ]
         },
         {
-          "h": "A. Villa",
-          "a": "Manchester Blue",
+          "h": "Brighton",
+          "a": "Sunderland",
           "o": [
-            2.95,
-            3.67,
-            2.23
+            1.56,
+            4.46,
+            5.17
+          ]
+        },
+        {
+          "h": "Wolverhampton",
+          "a": "Manchester Red",
+          "o": [
+            2.42,
+            3.44,
+            2.81
           ]
         },
         {
           "h": "C. Palace",
-          "a": "Bournemouth",
-          "o": [
-            1.81,
-            4.05,
-            3.84
-          ]
-        },
-        {
-          "h": "Spurs",
-          "a": "Burnley",
-          "o": [
-            1.43,
-            5.41,
-            5.75
-          ]
-        },
-        {
-          "h": "West Ham",
-          "a": "Liverpool",
-          "o": [
-            3.54,
-            4.02,
-            1.89
-          ]
-        },
-        {
-          "h": "Fulham",
-          "a": "Newcastle",
-          "o": [
-            2.63,
-            3.9,
-            2.36
-          ]
-        },
-        {
-          "h": "Manchester Red",
           "a": "Everton",
           "o": [
-            1.65,
-            3.6,
-            5.72
+            1.83,
+            3.39,
+            4.57
+          ]
+        },
+        {
+          "h": "Bournemouth",
+          "a": "Burnley",
+          "o": [
+            1.7,
+            4.0,
+            4.52
           ]
         },
         {
           "h": "London Blues",
-          "a": "Wolverhampton",
+          "a": "N. Forest",
           "o": [
-            1.47,
-            4.51,
-            6.24
+            1.42,
+            4.75,
+            6.78
           ]
         },
         {
-          "h": "Sunderland",
-          "a": "N. Forest",
+          "h": "Spurs",
+          "a": "Fulham",
           "o": [
-            4.41,
-            3.84,
-            1.75
+            1.96,
+            4.03,
+            3.31
           ]
         },
         {
           "h": "London Reds",
-          "a": "Brentford",
+          "a": "A. Villa",
           "o": [
-            1.45,
-            4.73,
-            6.27
+            1.35,
+            5.3,
+            7.75
+          ]
+        },
+        {
+          "h": "Brentford",
+          "a": "Manchester Blue",
+          "o": [
+            4.21,
+            4.15,
+            1.72
+          ]
+        },
+        {
+          "h": "Liverpool",
+          "a": "West Ham",
+          "o": [
+            1.22,
+            6.38,
+            11.65
           ]
         }
       ],
