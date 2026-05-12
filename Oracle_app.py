@@ -6,22 +6,36 @@
 """
 
 import streamlit as st
-import pandas as pd
 import re
 import json
 import os
-from difflib import get_close_matches
-from PIL import Image, ImageEnhance
-import numpy as np
 import io
 import math
+from difflib import get_close_matches
 from typing import List, Dict
 
-# ✅ V57 — easyocr chargé en lazy (import différé) pour éviter le crash au démarrage
+# ── Imports critiques protégés (crash si manquants dans requirements.txt) ──
+try:
+    import pandas as pd
+    _PANDAS_OK = True
+except Exception:
+    _PANDAS_OK = False
+    st.error("❌ 'pandas' manquant dans requirements.txt"); st.stop()
+
+try:
+    import numpy as np
+    from PIL import Image, ImageEnhance
+    _PIL_OK = True
+except Exception:
+    _PIL_OK = False
+    st.error("❌ 'Pillow' ou 'numpy' manquant dans requirements.txt"); st.stop()
+
+# ✅ V58 — easyocr chargé en lazy (import différé) pour éviter le crash au démarrage
+# Erreur large (Exception) car torch peut lever OSError, MemoryError, etc.
 try:
     import easyocr as _easyocr_module
     EASYOCR_DISPONIBLE = True
-except ImportError:
+except Exception:
     EASYOCR_DISPONIBLE = False
     _easyocr_module = None
 
@@ -135,7 +149,7 @@ except ImportError:
     CERVEAU_DISPONIBLE = False  # indique que c'est le fallback
 
 # ── Configuration ──
-st.set_page_config(page_title="Oracle Mahita V57", layout="wide", page_icon="🔮")
+st.set_page_config(page_title="Oracle Mahita V58", layout="wide", page_icon="🔮")
 
 # ✅ V54 — AUTHENTIFICATION : bloque l'accès si non connecté
 # Si auth_oracle.py absent → cette ligne ne fait rien (accès libre)
@@ -1221,7 +1235,7 @@ def ocr_resultats_rapide(image_bytes, debug=False):
 
 # ===================== SIDEBAR — STATUT SYNC =====================
 with st.sidebar:
-    st.markdown("### 🔮 Oracle Mahita V57")
+    st.markdown("### 🔮 Oracle Mahita V58")
     # ✅ V54 — Widget utilisateur connecté (nom, rôle, déconnexion)
     if AUTH_DISPONIBLE:
         afficher_widget_utilisateur()
@@ -1274,7 +1288,7 @@ st.markdown(f"""
                     ORACLE MAHITA
                 </span>
                 <span style="font-family:'Orbitron',sans-serif;font-size:0.75em;font-weight:700;
-                    color:#00FF88;white-space:nowrap;">V57.0</span>
+                    color:#00FF88;white-space:nowrap;">V58.0</span>
                 <span style="color:#555;font-size:0.65em;letter-spacing:1px;white-space:nowrap;overflow:hidden;">
                     IA Intégrée &middot; Apprentissage Actif
                 </span>
