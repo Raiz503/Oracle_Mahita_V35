@@ -1,0 +1,10 @@
+# ═══════════════════════════════════════════════════════
+#  packages.txt — dépendances système (Streamlit Cloud)
+#  Ces paquets sont installés via apt-get avant le build Python.
+# ═══════════════════════════════════════════════════════
+
+# Requis par opencv-python-headless
+libglib2.0-0
+
+# Requis par easyocr pour le traitement d'images
+libgomp1
