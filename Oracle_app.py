@@ -35,9 +35,12 @@ except ImportError:
     def tab_accessible(i): return True
     def get_role(): return "admin"
 
-# ── NOUVEAUX IMPORTS POUR L'OCR ──
-from scipy.signal import find_peaks
-from scipy.ndimage import uniform_filter1d
+# ── IMPORTS OPTIONNELS POUR L'OCR ──
+try:
+    from scipy.signal import find_peaks
+    from scipy.ndimage import uniform_filter1d
+except ImportError:
+    pass  # scipy optionnel — non utilisé directement dans ce fichier
 
 # ── Import IA (v53 en priorité, fallback v49) ──
 try:
@@ -125,7 +128,7 @@ except ImportError:
     CERVEAU_DISPONIBLE = False  # indique que c'est le fallback
 
 # ── Configuration ──
-st.set_page_config(page_title="Oracle Mahita V54", layout="wide", page_icon="🔮")
+st.set_page_config(page_title="Oracle Mahita V56", layout="wide", page_icon="🔮")
 
 # ✅ V54 — AUTHENTIFICATION : bloque l'accès si non connecté
 # Si auth_oracle.py absent → cette ligne ne fait rien (accès libre)
@@ -1096,19 +1099,19 @@ def ocr_resultats_rapide(image_bytes, debug=False):
 
             # ── Parcourir les blocs de l'image normale (noms + score + MT) ──
             for bbox, text, prob in all_texts:
-                if prob < 0.18 or len(text.strip()) < 1:
+                if prob < 0.12 or len(text.strip()) < 1:  # V56: seuil 0.12 (était 0.18)
                     continue
                 bx = (bbox[0][0] + bbox[2][0]) / 2
                 by = (bbox[0][1] + bbox[2][1]) / 2
 
                 # Appartient-il à cette ligne de match ?
-                if not (rt - 35 <= by <= rb + 50):
+                if not (rt - 40 <= by <= rb + 55):  # V56: zone élargie ±40 (était ±35)
                     continue
 
                 text_clean = text.strip()
 
                 # Score (centre du rectangle gris, même niveau)
-                if rl - 8 <= bx <= rr + 8 and rt - 5 <= by <= rb + 5:
+                if rl - 10 <= bx <= rr + 10 and rt - 8 <= by <= rb + 8:
                     m = re.search(r'(\d{1,2})[:\-](\d{1,2})', text_clean)
                     if m and not score:
                         score = f"{m.group(1)}:{m.group(2)}"
@@ -1128,10 +1131,11 @@ def ocr_resultats_rapide(image_bytes, debug=False):
                     continue
 
                 # Nom domicile (à gauche du rectangle, niveau du rect)
-                if bx < rl - 8 and rt - 25 <= by <= rb + 8:
+                if bx < rl - 5 and rt - 30 <= by <= rb + 10:
                     if len(text_clean) > 2 and not re.match(r'^\d+$', text_clean):
                         if not re.search(r"\d+\s*['′]", text_clean):
-                            m_eq = get_close_matches(text_clean, engine.teams_list, n=1, cutoff=0.28)
+                            # V56: cutoff réduit à 0.25 + accepte les abbréviations Bet261 (N. Forest, A. Villa...)
+                            m_eq = get_close_matches(text_clean, engine.teams_list, n=1, cutoff=0.25)
                             if m_eq and not equipe_dom:
                                 equipe_dom = m_eq[0]
                                 if debug:
@@ -1139,10 +1143,11 @@ def ocr_resultats_rapide(image_bytes, debug=False):
                     continue
 
                 # Nom extérieur (à droite du rectangle, niveau du rect)
-                if bx > rr + 8 and rt - 25 <= by <= rb + 8:
+                if bx > rr + 5 and rt - 30 <= by <= rb + 10:
                     if len(text_clean) > 2 and not re.match(r'^\d+$', text_clean):
                         if not re.search(r"\d+\s*['′]", text_clean):
-                            m_eq = get_close_matches(text_clean, engine.teams_list, n=1, cutoff=0.28)
+                            # V56: cutoff réduit à 0.25
+                            m_eq = get_close_matches(text_clean, engine.teams_list, n=1, cutoff=0.25)
                             if m_eq and not equipe_ext:
                                 equipe_ext = m_eq[0]
                                 if debug:
@@ -1198,7 +1203,7 @@ def ocr_resultats_rapide(image_bytes, debug=False):
 
 # ===================== SIDEBAR — STATUT SYNC =====================
 with st.sidebar:
-    st.markdown("### 🔮 Oracle Mahita V54")
+    st.markdown("### 🔮 Oracle Mahita V56")
     # ✅ V54 — Widget utilisateur connecté (nom, rôle, déconnexion)
     if AUTH_DISPONIBLE:
         afficher_widget_utilisateur()
@@ -1251,7 +1256,7 @@ st.markdown(f"""
                     ORACLE MAHITA
                 </span>
                 <span style="font-family:'Orbitron',sans-serif;font-size:0.75em;font-weight:700;
-                    color:#00FF88;white-space:nowrap;">V53.0</span>
+                    color:#00FF88;white-space:nowrap;">V56.0</span>
                 <span style="color:#555;font-size:0.65em;letter-spacing:1px;white-space:nowrap;overflow:hidden;">
                     IA Intégrée &middot; Apprentissage Actif
                 </span>
@@ -1464,32 +1469,16 @@ with tabs[1]:
                             if key in st.session_state:
                                 del st.session_state[key]
 
-                        # Notification riche calendrier OCR
+                        # Notification calendrier OCR — cadre vert néon
                         n_matchs = len(matchs_ocr)
                         equipes_str = ", ".join(f"{m['h']} vs {m['a']}" for m in matchs_ocr[:3])
                         if n_matchs > 3: equipes_str += f" (+ {n_matchs-3} autres)"
                         st.markdown(f"""
-                        <div style="padding:16px;border:2px solid #7FFFD4;border-radius:12px;
-                             background:rgba(0,255,136,0.07);margin:12px 0;
-                             box-shadow:0 0 18px rgba(0,255,136,0.35),inset 0 0 12px rgba(0,255,136,0.06);
-                             animation:pulse-green 2s ease-in-out;">
-                          <div style="color:#7FFFD4;font-weight:800;font-size:1.1em;margin-bottom:8px;">
-                            ✅ Journée {j_cal} — Calendrier enregistré !
-                          </div>
-                          <div style="color:#ccc;font-size:13px;margin-bottom:6px;">
-                            📋 <b>{n_matchs} matchs</b> importés avec succès
-                          </div>
-                          <div style="color:#aaa;font-size:12px;margin-bottom:10px;">{equipes_str}</div>
-                          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <span style="background:rgba(127,255,212,0.15);color:#7FFFD4;
-                                  border-radius:6px;padding:4px 10px;font-size:12px;">
-                              🎯 Allez dans PRONOS pour analyser
-                            </span>
-                            <span style="background:rgba(127,255,212,0.15);color:#7FFFD4;
-                                  border-radius:6px;padding:4px 10px;font-size:12px;">
-                              🧠 IA prête à prédire
-                            </span>
-                          </div>
+                        <div class="notif-green">
+                          <div style="font-size:1.3em;margin-bottom:6px;">✅ Calendrier enregistré</div>
+                          <div style="color:#ccc;font-size:13px;">📋 <b>{n_matchs} matchs</b> importés · Journée {j_cal}</div>
+                          <div style="color:#aaa;font-size:12px;margin-top:4px;">{equipes_str}</div>
+                          <div style="margin-top:8px;font-size:12px;color:#7FFFD4;">🎯 Allez dans <b>PRONOS</b> pour analyser · 🧠 IA prête</div>
                         </div>
                         """, unsafe_allow_html=True)
                         st.rerun()
@@ -1528,13 +1517,10 @@ with tabs[1]:
                 if 'tmp_cal' in st.session_state: del st.session_state['tmp_cal']
                 n_matchs_m = len(final_c)
                 st.markdown(f"""
-                <div style="padding:16px;border:2px solid #7FFFD4;border-radius:12px;
-                     background:rgba(127,255,212,0.07);margin:12px 0;">
-                  <div style="color:#7FFFD4;font-weight:800;font-size:1.1em;margin-bottom:6px;">
-                    ✅ Journée {j_cal} — Calendrier enregistré !
-                  </div>
-                  <div style="color:#ccc;font-size:13px;">📋 <b>{n_matchs_m} matchs</b> saisis manuellement</div>
-                  <div style="color:#888;font-size:12px;margin-top:8px;">➡️ Rendez-vous dans l'onglet <b>PRONOS</b></div>
+                <div class="notif-green">
+                  <div style="font-size:1.3em;margin-bottom:6px;">✅ Calendrier enregistré</div>
+                  <div style="color:#ccc;font-size:13px;">📋 <b>{n_matchs_m} matchs</b> saisis manuellement · Journée {j_cal}</div>
+                  <div style="color:#888;font-size:12px;margin-top:6px;">➡️ Rendez-vous dans l'onglet <b>PRONOS</b></div>
                 </div>
                 """, unsafe_allow_html=True)
                 st.rerun()
@@ -2127,34 +2113,15 @@ with tabs[3]:
                             else: nb_2r += 1; victoires_ext.append(r['a'])
                         except: pass
                     st.markdown(f"""
-                    <div style="padding:16px;border:2px solid #00FF00;border-radius:12px;
-                         background:rgba(0,255,0,0.06);margin:12px 0;
-                         box-shadow:0 0 20px rgba(0,255,136,0.4),inset 0 0 14px rgba(0,255,136,0.07);
-                         animation:pulse-green 2s ease-in-out;">
-                      <div style="color:#00FF88;font-weight:800;font-size:1.1em;margin-bottom:10px;">
-                        ✅ Journée {j_res} — Résultats enregistrés !
+                    <div class="notif-green">
+                      <div style="font-size:1.3em;margin-bottom:8px;">✅ Résultats de la journée {j_res}</div>
+                      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+                        <span style="color:#00FF88;font-weight:800;">🏠 Dom: {nb_1r}</span>
+                        <span style="color:#FFA500;font-weight:800;">🤝 Nul: {nb_xr}</span>
+                        <span style="color:#7FFFD4;font-weight:800;">✈️ Ext: {nb_2r}</span>
+                        <span style="color:#fff;font-weight:800;">⚽ Buts: {buts_r}</span>
                       </div>
-                      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-                        <div style="background:rgba(0,255,0,0.1);border-radius:8px;padding:8px 14px;text-align:center;">
-                          <div style="color:#00FF88;font-size:1.4em;font-weight:800;">{nb_1r}</div>
-                          <div style="color:#888;font-size:11px;">Victoires Dom.</div>
-                        </div>
-                        <div style="background:rgba(255,165,0,0.1);border-radius:8px;padding:8px 14px;text-align:center;">
-                          <div style="color:#FFA500;font-size:1.4em;font-weight:800;">{nb_xr}</div>
-                          <div style="color:#888;font-size:11px;">Nuls</div>
-                        </div>
-                        <div style="background:rgba(127,255,212,0.1);border-radius:8px;padding:8px 14px;text-align:center;">
-                          <div style="color:#7FFFD4;font-size:1.4em;font-weight:800;">{nb_2r}</div>
-                          <div style="color:#888;font-size:11px;">Victoires Ext.</div>
-                        </div>
-                        <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:8px 14px;text-align:center;">
-                          <div style="color:#fff;font-size:1.4em;font-weight:800;">{buts_r}</div>
-                          <div style="color:#888;font-size:11px;">Buts total</div>
-                        </div>
-                      </div>
-                      <div style="color:#aaa;font-size:12px;">
-                        🧠 IA Apprentissage mis à jour · 🏆 Classement recalculé
-                      </div>
+                      <div style="color:#aaa;font-size:12px;">🧠 IA Apprentissage mis à jour · 🏆 Classement recalculé</div>
                     </div>
                     """, unsafe_allow_html=True)
                     st.rerun()
@@ -2276,11 +2243,8 @@ with tabs[3]:
                         else: nb_2m += 1
                     except: pass
                 st.markdown(f"""
-                <div style="padding:14px;border:2px solid #00FF00;border-radius:12px;
-                     background:rgba(0,255,0,0.05);margin:10px 0;">
-                  <div style="color:#00FF88;font-weight:800;margin-bottom:8px;">
-                    ✅ Journée {j_res} — Résultats enregistrés !
-                  </div>
+                <div class="notif-green">
+                  <div style="font-size:1.3em;margin-bottom:6px;">✅ Résultats de la journée {j_res}</div>
                   <div style="color:#ccc;font-size:13px;">
                     🏠 Dom: {nb_1m} · 🤝 Nul: {nb_xm} · ✈️ Ext: {nb_2m} · ⚽ Buts: {buts_m}
                   </div>
@@ -3062,7 +3026,7 @@ with tabs[6]:
                     try:
                         if _j_to_del in st.session_state['history'][s_active]:
                             st.session_state['history'][s_active][_j_to_del]['res'] = []
-                            sauvegarder_history(st.session_state['history'])
+                            save_db(st.session_state['history'])
                             # ✅ V53.2 — Réinitialiser le marquage apprises pour réapprentissage
                             if IA_DISPONIBLE and moteur_apprentissage and hasattr(moteur_apprentissage, 'effacer_journee_apprise'):
                                 moteur_apprentissage.effacer_journee_apprise(s_active, _j_to_del)
@@ -3097,7 +3061,7 @@ with tabs[6]:
                 try:
                     if s_active in st.session_state['history']:
                         del st.session_state['history'][s_active]
-                        sauvegarder_history(st.session_state['history'])
+                        save_db(st.session_state['history'])
                         st.success(f"✅ Saison {s_active} supprimée.")
                         st.rerun()
                 except Exception as _e:
