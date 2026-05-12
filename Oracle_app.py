@@ -6,38 +6,17 @@
 """
 
 import streamlit as st
+import pandas as pd
+import easyocr
 import re
 import json
 import os
+from difflib import get_close_matches
+from PIL import Image, ImageEnhance
+import numpy as np
 import io
 import math
-from difflib import get_close_matches
 from typing import List, Dict
-
-# ── Imports critiques protégés (crash si manquants dans requirements.txt) ──
-try:
-    import pandas as pd
-    _PANDAS_OK = True
-except Exception:
-    _PANDAS_OK = False
-    st.error("❌ 'pandas' manquant dans requirements.txt"); st.stop()
-
-try:
-    import numpy as np
-    from PIL import Image, ImageEnhance
-    _PIL_OK = True
-except Exception:
-    _PIL_OK = False
-    st.error("❌ 'Pillow' ou 'numpy' manquant dans requirements.txt"); st.stop()
-
-# ✅ V58 — easyocr chargé en lazy (import différé) pour éviter le crash au démarrage
-# Erreur large (Exception) car torch peut lever OSError, MemoryError, etc.
-try:
-    import easyocr as _easyocr_module
-    EASYOCR_DISPONIBLE = True
-except Exception:
-    EASYOCR_DISPONIBLE = False
-    _easyocr_module = None
 
 # ✅ V54 — Authentification (optionnel : si auth_oracle.py absent, auth désactivée)
 try:
@@ -56,12 +35,9 @@ except ImportError:
     def tab_accessible(i): return True
     def get_role(): return "admin"
 
-# ── IMPORTS OPTIONNELS POUR L'OCR ──
-try:
-    from scipy.signal import find_peaks
-    from scipy.ndimage import uniform_filter1d
-except ImportError:
-    pass  # scipy optionnel — non utilisé directement dans ce fichier
+# ── NOUVEAUX IMPORTS POUR L'OCR ──
+from scipy.signal import find_peaks
+from scipy.ndimage import uniform_filter1d
 
 # ── Import IA (v53 en priorité, fallback v49) ──
 try:
@@ -149,7 +125,7 @@ except ImportError:
     CERVEAU_DISPONIBLE = False  # indique que c'est le fallback
 
 # ── Configuration ──
-st.set_page_config(page_title="Oracle Mahita V58", layout="wide", page_icon="🔮")
+st.set_page_config(page_title="Oracle Mahita V54", layout="wide", page_icon="🔮")
 
 # ✅ V54 — AUTHENTIFICATION : bloque l'accès si non connecté
 # Si auth_oracle.py absent → cette ligne ne fait rien (accès libre)
@@ -273,37 +249,31 @@ def load_db():
     """Chargement avec priorité GitHub si db_persistante disponible."""
     try:
         from db_persistante import load_db as _gh_load
-        result = _gh_load()
-        if isinstance(result, dict):
-            return result
-    except Exception:
-        # ImportError si module absent, ou toute autre erreur (réseau, JSON…)
+        return _gh_load()
+    except ImportError:
         pass
-    # Fallback local (fichier oracle_history.json ou oracle_data.json)
-    for fname in [DB_FILE, "oracle_data.json"]:
-        if os.path.exists(fname):
-            try:
-                with open(fname, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                continue
+    # Fallback local
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except: return {}
     return {}
 
 def save_db(data):
     """Sauvegarde locale + commit GitHub si db_persistante disponible."""
-    # 1. Sauvegarde locale immédiate
+    # Toujours sauvegarder localement
     try:
         with open(DB_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
         st.error(f"Erreur de sauvegarde locale : {e}")
-    # 2. Sauvegarde GitHub (si db_persistante.py présent et configuré)
+    # Sauvegarde GitHub (si module disponible)
     try:
         from db_persistante import save_db as _gh_save
         _gh_save(data)
-    except Exception:
-        # Module absent ou erreur réseau → mode local uniquement, pas de crash
-        pass
+    except ImportError:
+        pass  # Module absent → mode local uniquement
 
 def load_chat_history():
     if os.path.exists(CHAT_FILE):
@@ -492,14 +462,9 @@ if IA_DISPONIBLE and not st.session_state.get('_ia_history_loaded'):
 # ===================== OCR ENGINE =====================
 @st.cache_resource
 def load_ocr():
-    """Charge EasyOCR de manière différée — appelé uniquement au 1er scan OCR."""
-    if not EASYOCR_DISPONIBLE:
-        raise RuntimeError("easyocr non installé. Ajoutez 'easyocr' dans requirements.txt")
-    return _easyocr_module.Reader(['en', 'fr'], gpu=False)
+    return easyocr.Reader(['en', 'fr'], gpu=False)
 
-def get_reader():
-    """Retourne le reader OCR (chargement lazy au 1er appel)."""
-    return load_ocr()
+reader = load_ocr()
 
 class OracleEngine:
     def __init__(self):
@@ -626,7 +591,7 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
 
             try:
                 cote_array = np.array(zone_cote)
-                res = get_reader().readtext(cote_array, detail=0, paragraph=False)
+                res = reader.readtext(cote_array, detail=0, paragraph=False)
                 if res:
                     texte = ' '.join(res).strip()
                     texte = texte.replace(',', '.').replace(' ', '')
@@ -678,7 +643,7 @@ def ocr_calendrier_bet261(image_bytes, debug=False):
             zone_noms_contraste = np.array(enhancer.enhance(2.5))
             
             # OCR avec détail complet
-            res_noms = get_reader().readtext(zone_noms_contraste, detail=1, paragraph=False)
+            res_noms = reader.readtext(zone_noms_contraste, detail=1, paragraph=False)
             
             if debug:
                 print(f"\n--- Match {i+1} ---")
@@ -839,7 +804,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             enhancer = ImageEnhance.Contrast(centre_pil)
             centre_contraste = np.array(enhancer.enhance(3.0))
 
-            res_centre = get_reader().readtext(centre_contraste, detail=1, paragraph=False)
+            res_centre = reader.readtext(centre_contraste, detail=1, paragraph=False)
 
             if debug:
                 print(f"\n--- Match {i+1} CENTRE (score) ---")
@@ -867,7 +832,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             enhancer = ImageEnhance.Contrast(mt_pil)
             mt_contraste = np.array(enhancer.enhance(3.0))
 
-            res_mt = get_reader().readtext(mt_contraste, detail=1, paragraph=False)
+            res_mt = reader.readtext(mt_contraste, detail=1, paragraph=False)
 
             if debug:
                 print(f"\n--- Match {i+1} MT ---")
@@ -900,7 +865,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             enhancer = ImageEnhance.Contrast(nom_g_pil)
             nom_g_contraste = np.array(enhancer.enhance(2.5))
 
-            res_nom_g = get_reader().readtext(nom_g_contraste, detail=1, paragraph=False)
+            res_nom_g = reader.readtext(nom_g_contraste, detail=1, paragraph=False)
 
             if debug:
                 print(f"\n--- Match {i+1} NOM GAUCHE ---")
@@ -932,7 +897,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
             enhancer = ImageEnhance.Contrast(nom_d_pil)
             nom_d_contraste = np.array(enhancer.enhance(2.5))
 
-            res_nom_d = get_reader().readtext(nom_d_contraste, detail=1, paragraph=False)
+            res_nom_d = reader.readtext(nom_d_contraste, detail=1, paragraph=False)
 
             if debug:
                 print(f"\n--- Match {i+1} NOM DROITE ---")
@@ -973,7 +938,7 @@ def ocr_resultats_bet261(image_bytes, debug=False):
                 pil_big = pil_padded.resize((pil_padded.width * 3, pil_padded.height * 3), Image.LANCZOS)
                 enhanced = np.array(ImageEnhance.Contrast(pil_big).enhance(2.5))
 
-                res = get_reader().readtext(enhanced, detail=1, paragraph=False)
+                res = reader.readtext(enhanced, detail=1, paragraph=False)
 
                 if debug:
                     print(f"\n--- {label} ---")
@@ -1037,10 +1002,181 @@ def ocr_resultats_bet261(image_bytes, debug=False):
     return matches
 
 
+# ===================== OCR RÉSULTATS — MODE RAPIDE (2 appels au lieu de 50) =====================
+def ocr_resultats_rapide(image_bytes, debug=False):
+    """OCR résultats Bet261 — MODE RAPIDE.
+    Principe : 1 readtext() sur l'image entière + 1 readtext() sur image ×2 pour buteurs.
+    Résultat  : mêmes données extraites (score, MT, noms, buteurs) en 5-15 sec au lieu de 100-150 sec.
+    FIX V53.1 :
+      - Conversion forcée en RGB (évite crash cv2 sur images RGBA/palette)
+      - Dimensions converties en int Python (évite crash PIL resize avec numpy.int64)
+      - try/except global pour retourner [] proprement au lieu de planter l'app
+    """
+    try:
+        import cv2
+        img = Image.open(io.BytesIO(image_bytes)).convert('RGB')  # FIX A: force RGB
+        img_array = np.array(img)
+        h_img, w_img = int(img_array.shape[0]), int(img_array.shape[1])  # FIX B: int Python
+
+        # ─── ÉTAPE 1 : Détecter les rectangles gris (score box) — identique au mode précis ───
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        gray_mask = (hsv[:,:,1] < 50) & (hsv[:,:,2] > 40) & (hsv[:,:,2] < 180)
+        gray_mask = gray_mask.astype(np.uint8)
+        kernel = np.ones((5,5), np.uint8)
+        gray_mask = cv2.morphologyEx(gray_mask, cv2.MORPH_CLOSE, kernel)
+        contours, _ = cv2.findContours(gray_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        rectangles = []
+        for cnt in contours:
+            x, y, bw, bh = cv2.boundingRect(cnt)
+            area = bw * bh
+            aspect = bw / bh if bh > 0 else 0
+            if 1000 < area < 8000 and 0.8 < aspect < 2.5 and bw > 40 and bh > 25:
+                rectangles.append({'x': x, 'y': y, 'w': bw, 'h': bh,
+                                    'cx': x+bw//2, 'cy': y+bh//2})
+
+        rectangles.sort(key=lambda r: r['cy'])
+        rectangles = [r for r in rectangles if r['cy'] > int(h_img * 0.15)]
+        rectangles = rectangles[:10]
+
+        if not rectangles:
+            return []
+
+        # ─── APPEL 1 : image entière contrastée — grand texte (noms, scores, MT) ───
+        img_enhanced = np.array(ImageEnhance.Contrast(img).enhance(2.2))
+        all_texts = reader.readtext(img_enhanced, detail=1, paragraph=False)
+
+        # ─── APPEL 2 : image ×2 — petit texte (minutes buteurs) ───
+        SCALE = 2
+        img_big = img.resize((w_img * SCALE, h_img * SCALE), Image.LANCZOS)
+        img_big_arr = np.array(ImageEnhance.Contrast(img_big).enhance(2.5))
+        all_texts_big_raw = reader.readtext(img_big_arr, detail=1, paragraph=False)
+        # Ramener les coordonnées à l'échelle originale
+        all_texts_big = [([[p[0]/SCALE, p[1]/SCALE] for p in bbox], text, prob)
+                     for bbox, text, prob in all_texts_big_raw]
+
+        if debug:
+            print(f"[RAPIDE] Textes détectés image normale: {len(all_texts)}")
+            print(f"[RAPIDE] Textes détectés image ×{SCALE}:  {len(all_texts_big)}")
+
+        # ─── ÉTAPE 2 : Assigner chaque bloc de texte à son match via position ───
+        matches = []
+
+        for i, rect in enumerate(rectangles):
+            rl, rr = rect['x'], rect['x'] + rect['w']
+            rt, rb = rect['y'], rect['y'] + rect['h']
+
+            y_start = max(0, rt - 15)
+            y_end   = min(h_img, rb + 55)
+            ligne_img = img.crop((0, y_start, w_img, y_end))
+
+            equipe_dom = equipe_ext = score = mt = buteurs_dom = buteurs_ext = ""
+
+            # ── Parcourir les blocs de l'image normale (noms + score + MT) ──
+            for bbox, text, prob in all_texts:
+                if prob < 0.18 or len(text.strip()) < 1:
+                    continue
+                bx = (bbox[0][0] + bbox[2][0]) / 2
+                by = (bbox[0][1] + bbox[2][1]) / 2
+
+                # Appartient-il à cette ligne de match ?
+                if not (rt - 35 <= by <= rb + 50):
+                    continue
+
+                text_clean = text.strip()
+
+                # Score (centre du rectangle gris, même niveau)
+                if rl - 8 <= bx <= rr + 8 and rt - 5 <= by <= rb + 5:
+                    m = re.search(r'(\d{1,2})[:\-](\d{1,2})', text_clean)
+                    if m and not score:
+                        score = f"{m.group(1)}:{m.group(2)}"
+                    continue
+
+                # Mi-temps (sous le rectangle, zone centrale)
+                if rl - 25 <= bx <= rr + 25 and rb < by <= rb + 50:
+                    m_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', text_clean, re.IGNORECASE)
+                    if m_mt:
+                        mt = f"{m_mt.group(1)}:{m_mt.group(2)}"
+                    elif not mt:
+                        m2 = re.search(r'(\d{1,2})[:\-](\d{1,2})', text_clean)
+                        if m2:
+                            cand = f"{m2.group(1)}:{m2.group(2)}"
+                            if cand != score:
+                                mt = cand
+                    continue
+
+                # Nom domicile (à gauche du rectangle, niveau du rect)
+                if bx < rl - 8 and rt - 25 <= by <= rb + 8:
+                    if len(text_clean) > 2 and not re.match(r'^\d+$', text_clean):
+                        if not re.search(r"\d+\s*['′]", text_clean):
+                            m_eq = get_close_matches(text_clean, engine.teams_list, n=1, cutoff=0.28)
+                            if m_eq and not equipe_dom:
+                                equipe_dom = m_eq[0]
+                                if debug:
+                                    print(f"  DOM '{text_clean}' → {equipe_dom}")
+                    continue
+
+                # Nom extérieur (à droite du rectangle, niveau du rect)
+                if bx > rr + 8 and rt - 25 <= by <= rb + 8:
+                    if len(text_clean) > 2 and not re.match(r'^\d+$', text_clean):
+                        if not re.search(r"\d+\s*['′]", text_clean):
+                            m_eq = get_close_matches(text_clean, engine.teams_list, n=1, cutoff=0.28)
+                            if m_eq and not equipe_ext:
+                                equipe_ext = m_eq[0]
+                                if debug:
+                                    print(f"  EXT '{text_clean}' → {equipe_ext}")
+                    continue
+
+            # ── Buteurs depuis l'image agrandie ──
+            mins_dom, mins_ext = [], []
+            seen_d, seen_e = set(), set()
+
+            for bbox, text, prob in all_texts_big:
+                if prob < 0.10:
+                    continue
+                bx = (bbox[0][0] + bbox[2][0]) / 2
+                by = (bbox[0][1] + bbox[2][1]) / 2
+
+                # Sous le rectangle uniquement
+                if not (rb < by <= rb + 45):
+                    continue
+
+                text_c = text.strip()
+                # Priorité apostrophes, fallback chiffres 1-120
+                mins = re.findall(r"(\d{1,3})\s*['\u2019\u02bc`´′]", text_c)
+                if not mins:
+                    mins = [m for m in re.findall(r'\b(\d{1,3})\b', text_c) if 1 <= int(m) <= 120]
+
+                for m in mins:
+                    if bx < rl - 5:
+                        if m not in seen_d:
+                            seen_d.add(m); mins_dom.append(m)
+                    elif bx > rr + 5:
+                        if m not in seen_e:
+                            seen_e.add(m); mins_ext.append(m)
+
+            buteurs_dom = ' '.join(f"{m}'" for m in mins_dom)
+            buteurs_ext = ' '.join(f"{m}'" for m in mins_ext)
+
+            matches.append({
+                'h': equipe_dom, 'a': equipe_ext,
+                's': score, 'mt': mt,
+                'hm': buteurs_dom, 'am': buteurs_ext,
+                'ligne_img': ligne_img
+            })
+
+        return matches
+    except Exception as _e_rapide:
+        raise RuntimeError(
+            f"Mode Rapide — Erreur OCR : {_e_rapide}. "
+            "Conseil : essayez le Mode Précis, ou vérifiez que l'image est une capture Bet261."
+        )
+
+
 
 # ===================== SIDEBAR — STATUT SYNC =====================
 with st.sidebar:
-    st.markdown("### 🔮 Oracle Mahita V58")
+    st.markdown("### 🔮 Oracle Mahita V54")
     # ✅ V54 — Widget utilisateur connecté (nom, rôle, déconnexion)
     if AUTH_DISPONIBLE:
         afficher_widget_utilisateur()
@@ -1059,7 +1195,7 @@ with st.sidebar:
                     st.rerun()
                 except Exception as _e:
                     st.error(f"Erreur resync : {_e}")
-    except Exception:
+    except ImportError:
         st.markdown("""
         <div style="padding:8px;background:rgba(255,165,0,0.1);border:1px solid #FFA500;
              border-radius:8px;font-size:11px;color:#FFA500;">
@@ -1093,7 +1229,7 @@ st.markdown(f"""
                     ORACLE MAHITA
                 </span>
                 <span style="font-family:'Orbitron',sans-serif;font-size:0.75em;font-weight:700;
-                    color:#00FF88;white-space:nowrap;">V58.0</span>
+                    color:#00FF88;white-space:nowrap;">V53.0</span>
                 <span style="color:#555;font-size:0.65em;letter-spacing:1px;white-space:nowrap;overflow:hidden;">
                     IA Intégrée &middot; Apprentissage Actif
                 </span>
@@ -1306,16 +1442,32 @@ with tabs[1]:
                             if key in st.session_state:
                                 del st.session_state[key]
 
-                        # Notification calendrier OCR — cadre vert néon
+                        # Notification riche calendrier OCR
                         n_matchs = len(matchs_ocr)
                         equipes_str = ", ".join(f"{m['h']} vs {m['a']}" for m in matchs_ocr[:3])
                         if n_matchs > 3: equipes_str += f" (+ {n_matchs-3} autres)"
                         st.markdown(f"""
-                        <div class="notif-green">
-                          <div style="font-size:1.3em;margin-bottom:6px;">✅ Calendrier enregistré</div>
-                          <div style="color:#ccc;font-size:13px;">📋 <b>{n_matchs} matchs</b> importés · Journée {j_cal}</div>
-                          <div style="color:#aaa;font-size:12px;margin-top:4px;">{equipes_str}</div>
-                          <div style="margin-top:8px;font-size:12px;color:#7FFFD4;">🎯 Allez dans <b>PRONOS</b> pour analyser · 🧠 IA prête</div>
+                        <div style="padding:16px;border:2px solid #7FFFD4;border-radius:12px;
+                             background:rgba(0,255,136,0.07);margin:12px 0;
+                             box-shadow:0 0 18px rgba(0,255,136,0.35),inset 0 0 12px rgba(0,255,136,0.06);
+                             animation:pulse-green 2s ease-in-out;">
+                          <div style="color:#7FFFD4;font-weight:800;font-size:1.1em;margin-bottom:8px;">
+                            ✅ Journée {j_cal} — Calendrier enregistré !
+                          </div>
+                          <div style="color:#ccc;font-size:13px;margin-bottom:6px;">
+                            📋 <b>{n_matchs} matchs</b> importés avec succès
+                          </div>
+                          <div style="color:#aaa;font-size:12px;margin-bottom:10px;">{equipes_str}</div>
+                          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <span style="background:rgba(127,255,212,0.15);color:#7FFFD4;
+                                  border-radius:6px;padding:4px 10px;font-size:12px;">
+                              🎯 Allez dans PRONOS pour analyser
+                            </span>
+                            <span style="background:rgba(127,255,212,0.15);color:#7FFFD4;
+                                  border-radius:6px;padding:4px 10px;font-size:12px;">
+                              🧠 IA prête à prédire
+                            </span>
+                          </div>
                         </div>
                         """, unsafe_allow_html=True)
                         st.rerun()
@@ -1354,10 +1506,13 @@ with tabs[1]:
                 if 'tmp_cal' in st.session_state: del st.session_state['tmp_cal']
                 n_matchs_m = len(final_c)
                 st.markdown(f"""
-                <div class="notif-green">
-                  <div style="font-size:1.3em;margin-bottom:6px;">✅ Calendrier enregistré</div>
-                  <div style="color:#ccc;font-size:13px;">📋 <b>{n_matchs_m} matchs</b> saisis manuellement · Journée {j_cal}</div>
-                  <div style="color:#888;font-size:12px;margin-top:6px;">➡️ Rendez-vous dans l'onglet <b>PRONOS</b></div>
+                <div style="padding:16px;border:2px solid #7FFFD4;border-radius:12px;
+                     background:rgba(127,255,212,0.07);margin:12px 0;">
+                  <div style="color:#7FFFD4;font-weight:800;font-size:1.1em;margin-bottom:6px;">
+                    ✅ Journée {j_cal} — Calendrier enregistré !
+                  </div>
+                  <div style="color:#ccc;font-size:13px;">📋 <b>{n_matchs_m} matchs</b> saisis manuellement</div>
+                  <div style="color:#888;font-size:12px;margin-top:8px;">➡️ Rendez-vous dans l'onglet <b>PRONOS</b></div>
                 </div>
                 """, unsafe_allow_html=True)
                 st.rerun()
@@ -1691,19 +1846,8 @@ with tabs[2]:
 with tabs[3]:
     st.markdown("### ⚽ Saisie des Résultats")
 
-    # ── FIX V55: Journée par défaut intelligente ──
-    # Priorité 1 : première journée avec calendrier mais sans résultats encore saisis
-    # Priorité 2 : next_j (même logique que l'onglet Calendrier)
-    _jours_en_attente = []
-    for _k in st.session_state['history'][s_active].keys():
-        _num = int(re.search(r'\d+', _k).group()) if re.search(r'\d+', _k) else 0
-        _jd = st.session_state['history'][s_active][_k]
-        if _jd.get("cal") and not _jd.get("res"):
-            _jours_en_attente.append(_num)
-    _j_res_default = min(_jours_en_attente) if _jours_en_attente else next_j
-
-    j_res = st.number_input("Journée", 1, 50, _j_res_default, key="j_res_input")
-
+    j_res = st.number_input("Journée", 1, 50, 1, key="j_res_input")
+    
     # ── Option OCR (Capture Bet261) ──
     st.markdown("#### 📸 Import par OCR (Capture Bet261)")
     
@@ -1717,13 +1861,32 @@ with tabs[3]:
         img = Image.open(io.BytesIO(f_res.getvalue()))
         st.image(img, caption="Image originale", use_container_width=True)
 
-        # ── Mode OCR : Scan Précis uniquement ──
-        st.info("🔬 **Scan Précis** — Découpe chaque zone individuellement (score, MT, noms, buteurs). Analyse zone par zone.")
+        # ── Sélecteur de mode OCR ──
+        st.markdown("#### ⚙️ Mode d'analyse")
+        _ocr_mode = st.radio(
+            "Choisir le mode :",
+            options=["⚡ Mode Rapide (2 appels · ~10 sec)", "🔬 Mode Précis (50 appels · ~2 min)"],
+            index=0,
+            key="ocr_res_mode",
+            horizontal=True
+        )
+        _use_rapide = "Rapide" in _ocr_mode
 
-        if st.button("🔬 Lancer le scan précis", use_container_width=True, key="btn_ocr_res"):
-            with st.spinner("🔬 Analyse précise en cours (peut prendre 1-2 min)..."):
+        if _use_rapide:
+            st.info("⚡ **Mode Rapide** — 1 readtext() sur l'image entière + 1 sur image agrandie pour les buteurs. Même extraction, bien plus rapide.")
+        else:
+            st.info("🔬 **Mode Précis** — Découpe chaque zone individuellement (score, MT, noms, buteurs). Plus lent mais analyse zone par zone.")
+
+        _btn_label = "⚡ Lancer le scan (Mode Rapide)" if _use_rapide else "🔬 Lancer le scan (Mode Précis)"
+        _spinner_msg = "⚡ Analyse rapide (2 appels OCR)..." if _use_rapide else "🔬 Analyse précise en cours (peut prendre 1-2 min)..."
+
+        if st.button(_btn_label, use_container_width=True, key="btn_ocr_res"):
+            with st.spinner(_spinner_msg):
                 try:
-                    extracted = ocr_resultats_bet261(f_res.getvalue())
+                    if _use_rapide:
+                        extracted = ocr_resultats_rapide(f_res.getvalue())
+                    else:
+                        extracted = ocr_resultats_bet261(f_res.getvalue())
 
                     if len(extracted) == 0:
                         st.error("❌ Aucun match détecté. Essayez la saisie manuelle.")
@@ -1931,15 +2094,34 @@ with tabs[3]:
                             else: nb_2r += 1; victoires_ext.append(r['a'])
                         except: pass
                     st.markdown(f"""
-                    <div class="notif-green">
-                      <div style="font-size:1.3em;margin-bottom:8px;">✅ Résultats de la journée {j_res}</div>
-                      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-                        <span style="color:#00FF88;font-weight:800;">🏠 Dom: {nb_1r}</span>
-                        <span style="color:#FFA500;font-weight:800;">🤝 Nul: {nb_xr}</span>
-                        <span style="color:#7FFFD4;font-weight:800;">✈️ Ext: {nb_2r}</span>
-                        <span style="color:#fff;font-weight:800;">⚽ Buts: {buts_r}</span>
+                    <div style="padding:16px;border:2px solid #00FF00;border-radius:12px;
+                         background:rgba(0,255,0,0.06);margin:12px 0;
+                         box-shadow:0 0 20px rgba(0,255,136,0.4),inset 0 0 14px rgba(0,255,136,0.07);
+                         animation:pulse-green 2s ease-in-out;">
+                      <div style="color:#00FF88;font-weight:800;font-size:1.1em;margin-bottom:10px;">
+                        ✅ Journée {j_res} — Résultats enregistrés !
                       </div>
-                      <div style="color:#aaa;font-size:12px;">🧠 IA Apprentissage mis à jour · 🏆 Classement recalculé</div>
+                      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                        <div style="background:rgba(0,255,0,0.1);border-radius:8px;padding:8px 14px;text-align:center;">
+                          <div style="color:#00FF88;font-size:1.4em;font-weight:800;">{nb_1r}</div>
+                          <div style="color:#888;font-size:11px;">Victoires Dom.</div>
+                        </div>
+                        <div style="background:rgba(255,165,0,0.1);border-radius:8px;padding:8px 14px;text-align:center;">
+                          <div style="color:#FFA500;font-size:1.4em;font-weight:800;">{nb_xr}</div>
+                          <div style="color:#888;font-size:11px;">Nuls</div>
+                        </div>
+                        <div style="background:rgba(127,255,212,0.1);border-radius:8px;padding:8px 14px;text-align:center;">
+                          <div style="color:#7FFFD4;font-size:1.4em;font-weight:800;">{nb_2r}</div>
+                          <div style="color:#888;font-size:11px;">Victoires Ext.</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:8px 14px;text-align:center;">
+                          <div style="color:#fff;font-size:1.4em;font-weight:800;">{buts_r}</div>
+                          <div style="color:#888;font-size:11px;">Buts total</div>
+                        </div>
+                      </div>
+                      <div style="color:#aaa;font-size:12px;">
+                        🧠 IA Apprentissage mis à jour · 🏆 Classement recalculé
+                      </div>
                     </div>
                     """, unsafe_allow_html=True)
                     st.rerun()
@@ -2061,8 +2243,11 @@ with tabs[3]:
                         else: nb_2m += 1
                     except: pass
                 st.markdown(f"""
-                <div class="notif-green">
-                  <div style="font-size:1.3em;margin-bottom:6px;">✅ Résultats de la journée {j_res}</div>
+                <div style="padding:14px;border:2px solid #00FF00;border-radius:12px;
+                     background:rgba(0,255,0,0.05);margin:10px 0;">
+                  <div style="color:#00FF88;font-weight:800;margin-bottom:8px;">
+                    ✅ Journée {j_res} — Résultats enregistrés !
+                  </div>
                   <div style="color:#ccc;font-size:13px;">
                     🏠 Dom: {nb_1m} · 🤝 Nul: {nb_xm} · ✈️ Ext: {nb_2m} · ⚽ Buts: {buts_m}
                   </div>
@@ -2844,7 +3029,7 @@ with tabs[6]:
                     try:
                         if _j_to_del in st.session_state['history'][s_active]:
                             st.session_state['history'][s_active][_j_to_del]['res'] = []
-                            save_db(st.session_state['history'])
+                            sauvegarder_history(st.session_state['history'])
                             # ✅ V53.2 — Réinitialiser le marquage apprises pour réapprentissage
                             if IA_DISPONIBLE and moteur_apprentissage and hasattr(moteur_apprentissage, 'effacer_journee_apprise'):
                                 moteur_apprentissage.effacer_journee_apprise(s_active, _j_to_del)
@@ -2879,7 +3064,7 @@ with tabs[6]:
                 try:
                     if s_active in st.session_state['history']:
                         del st.session_state['history'][s_active]
-                        save_db(st.session_state['history'])
+                        sauvegarder_history(st.session_state['history'])
                         st.success(f"✅ Saison {s_active} supprimée.")
                         st.rerun()
                 except Exception as _e:
