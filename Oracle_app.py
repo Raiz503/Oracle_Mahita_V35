@@ -18,6 +18,23 @@ import io
 import math
 from typing import List, Dict
 
+# ✅ V54 — Authentification (optionnel : si auth_oracle.py absent, auth désactivée)
+try:
+    from auth_oracle import (
+        afficher_page_login, afficher_widget_utilisateur,
+        afficher_panneau_admin, est_connecte, peut, tab_accessible, get_role
+    )
+    AUTH_DISPONIBLE = True
+except ImportError:
+    AUTH_DISPONIBLE = False
+    def afficher_page_login(): pass
+    def afficher_widget_utilisateur(): pass
+    def afficher_panneau_admin(): pass
+    def est_connecte(): return True
+    def peut(action): return True
+    def tab_accessible(i): return True
+    def get_role(): return "admin"
+
 # ── NOUVEAUX IMPORTS POUR L'OCR ──
 from scipy.signal import find_peaks
 from scipy.ndimage import uniform_filter1d
@@ -108,7 +125,11 @@ except ImportError:
     CERVEAU_DISPONIBLE = False  # indique que c'est le fallback
 
 # ── Configuration ──
-st.set_page_config(page_title="Oracle Mahita V52", layout="wide", page_icon="🔮")
+st.set_page_config(page_title="Oracle Mahita V54", layout="wide", page_icon="🔮")
+
+# ✅ V54 — AUTHENTIFICATION : bloque l'accès si non connecté
+# Si auth_oracle.py absent → cette ligne ne fait rien (accès libre)
+afficher_page_login()
 
 # ── CSS ──
 st.markdown("""
@@ -225,6 +246,13 @@ CHAT_FILE = "oracle_chat_history.json"
 CHAT_SESSIONS_FILE = "oracle_chat_sessions.json"
 
 def load_db():
+    """Chargement avec priorité GitHub si db_persistante disponible."""
+    try:
+        from db_persistante import load_db as _gh_load
+        return _gh_load()
+    except ImportError:
+        pass
+    # Fallback local
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -233,11 +261,19 @@ def load_db():
     return {}
 
 def save_db(data):
+    """Sauvegarde locale + commit GitHub si db_persistante disponible."""
+    # Toujours sauvegarder localement
     try:
         with open(DB_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
-        st.error(f"Erreur de sauvegarde : {e}")
+        st.error(f"Erreur de sauvegarde locale : {e}")
+    # Sauvegarde GitHub (si module disponible)
+    try:
+        from db_persistante import save_db as _gh_save
+        _gh_save(data)
+    except ImportError:
+        pass  # Module absent → mode local uniquement
 
 def load_chat_history():
     if os.path.exists(CHAT_FILE):
@@ -370,6 +406,8 @@ def build_full_context(history: dict, saison_active: str, standings: pd.DataFram
     return "\n".join(ctx)
 
 if 'history' not in st.session_state:
+    # ✅ V54 — load_db() priorise GitHub si db_persistante.py est présent,
+    # sinon utilise le fichier local oracle_data.json (fallback automatique)
     st.session_state['history'] = load_db()
     if not st.session_state['history']:
         st.session_state['history']["Saison 2026"] = {}
@@ -990,19 +1028,19 @@ def ocr_resultats_rapide(image_bytes, debug=False):
 
         rectangles = []
         for cnt in contours:
-        x, y, bw, bh = cv2.boundingRect(cnt)
-        area = bw * bh
-        aspect = bw / bh if bh > 0 else 0
-        if 1000 < area < 8000 and 0.8 < aspect < 2.5 and bw > 40 and bh > 25:
-            rectangles.append({'x': x, 'y': y, 'w': bw, 'h': bh,
-                                'cx': x+bw//2, 'cy': y+bh//2})
+            x, y, bw, bh = cv2.boundingRect(cnt)
+            area = bw * bh
+            aspect = bw / bh if bh > 0 else 0
+            if 1000 < area < 8000 and 0.8 < aspect < 2.5 and bw > 40 and bh > 25:
+                rectangles.append({'x': x, 'y': y, 'w': bw, 'h': bh,
+                                    'cx': x+bw//2, 'cy': y+bh//2})
 
         rectangles.sort(key=lambda r: r['cy'])
         rectangles = [r for r in rectangles if r['cy'] > int(h_img * 0.15)]
         rectangles = rectangles[:10]
 
         if not rectangles:
-        return []
+            return []
 
         # ─── APPEL 1 : image entière contrastée — grand texte (noms, scores, MT) ───
         img_enhanced = np.array(ImageEnhance.Contrast(img).enhance(2.2))
@@ -1018,114 +1056,114 @@ def ocr_resultats_rapide(image_bytes, debug=False):
                      for bbox, text, prob in all_texts_big_raw]
 
         if debug:
-        print(f"[RAPIDE] Textes détectés image normale: {len(all_texts)}")
-        print(f"[RAPIDE] Textes détectés image ×{SCALE}:  {len(all_texts_big)}")
+            print(f"[RAPIDE] Textes détectés image normale: {len(all_texts)}")
+            print(f"[RAPIDE] Textes détectés image ×{SCALE}:  {len(all_texts_big)}")
 
         # ─── ÉTAPE 2 : Assigner chaque bloc de texte à son match via position ───
         matches = []
 
         for i, rect in enumerate(rectangles):
-        rl, rr = rect['x'], rect['x'] + rect['w']
-        rt, rb = rect['y'], rect['y'] + rect['h']
+            rl, rr = rect['x'], rect['x'] + rect['w']
+            rt, rb = rect['y'], rect['y'] + rect['h']
 
-        y_start = max(0, rt - 15)
-        y_end   = min(h_img, rb + 55)
-        ligne_img = img.crop((0, y_start, w_img, y_end))
+            y_start = max(0, rt - 15)
+            y_end   = min(h_img, rb + 55)
+            ligne_img = img.crop((0, y_start, w_img, y_end))
 
-        equipe_dom = equipe_ext = score = mt = buteurs_dom = buteurs_ext = ""
+            equipe_dom = equipe_ext = score = mt = buteurs_dom = buteurs_ext = ""
 
-        # ── Parcourir les blocs de l'image normale (noms + score + MT) ──
-        for bbox, text, prob in all_texts:
-            if prob < 0.18 or len(text.strip()) < 1:
-                continue
-            bx = (bbox[0][0] + bbox[2][0]) / 2
-            by = (bbox[0][1] + bbox[2][1]) / 2
+            # ── Parcourir les blocs de l'image normale (noms + score + MT) ──
+            for bbox, text, prob in all_texts:
+                if prob < 0.18 or len(text.strip()) < 1:
+                    continue
+                bx = (bbox[0][0] + bbox[2][0]) / 2
+                by = (bbox[0][1] + bbox[2][1]) / 2
 
-            # Appartient-il à cette ligne de match ?
-            if not (rt - 35 <= by <= rb + 50):
-                continue
+                # Appartient-il à cette ligne de match ?
+                if not (rt - 35 <= by <= rb + 50):
+                    continue
 
-            text_clean = text.strip()
+                text_clean = text.strip()
 
-            # Score (centre du rectangle gris, même niveau)
-            if rl - 8 <= bx <= rr + 8 and rt - 5 <= by <= rb + 5:
-                m = re.search(r'(\d{1,2})[:\-](\d{1,2})', text_clean)
-                if m and not score:
-                    score = f"{m.group(1)}:{m.group(2)}"
-                continue
+                # Score (centre du rectangle gris, même niveau)
+                if rl - 8 <= bx <= rr + 8 and rt - 5 <= by <= rb + 5:
+                    m = re.search(r'(\d{1,2})[:\-](\d{1,2})', text_clean)
+                    if m and not score:
+                        score = f"{m.group(1)}:{m.group(2)}"
+                    continue
 
-            # Mi-temps (sous le rectangle, zone centrale)
-            if rl - 25 <= bx <= rr + 25 and rb < by <= rb + 50:
-                m_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', text_clean, re.IGNORECASE)
-                if m_mt:
-                    mt = f"{m_mt.group(1)}:{m_mt.group(2)}"
-                elif not mt:
-                    m2 = re.search(r'(\d{1,2})[:\-](\d{1,2})', text_clean)
-                    if m2:
-                        cand = f"{m2.group(1)}:{m2.group(2)}"
-                        if cand != score:
-                            mt = cand
-                continue
+                # Mi-temps (sous le rectangle, zone centrale)
+                if rl - 25 <= bx <= rr + 25 and rb < by <= rb + 50:
+                    m_mt = re.search(r'MT[:\s]*(\d{1,2})[:\-\.](\d{1,2})', text_clean, re.IGNORECASE)
+                    if m_mt:
+                        mt = f"{m_mt.group(1)}:{m_mt.group(2)}"
+                    elif not mt:
+                        m2 = re.search(r'(\d{1,2})[:\-](\d{1,2})', text_clean)
+                        if m2:
+                            cand = f"{m2.group(1)}:{m2.group(2)}"
+                            if cand != score:
+                                mt = cand
+                    continue
 
-            # Nom domicile (à gauche du rectangle, niveau du rect)
-            if bx < rl - 8 and rt - 25 <= by <= rb + 8:
-                if len(text_clean) > 2 and not re.match(r'^\d+$', text_clean):
-                    if not re.search(r"\d+\s*['′]", text_clean):
-                        m_eq = get_close_matches(text_clean, engine.teams_list, n=1, cutoff=0.28)
-                        if m_eq and not equipe_dom:
-                            equipe_dom = m_eq[0]
-                            if debug:
-                                print(f"  DOM '{text_clean}' → {equipe_dom}")
-                continue
+                # Nom domicile (à gauche du rectangle, niveau du rect)
+                if bx < rl - 8 and rt - 25 <= by <= rb + 8:
+                    if len(text_clean) > 2 and not re.match(r'^\d+$', text_clean):
+                        if not re.search(r"\d+\s*['′]", text_clean):
+                            m_eq = get_close_matches(text_clean, engine.teams_list, n=1, cutoff=0.28)
+                            if m_eq and not equipe_dom:
+                                equipe_dom = m_eq[0]
+                                if debug:
+                                    print(f"  DOM '{text_clean}' → {equipe_dom}")
+                    continue
 
-            # Nom extérieur (à droite du rectangle, niveau du rect)
-            if bx > rr + 8 and rt - 25 <= by <= rb + 8:
-                if len(text_clean) > 2 and not re.match(r'^\d+$', text_clean):
-                    if not re.search(r"\d+\s*['′]", text_clean):
-                        m_eq = get_close_matches(text_clean, engine.teams_list, n=1, cutoff=0.28)
-                        if m_eq and not equipe_ext:
-                            equipe_ext = m_eq[0]
-                            if debug:
-                                print(f"  EXT '{text_clean}' → {equipe_ext}")
-                continue
+                # Nom extérieur (à droite du rectangle, niveau du rect)
+                if bx > rr + 8 and rt - 25 <= by <= rb + 8:
+                    if len(text_clean) > 2 and not re.match(r'^\d+$', text_clean):
+                        if not re.search(r"\d+\s*['′]", text_clean):
+                            m_eq = get_close_matches(text_clean, engine.teams_list, n=1, cutoff=0.28)
+                            if m_eq and not equipe_ext:
+                                equipe_ext = m_eq[0]
+                                if debug:
+                                    print(f"  EXT '{text_clean}' → {equipe_ext}")
+                    continue
 
-        # ── Buteurs depuis l'image agrandie ──
-        mins_dom, mins_ext = [], []
-        seen_d, seen_e = set(), set()
+            # ── Buteurs depuis l'image agrandie ──
+            mins_dom, mins_ext = [], []
+            seen_d, seen_e = set(), set()
 
-        for bbox, text, prob in all_texts_big:
-            if prob < 0.10:
-                continue
-            bx = (bbox[0][0] + bbox[2][0]) / 2
-            by = (bbox[0][1] + bbox[2][1]) / 2
+            for bbox, text, prob in all_texts_big:
+                if prob < 0.10:
+                    continue
+                bx = (bbox[0][0] + bbox[2][0]) / 2
+                by = (bbox[0][1] + bbox[2][1]) / 2
 
-            # Sous le rectangle uniquement
-            if not (rb < by <= rb + 45):
-                continue
+                # Sous le rectangle uniquement
+                if not (rb < by <= rb + 45):
+                    continue
 
-            text_c = text.strip()
-            # Priorité apostrophes, fallback chiffres 1-120
-            mins = re.findall(r"(\d{1,3})\s*['\u2019\u02bc`´′]", text_c)
-            if not mins:
-                mins = [m for m in re.findall(r'\b(\d{1,3})\b', text_c) if 1 <= int(m) <= 120]
+                text_c = text.strip()
+                # Priorité apostrophes, fallback chiffres 1-120
+                mins = re.findall(r"(\d{1,3})\s*['\u2019\u02bc`´′]", text_c)
+                if not mins:
+                    mins = [m for m in re.findall(r'\b(\d{1,3})\b', text_c) if 1 <= int(m) <= 120]
 
-            for m in mins:
-                if bx < rl - 5:
-                    if m not in seen_d:
-                        seen_d.add(m); mins_dom.append(m)
-                elif bx > rr + 5:
-                    if m not in seen_e:
-                        seen_e.add(m); mins_ext.append(m)
+                for m in mins:
+                    if bx < rl - 5:
+                        if m not in seen_d:
+                            seen_d.add(m); mins_dom.append(m)
+                    elif bx > rr + 5:
+                        if m not in seen_e:
+                            seen_e.add(m); mins_ext.append(m)
 
-        buteurs_dom = ' '.join(f"{m}'" for m in mins_dom)
-        buteurs_ext = ' '.join(f"{m}'" for m in mins_ext)
+            buteurs_dom = ' '.join(f"{m}'" for m in mins_dom)
+            buteurs_ext = ' '.join(f"{m}'" for m in mins_ext)
 
-        matches.append({
-            'h': equipe_dom, 'a': equipe_ext,
-            's': score, 'mt': mt,
-            'hm': buteurs_dom, 'am': buteurs_ext,
-            'ligne_img': ligne_img
-        })
+            matches.append({
+                'h': equipe_dom, 'a': equipe_ext,
+                's': score, 'mt': mt,
+                'hm': buteurs_dom, 'am': buteurs_ext,
+                'ligne_img': ligne_img
+            })
 
         return matches
     except Exception as _e_rapide:
@@ -1135,6 +1173,48 @@ def ocr_resultats_rapide(image_bytes, debug=False):
         )
 
 
+
+# ===================== SIDEBAR — STATUT SYNC =====================
+with st.sidebar:
+    st.markdown("### 🔮 Oracle Mahita V54")
+    # ✅ V54 — Widget utilisateur connecté (nom, rôle, déconnexion)
+    if AUTH_DISPONIBLE:
+        afficher_widget_utilisateur()
+        st.divider()
+    # Statut synchronisation GitHub
+    try:
+        from db_persistante import afficher_statut_sync, github_configure
+        afficher_statut_sync()
+        if github_configure():
+            if st.button("🔄 Forcer resync GitHub", use_container_width=True, key="btn_resync"):
+                try:
+                    from db_persistante import forcer_resynchronisation
+                    resultats = forcer_resynchronisation()
+                    st.session_state['history'] = load_db()
+                    st.success("✅ Données rechargées depuis GitHub !")
+                    st.rerun()
+                except Exception as _e:
+                    st.error(f"Erreur resync : {_e}")
+    except ImportError:
+        st.markdown("""
+        <div style="padding:8px;background:rgba(255,165,0,0.1);border:1px solid #FFA500;
+             border-radius:8px;font-size:11px;color:#FFA500;">
+        ⚠️ Mode local — ajoutez db_persistante.py pour la persistance GitHub
+        </div>
+        """, unsafe_allow_html=True)
+    st.divider()
+    # Infos saison active
+    if 'history' in st.session_state and 's_active' in st.session_state:
+        _sa = st.session_state.get('s_active','')
+        _nb_j = len(st.session_state['history'].get(_sa, {}))
+        _nb_res = sum(len(jd.get('res',[])) for jd in st.session_state['history'].get(_sa,{}).values())
+        st.markdown(f"""
+        <div style="font-size:11px;color:#888;line-height:1.8;">
+        📅 Saison active : <b style="color:#7FFFD4">{_sa}</b><br>
+        📋 Journées : <b style="color:#7FFFD4">{_nb_j}</b><br>
+        ⚽ Matchs enregistrés : <b style="color:#7FFFD4">{_nb_res}</b>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ===================== HEADER & SAISON =====================
 st.markdown(f"""
@@ -1922,70 +2002,79 @@ with tabs[3]:
                     # ── Apprentissage IA V2.3 ──
                     if IA_DISPONIBLE and moteur_apprentissage is not None:
                         try:
-                            _hav = {jj: st.session_state['history'][s_active][jj]
-                                for jj in sorted(st.session_state['history'][s_active].keys())
-                                if (int(re.search(r'\d+',jj).group()) if re.search(r'\d+',jj) else 0) < j_res}
-                            _stav = get_standings(_hav, engine.teams_list)
-                            _se = {t: {"bp_dom":[],"bc_dom":[],"bp_ext":[],"bc_ext":[]} for t in engine.teams_list}
-                            for _jd in _hav.values():
-                                for _mm in _jd.get("res",[]):
+                            # ✅ V53.2 — Vérification anti-doublons
+                            _deja_appris = (hasattr(moteur_apprentissage, 'est_journee_apprise')
+                                            and moteur_apprentissage.est_journee_apprise(s_active, jk))
+                            if _deja_appris:
+                                st.info(f"ℹ️ Journée **{jk}** déjà apprise — patterns non recalculés pour éviter les doublons.")
+                            else:
+                                _hav = {jj: st.session_state['history'][s_active][jj]
+                                    for jj in sorted(st.session_state['history'][s_active].keys())
+                                    if (int(re.search(r'\d+',jj).group()) if re.search(r'\d+',jj) else 0) < j_res}
+                                _stav = get_standings(_hav, engine.teams_list)
+                                _se = {t: {"bp_dom":[],"bc_dom":[],"bp_ext":[],"bc_ext":[]} for t in engine.teams_list}
+                                for _jd in _hav.values():
+                                    for _mm in _jd.get("res",[]):
+                                        try:
+                                            _s,_a = map(int, _mm['s'].replace('-',':').split(':'))
+                                            if _mm['h'] in _se: _se[_mm['h']]["bp_dom"].append(_s); _se[_mm['h']]["bc_dom"].append(_a)
+                                            if _mm['a'] in _se: _se[_mm['a']]["bp_ext"].append(_a); _se[_mm['a']]["bc_ext"].append(_s)
+                                        except: pass
+                                def _moy_l(lst): return sum(lst)/len(lst) if lst else 1.5
+                                for _i, _mm in enumerate(final_res):
                                     try:
-                                        _s,_a = map(int, _mm['s'].replace('-',':').split(':'))
-                                        if _mm['h'] in _se: _se[_mm['h']]["bp_dom"].append(_s); _se[_mm['h']]["bc_dom"].append(_a)
-                                        if _mm['a'] in _se: _se[_mm['a']]["bp_ext"].append(_a); _se[_mm['a']]["bc_ext"].append(_s)
+                                        _sh,_sa = map(int, _mm['s'].replace('-',':').split(':'))
+                                        _res = "1" if _sh>_sa else ("X" if _sh==_sa else "2")
+                                        _co = cal_ref[_i].get('o',[2.0,3.0,3.0]) if cal_ref and _i<len(cal_ref) else [2.0,3.0,3.0]
+                                        _rd = int(_stav[_stav['Équipe']==_mm['h']]['Rang'].values[0]) if not _stav[_stav['Équipe']==_mm['h']].empty else 10
+                                        _re = int(_stav[_stav['Équipe']==_mm['a']]['Rang'].values[0]) if not _stav[_stav['Équipe']==_mm['a']].empty else 10
+                                        _fd = get_forme_equipe(st.session_state['history'], s_active, _mm['h'], 3)
+                                        _fe = get_forme_equipe(st.session_state['history'], s_active, _mm['a'], 3)
+                                        _bpmd=_moy_l(_se[_mm['h']]["bp_dom"]); _bcmd=_moy_l(_se[_mm['h']]["bc_dom"])
+                                        _bpme=_moy_l(_se[_mm['a']]["bp_ext"]); _bcme=_moy_l(_se[_mm['a']]["bc_ext"])
+                                        _tad="favori" if _rd<=5 else ("medium" if _rd<=15 else "outsider")
+                                        _tae="favori" if _re<=5 else ("medium" if _re<=15 else "outsider")
+                                        if hasattr(moteur_apprentissage,'analyser_pattern_cotes'):
+                                            moteur_apprentissage.analyser_pattern_cotes(_co[0],_co[1],_co[2],_res)
+                                        if hasattr(moteur_apprentissage,'analyser_pattern_classement'):
+                                            moteur_apprentissage.analyser_pattern_classement(_mm['h'],_mm['a'],_rd,_re,_res)
+                                        if hasattr(moteur_apprentissage,'analyser_pattern_force'):
+                                            moteur_apprentissage.analyser_pattern_force(_mm['h'],_mm['a'],_rd,_re,_res)
+                                        if hasattr(moteur_apprentissage,'analyser_pattern_lieu_rang'):
+                                            moteur_apprentissage.analyser_pattern_lieu_rang(_mm['h'],_mm['a'],_rd,_re,_res)
+                                        if hasattr(moteur_apprentissage,'analyser_pattern_serie_forme'):
+                                            moteur_apprentissage.analyser_pattern_serie_forme(_mm['h'],_mm['a'],_fd,_fe,_res)
+                                        if hasattr(moteur_apprentissage,'analyser_pattern_serie_rang'):
+                                            moteur_apprentissage.analyser_pattern_serie_rang(_mm['h'],_mm['a'],"stable","stable",_res)
+                                        if hasattr(moteur_apprentissage,'analyser_pattern_tendance_buts'):
+                                            moteur_apprentissage.analyser_pattern_tendance_buts(_mm['h'],_mm['a'],_bpmd,_bcmd,_bpme,_bcme,_tad,_tae,_res)
+                                        if hasattr(moteur_apprentissage,'analyser_pattern_equipe'):
+                                            moteur_apprentissage.analyser_pattern_equipe(_mm['h'],"V" if _res=="1" else ("N" if _res=="X" else "D"),{"domicile":True})
+                                            moteur_apprentissage.analyser_pattern_equipe(_mm['a'],"V" if _res=="2" else ("N" if _res=="X" else "D"),{"domicile":False})
+                                        # ✅ V53.1 — Suivi précision IA : enregistrer_prediction avec résultat réel
+                                        if hasattr(moteur_apprentissage, 'enregistrer_prediction'):
+                                            # Récupérer le prono sauvegardé pour ce match si disponible
+                                            _pro_j = st.session_state['history'][s_active].get(jk, {}).get("pro", [])
+                                            _pred_saved = _pro_j[_i] if _i < len(_pro_j) else {}
+                                            _prediction_ia = _pred_saved.get('prediction', None)
+                                            _confiance_ia  = _pred_saved.get('indice', 50)
+                                            _match_data = {"h": _mm['h'], "a": _mm['a'], "o": _co}
+                                            _facteurs_ia = {
+                                                "cote_favorite": "1" if _co[0] < _co[2] else "2",
+                                                "classement":    "1" if _rd < _re else "2"
+                                            }
+                                            moteur_apprentissage.enregistrer_prediction(
+                                                match_data=_match_data,
+                                                prediction=_prediction_ia or ("1" if _co[0]<_co[2] else "2"),
+                                                confiance=_confiance_ia,
+                                                resultat_reel=_res,
+                                                facteurs_utilises=_facteurs_ia
+                                            )
                                     except: pass
-                            def _moy_l(lst): return sum(lst)/len(lst) if lst else 1.5
-                            for _i, _mm in enumerate(final_res):
-                                try:
-                                    _sh,_sa = map(int, _mm['s'].replace('-',':').split(':'))
-                                    _res = "1" if _sh>_sa else ("X" if _sh==_sa else "2")
-                                    _co = cal_ref[_i].get('o',[2.0,3.0,3.0]) if cal_ref and _i<len(cal_ref) else [2.0,3.0,3.0]
-                                    _rd = int(_stav[_stav['Équipe']==_mm['h']]['Rang'].values[0]) if not _stav[_stav['Équipe']==_mm['h']].empty else 10
-                                    _re = int(_stav[_stav['Équipe']==_mm['a']]['Rang'].values[0]) if not _stav[_stav['Équipe']==_mm['a']].empty else 10
-                                    _fd = get_forme_equipe(st.session_state['history'], s_active, _mm['h'], 3)
-                                    _fe = get_forme_equipe(st.session_state['history'], s_active, _mm['a'], 3)
-                                    _bpmd=_moy_l(_se[_mm['h']]["bp_dom"]); _bcmd=_moy_l(_se[_mm['h']]["bc_dom"])
-                                    _bpme=_moy_l(_se[_mm['a']]["bp_ext"]); _bcme=_moy_l(_se[_mm['a']]["bc_ext"])
-                                    _tad="favori" if _rd<=5 else ("medium" if _rd<=15 else "outsider")
-                                    _tae="favori" if _re<=5 else ("medium" if _re<=15 else "outsider")
-                                    if hasattr(moteur_apprentissage,'analyser_pattern_cotes'):
-                                        moteur_apprentissage.analyser_pattern_cotes(_co[0],_co[1],_co[2],_res)
-                                    if hasattr(moteur_apprentissage,'analyser_pattern_classement'):
-                                        moteur_apprentissage.analyser_pattern_classement(_mm['h'],_mm['a'],_rd,_re,_res)
-                                    if hasattr(moteur_apprentissage,'analyser_pattern_force'):
-                                        moteur_apprentissage.analyser_pattern_force(_mm['h'],_mm['a'],_rd,_re,_res)
-                                    if hasattr(moteur_apprentissage,'analyser_pattern_lieu_rang'):
-                                        moteur_apprentissage.analyser_pattern_lieu_rang(_mm['h'],_mm['a'],_rd,_re,_res)
-                                    if hasattr(moteur_apprentissage,'analyser_pattern_serie_forme'):
-                                        moteur_apprentissage.analyser_pattern_serie_forme(_mm['h'],_mm['a'],_fd,_fe,_res)
-                                    if hasattr(moteur_apprentissage,'analyser_pattern_serie_rang'):
-                                        moteur_apprentissage.analyser_pattern_serie_rang(_mm['h'],_mm['a'],"stable","stable",_res)
-                                    if hasattr(moteur_apprentissage,'analyser_pattern_tendance_buts'):
-                                        moteur_apprentissage.analyser_pattern_tendance_buts(_mm['h'],_mm['a'],_bpmd,_bcmd,_bpme,_bcme,_tad,_tae,_res)
-                                    if hasattr(moteur_apprentissage,'analyser_pattern_equipe'):
-                                        moteur_apprentissage.analyser_pattern_equipe(_mm['h'],"V" if _res=="1" else ("N" if _res=="X" else "D"),{"domicile":True})
-                                        moteur_apprentissage.analyser_pattern_equipe(_mm['a'],"V" if _res=="2" else ("N" if _res=="X" else "D"),{"domicile":False})
-                                    # ✅ V53.1 — Suivi précision IA : enregistrer_prediction avec résultat réel
-                                    if hasattr(moteur_apprentissage, 'enregistrer_prediction'):
-                                        # Récupérer le prono sauvegardé pour ce match si disponible
-                                        _pro_j = st.session_state['history'][s_active].get(jk, {}).get("pro", [])
-                                        _pred_saved = _pro_j[_i] if _i < len(_pro_j) else {}
-                                        _prediction_ia = _pred_saved.get('prediction', None)
-                                        _confiance_ia  = _pred_saved.get('indice', 50)
-                                        _match_data = {"h": _mm['h'], "a": _mm['a'], "o": _co}
-                                        _facteurs_ia = {
-                                            "cote_favorite": "1" if _co[0] < _co[2] else "2",
-                                            "classement":    "1" if _rd < _re else "2"
-                                        }
-                                        moteur_apprentissage.enregistrer_prediction(
-                                            match_data=_match_data,
-                                            prediction=_prediction_ia or ("1" if _co[0]<_co[2] else "2"),
-                                            confiance=_confiance_ia,
-                                            resultat_reel=_res,
-                                            facteurs_utilises=_facteurs_ia
-                                        )
-                                except: pass
-                            moteur_apprentissage.save()
+                            # ✅ V53.2 — Marquer la journée comme apprise
+                            if hasattr(moteur_apprentissage, 'marquer_journee_apprise'):
+                                moteur_apprentissage.marquer_journee_apprise(s_active, jk)
+                                moteur_apprentissage.save()
                         except Exception as _e_ap: pass
 
                     # Nettoyer session
@@ -2088,7 +2177,15 @@ with tabs[3]:
                 # ── Apprentissage IA sur résultats manuels ──
                 if IA_DISPONIBLE and moteur_apprentissage is not None:
                     try:
-                        _hav2 = {jj: st.session_state['history'][s_active][jj]
+                        # ✅ V53.2 — Vérification anti-doublons (résultats manuels)
+                        _deja_appris_m = (hasattr(moteur_apprentissage, 'est_journee_apprise')
+                                          and moteur_apprentissage.est_journee_apprise(s_active, jk))
+                        if _deja_appris_m:
+                            st.info(f"ℹ️ Journée **{jk}** déjà apprise — patterns non recalculés.")
+                        else:
+                            _hav2_placeholder = True  # start else block
+                        if not _deja_appris_m:
+                            _hav2 = {jj: st.session_state['history'][s_active][jj]
                             for jj in sorted(st.session_state['history'][s_active].keys())
                             if (int(re.search(r'\d+',jj).group()) if re.search(r'\d+',jj) else 0) < j_res}
                         _stav2 = get_standings(_hav2, engine.teams_list)
@@ -2126,7 +2223,10 @@ with tabs[3]:
                                         }
                                     )
                             except: pass
-                        moteur_apprentissage.save()
+                            # ✅ V53.2 — Marquer journée apprise (résultats manuels)
+                            if hasattr(moteur_apprentissage, 'marquer_journee_apprise'):
+                                moteur_apprentissage.marquer_journee_apprise(s_active, jk)
+                            moteur_apprentissage.save()
                     except: pass
 
                 if 'tmp_res' in st.session_state:
@@ -2428,6 +2528,17 @@ with tabs[4]:
 # ===================== TAB 5 : GESTION =====================
 with tabs[5]:
     st.markdown("### ⚙️ Gestion")
+
+    # ✅ V54 — Vérification accès onglet Gestion
+    if not tab_accessible(5):
+        st.warning("⛔ Votre rôle ne permet pas d'accéder à cet onglet.")
+        st.stop()
+
+    # ── Panneau Admin (visible uniquement pour l'admin) ──
+    if AUTH_DISPONIBLE and get_role() == "admin":
+        with st.expander("👥 Gestion des Utilisateurs & Accès", expanded=False):
+            afficher_panneau_admin()
+        st.divider()
 
     # ── 1) CRÉER UNE NOUVELLE SAISON ──
     st.markdown("#### ➕ Nouvelle Saison")
@@ -2919,7 +3030,11 @@ with tabs[6]:
                         if _j_to_del in st.session_state['history'][s_active]:
                             st.session_state['history'][s_active][_j_to_del]['res'] = []
                             sauvegarder_history(st.session_state['history'])
-                            st.success(f"✅ Résultats de {_j_to_del} supprimés.")
+                            # ✅ V53.2 — Réinitialiser le marquage apprises pour réapprentissage
+                            if IA_DISPONIBLE and moteur_apprentissage and hasattr(moteur_apprentissage, 'effacer_journee_apprise'):
+                                moteur_apprentissage.effacer_journee_apprise(s_active, _j_to_del)
+                                moteur_apprentissage.save()
+                            st.success(f"✅ Résultats de {_j_to_del} supprimés. L'IA pourra réapprendre cette journée.")
                             st.rerun()
                     except Exception as _e:
                         st.error(f"❌ Erreur : {_e}")
