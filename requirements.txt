@@ -1,9 +1,17 @@
 streamlit
-easyocr
 pandas
 matplotlib
-opencv-python-headless
-pillow
 numpy
-groq
+Pillow
 scipy
+requests
+groq
+opencv-python-headless
+
+# ⚠️ OBLIGATOIRE : torch CPU-only AVANT easyocr
+# Sans cette ligne, pip installe PyTorch CUDA (~2GB) → crash Streamlit Cloud
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+
+easyocr
