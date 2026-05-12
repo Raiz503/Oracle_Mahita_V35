@@ -1005,16 +1005,28 @@ def ocr_resultats_bet261(image_bytes, debug=False):
 # ===================== OCR RÉSULTATS — MODE RAPIDE (2 appels au lieu de 50) =====================
 def ocr_resultats_rapide(image_bytes, debug=False):
     """OCR résultats Bet261 — MODE RAPIDE.
-    Principe : 1 readtext() sur l'image entière + 1 readtext() sur image ×2 pour buteurs.
+    Principe : 1 readtext() sur l'image entière + 1 readtext() sur image ×1.5 pour buteurs.
     Résultat  : mêmes données extraites (score, MT, noms, buteurs) en 5-15 sec au lieu de 100-150 sec.
-    FIX V53.1 :
+    FIX V54.1 :
       - Conversion forcée en RGB (évite crash cv2 sur images RGBA/palette)
       - Dimensions converties en int Python (évite crash PIL resize avec numpy.int64)
+      - FIX C: Redimensionnement à max 800px de large AVANT tout OCR pour éviter
+               le crash mémoire (OOM) sur Streamlit Cloud. L'image mobile typique
+               (1080×2400px) passe à ~800×1778px → ×1.5 donne 1200×2667px au lieu
+               de 2160×4800px, ce qui divise la consommation mémoire par ~4.
       - try/except global pour retourner [] proprement au lieu de planter l'app
     """
     try:
         import cv2
         img = Image.open(io.BytesIO(image_bytes)).convert('RGB')  # FIX A: force RGB
+
+        # FIX C: Redimensionner à 800px de large max pour éviter OOM sur Streamlit Cloud
+        MAX_W = 800
+        _orig_w, _orig_h = img.size
+        if _orig_w > MAX_W:
+            _ratio = MAX_W / _orig_w
+            img = img.resize((MAX_W, int(_orig_h * _ratio)), Image.LANCZOS)
+
         img_array = np.array(img)
         h_img, w_img = int(img_array.shape[0]), int(img_array.shape[1])  # FIX B: int Python
 
@@ -1026,12 +1038,19 @@ def ocr_resultats_rapide(image_bytes, debug=False):
         gray_mask = cv2.morphologyEx(gray_mask, cv2.MORPH_CLOSE, kernel)
         contours, _ = cv2.findContours(gray_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+        # FIX C: Seuils adaptatifs selon la largeur réelle de l'image
+        _px = w_img / 800.0  # facteur d'échelle (1.0 à 800px, >1 si image plus large)
+        _min_area = int(300 * _px * _px)
+        _max_area = int(12000 * _px * _px)
+        _min_bw   = int(20 * _px)
+        _min_bh   = int(10 * _px)
+
         rectangles = []
         for cnt in contours:
             x, y, bw, bh = cv2.boundingRect(cnt)
             area = bw * bh
             aspect = bw / bh if bh > 0 else 0
-            if 1000 < area < 8000 and 0.8 < aspect < 2.5 and bw > 40 and bh > 25:
+            if _min_area < area < _max_area and 0.6 < aspect < 3.5 and bw > _min_bw and bh > _min_bh:
                 rectangles.append({'x': x, 'y': y, 'w': bw, 'h': bh,
                                     'cx': x+bw//2, 'cy': y+bh//2})
 
@@ -1046,9 +1065,12 @@ def ocr_resultats_rapide(image_bytes, debug=False):
         img_enhanced = np.array(ImageEnhance.Contrast(img).enhance(2.2))
         all_texts = reader.readtext(img_enhanced, detail=1, paragraph=False)
 
-        # ─── APPEL 2 : image ×2 — petit texte (minutes buteurs) ───
-        SCALE = 2
-        img_big = img.resize((w_img * SCALE, h_img * SCALE), Image.LANCZOS)
+        # ─── APPEL 2 : image ×1.5 — petit texte (minutes buteurs) ───
+        # FIX C: Scale réduit de ×2 à ×1.5 : sur 800px → 1200px (au lieu de 2160px)
+        SCALE = 1.5
+        _big_w = int(w_img * SCALE)
+        _big_h = int(h_img * SCALE)
+        img_big = img.resize((_big_w, _big_h), Image.LANCZOS)
         img_big_arr = np.array(ImageEnhance.Contrast(img_big).enhance(2.5))
         all_texts_big_raw = reader.readtext(img_big_arr, detail=1, paragraph=False)
         # Ramener les coordonnées à l'échelle originale
@@ -1846,8 +1868,19 @@ with tabs[2]:
 with tabs[3]:
     st.markdown("### ⚽ Saisie des Résultats")
 
-    j_res = st.number_input("Journée", 1, 50, 1, key="j_res_input")
-    
+    # ── FIX V55: Journée par défaut intelligente ──
+    # Priorité 1 : première journée avec calendrier mais sans résultats encore saisis
+    # Priorité 2 : next_j (même logique que l'onglet Calendrier)
+    _jours_en_attente = []
+    for _k in st.session_state['history'][s_active].keys():
+        _num = int(re.search(r'\d+', _k).group()) if re.search(r'\d+', _k) else 0
+        _jd = st.session_state['history'][s_active][_k]
+        if _jd.get("cal") and not _jd.get("res"):
+            _jours_en_attente.append(_num)
+    _j_res_default = min(_jours_en_attente) if _jours_en_attente else next_j
+
+    j_res = st.number_input("Journée", 1, 50, _j_res_default, key="j_res_input")
+
     # ── Option OCR (Capture Bet261) ──
     st.markdown("#### 📸 Import par OCR (Capture Bet261)")
     
