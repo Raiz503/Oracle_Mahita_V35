@@ -1,0 +1,100 @@
+{
+  "Saison 2026": {
+    "Journée 1": {
+      "cal": [
+        {
+          "h": "Leeds",
+          "a": "Brighton",
+          "o": [
+            6.25,
+            5.04,
+            1.43
+          ]
+        },
+        {
+          "h": "A. Villa",
+          "a": "Manchester Blue",
+          "o": [
+            2.95,
+            3.67,
+            2.23
+          ]
+        },
+        {
+          "h": "C. Palace",
+          "a": "Bournemouth",
+          "o": [
+            1.81,
+            4.05,
+            3.84
+          ]
+        },
+        {
+          "h": "Spurs",
+          "a": "Burnley",
+          "o": [
+            1.43,
+            5.41,
+            5.75
+          ]
+        },
+        {
+          "h": "West Ham",
+          "a": "Liverpool",
+          "o": [
+            3.54,
+            4.02,
+            1.89
+          ]
+        },
+        {
+          "h": "Fulham",
+          "a": "Newcastle",
+          "o": [
+            2.63,
+            3.9,
+            2.36
+          ]
+        },
+        {
+          "h": "Manchester Red",
+          "a": "Everton",
+          "o": [
+            1.65,
+            3.6,
+            5.72
+          ]
+        },
+        {
+          "h": "London Blues",
+          "a": "Wolverhampton",
+          "o": [
+            1.47,
+            4.51,
+            6.24
+          ]
+        },
+        {
+          "h": "Sunderland",
+          "a": "N. Forest",
+          "o": [
+            4.41,
+            3.84,
+            1.75
+          ]
+        },
+        {
+          "h": "London Reds",
+          "a": "Brentford",
+          "o": [
+            1.45,
+            4.73,
+            6.27
+          ]
+        }
+      ],
+      "res": [],
+      "pro": []
+    }
+  }
+}
