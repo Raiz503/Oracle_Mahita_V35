@@ -1291,6 +1291,9 @@ with tabs[0]:
 # ===================== TAB 1 : CALENDRIER =====================
 with tabs[1]:
     st.markdown("### 📅 Import du Calendrier")
+    # Auto-incrément après enregistrement
+    if 'j_cal_auto_next' in st.session_state:
+        st.session_state['j_cal_input'] = st.session_state.pop('j_cal_auto_next')
     j_cal = st.number_input("Journée", 1, 50, next_j, key="j_cal_input")
 
     # ── Option OCR (Capture Bet261) ──
@@ -1442,6 +1445,9 @@ with tabs[1]:
                             if key in st.session_state:
                                 del st.session_state[key]
 
+                        # ── Auto-incrément journée calendrier ──
+                        st.session_state['j_cal_auto_next'] = j_cal + 1
+
                         # Notification riche calendrier OCR
                         n_matchs = len(matchs_ocr)
                         equipes_str = ", ".join(f"{m['h']} vs {m['a']}" for m in matchs_ocr[:3])
@@ -1504,6 +1510,8 @@ with tabs[1]:
                 st.session_state['current_j_num'] = j_cal
                 save_db(st.session_state['history'])
                 if 'tmp_cal' in st.session_state: del st.session_state['tmp_cal']
+                # ── Auto-incrément journée calendrier ──
+                st.session_state['j_cal_auto_next'] = j_cal + 1
                 n_matchs_m = len(final_c)
                 st.markdown(f"""
                 <div style="padding:16px;border:2px solid #7FFFD4;border-radius:12px;
@@ -1846,7 +1854,10 @@ with tabs[2]:
 with tabs[3]:
     st.markdown("### ⚽ Saisie des Résultats")
 
-    j_res = st.number_input("Journée", 1, 50, 1, key="j_res_input")
+    # Auto-incrément après enregistrement
+    if 'j_res_auto_next' in st.session_state:
+        st.session_state['j_res_input'] = st.session_state.pop('j_res_auto_next')
+    j_res = st.number_input("Journée", 1, 50, next_j, key="j_res_input")
     
     # ── Option OCR (Capture Bet261) ──
     st.markdown("#### 📸 Import par OCR (Capture Bet261)")
@@ -1861,32 +1872,10 @@ with tabs[3]:
         img = Image.open(io.BytesIO(f_res.getvalue()))
         st.image(img, caption="Image originale", use_container_width=True)
 
-        # ── Sélecteur de mode OCR ──
-        st.markdown("#### ⚙️ Mode d'analyse")
-        _ocr_mode = st.radio(
-            "Choisir le mode :",
-            options=["⚡ Mode Rapide (2 appels · ~10 sec)", "🔬 Mode Précis (50 appels · ~2 min)"],
-            index=0,
-            key="ocr_res_mode",
-            horizontal=True
-        )
-        _use_rapide = "Rapide" in _ocr_mode
-
-        if _use_rapide:
-            st.info("⚡ **Mode Rapide** — 1 readtext() sur l'image entière + 1 sur image agrandie pour les buteurs. Même extraction, bien plus rapide.")
-        else:
-            st.info("🔬 **Mode Précis** — Découpe chaque zone individuellement (score, MT, noms, buteurs). Plus lent mais analyse zone par zone.")
-
-        _btn_label = "⚡ Lancer le scan (Mode Rapide)" if _use_rapide else "🔬 Lancer le scan (Mode Précis)"
-        _spinner_msg = "⚡ Analyse rapide (2 appels OCR)..." if _use_rapide else "🔬 Analyse précise en cours (peut prendre 1-2 min)..."
-
-        if st.button(_btn_label, use_container_width=True, key="btn_ocr_res"):
-            with st.spinner(_spinner_msg):
+        if st.button("🔬 Lancer le scan OCR", use_container_width=True, key="btn_ocr_res"):
+            with st.spinner("🔬 Analyse en cours (peut prendre 1-2 min)..."):
                 try:
-                    if _use_rapide:
-                        extracted = ocr_resultats_rapide(f_res.getvalue())
-                    else:
-                        extracted = ocr_resultats_bet261(f_res.getvalue())
+                    extracted = ocr_resultats_bet261(f_res.getvalue())
 
                     if len(extracted) == 0:
                         st.error("❌ Aucun match détecté. Essayez la saisie manuelle.")
@@ -2082,6 +2071,9 @@ with tabs[3]:
                         if key in st.session_state:
                             del st.session_state[key]
 
+                    # ── Auto-incrément journée résultats ──
+                    st.session_state['j_res_auto_next'] = j_res + 1
+
                     # ── Notification riche résultats ──
                     nb_1r = nb_xr = nb_2r = buts_r = 0
                     victoires_dom, victoires_ext, nuls = [], [], []
@@ -2231,6 +2223,9 @@ with tabs[3]:
 
                 if 'tmp_res' in st.session_state:
                     del st.session_state['tmp_res']
+                
+                # ── Auto-incrément journée résultats ──
+                st.session_state['j_res_auto_next'] = j_res + 1
                 
                 # Notification résultats manuel
                 nb_1m = nb_xm = nb_2m = buts_m = 0
@@ -3029,7 +3024,7 @@ with tabs[6]:
                     try:
                         if _j_to_del in st.session_state['history'][s_active]:
                             st.session_state['history'][s_active][_j_to_del]['res'] = []
-                            sauvegarder_history(st.session_state['history'])
+                            save_db(st.session_state['history'])
                             # ✅ V53.2 — Réinitialiser le marquage apprises pour réapprentissage
                             if IA_DISPONIBLE and moteur_apprentissage and hasattr(moteur_apprentissage, 'effacer_journee_apprise'):
                                 moteur_apprentissage.effacer_journee_apprise(s_active, _j_to_del)
@@ -3064,7 +3059,7 @@ with tabs[6]:
                 try:
                     if s_active in st.session_state['history']:
                         del st.session_state['history'][s_active]
-                        sauvegarder_history(st.session_state['history'])
+                        save_db(st.session_state['history'])
                         st.success(f"✅ Saison {s_active} supprimée.")
                         st.rerun()
                 except Exception as _e:
