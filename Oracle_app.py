@@ -1258,8 +1258,12 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
-s_active = st.selectbox("Saison", list(st.session_state['history'].keys()), label_visibility="collapsed")
+s_active = st.selectbox("Saison", list(st.session_state['history'].keys()), label_visibility="collapsed") if st.session_state['history'] else None
 st.session_state['s_active'] = s_active
+
+if not s_active or s_active not in st.session_state['history']:
+    st.warning("Aucune saison disponible. Créez-en une dans l'onglet **GESTION**.")
+    st.stop()
 
 days = [int(re.search(r'\d+', k).group()) for k in st.session_state['history'][s_active].keys() 
         if re.search(r'\d+', k) and st.session_state['history'][s_active][k].get("res")]
@@ -3059,6 +3063,9 @@ with tabs[6]:
                 try:
                     if s_active in st.session_state['history']:
                         del st.session_state['history'][s_active]
+                        # Si plus aucune saison, en créer une par défaut
+                        if not st.session_state['history']:
+                            st.session_state['history']['Saison 2026'] = {}
                         save_db(st.session_state['history'])
                         st.success(f"✅ Saison {s_active} supprimée.")
                         st.rerun()
