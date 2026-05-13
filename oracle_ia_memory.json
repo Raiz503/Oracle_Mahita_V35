@@ -1,48 +1,12 @@
 {
   "patterns": {
-    "FAVORI_FORT": {
-      "1": 3,
-      "X": 2,
-      "2": 2,
-      "total": 7
-    },
-    "6.2_5.0_1.4": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
     "DIFF_EGAL": {
       "1": 5,
       "X": 3,
       "2": 3,
       "total": 11
     },
-    "ZONE_Z1_vs_Z1": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
-    },
     "FORCE_fort_dom_vs_fort_ext": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
-    },
-    "FORTE_DOM_A. Villa_vs_fort": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "FORTE_EXT_Manchester Blue_vs_fort": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "LIEU_dom_Z1_vs_Z1": {
       "1": 1,
       "X": 1,
       "2": 0,
@@ -53,24 +17,6 @@
       "X": 2,
       "2": 0,
       "total": 4
-    },
-    "SERIE_V_vs_D": {
-      "1": 5,
-      "X": 0,
-      "2": 0,
-      "total": 5
-    },
-    "SERIE_dom_V": {
-      "1": 5,
-      "X": 0,
-      "2": 0,
-      "total": 5
-    },
-    "SERIE_ext_D": {
-      "1": 5,
-      "X": 0,
-      "2": 0,
-      "total": 5
     },
     "RANGEV_stable_vs_stable": {
       "1": 7,
@@ -90,124 +36,6 @@
       "2": 0,
       "total": 1
     },
-    "TEND_att_moyenne_def_moyenne_vs_att_moyenne_def_moyenne": {
-      "1": 5,
-      "X": 8,
-      "2": 5,
-      "total": 18
-    },
-    "TENDADV_dom_att_moyenne_def_moyenne_vs_favori": {
-      "1": 2,
-      "X": 2,
-      "2": 2,
-      "total": 6
-    },
-    "TENDADV_ext_att_moyenne_def_moyenne_vs_favori": {
-      "1": 2,
-      "X": 2,
-      "2": 0,
-      "total": 4
-    },
-    "TENDEQ_dom_A. Villa_att_moyenne_def_moyenne_vs_favori": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "A. Villa": {
-      "domicile": {
-        "V": 1,
-        "N": 0,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "Manchester Blue": {
-      "domicile": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "MATCH_OUVERT": {
-      "1": 0,
-      "X": 2,
-      "2": 2,
-      "total": 4
-    },
-    "3.0_3.7_2.2": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "FORTE_DOM_Leeds_vs_fort": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "FORTE_EXT_Brighton_vs_fort": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_N_vs_N": {
-      "1": 0,
-      "X": 2,
-      "2": 0,
-      "total": 2
-    },
-    "SERIE_dom_N": {
-      "1": 0,
-      "X": 2,
-      "2": 0,
-      "total": 2
-    },
-    "SERIE_ext_N": {
-      "1": 0,
-      "X": 2,
-      "2": 0,
-      "total": 2
-    },
     "RANGEV_DOM_Leeds_stable": {
       "1": 0,
       "X": 1,
@@ -220,89 +48,7 @@
       "2": 0,
       "total": 1
     },
-    "TENDEQ_dom_Leeds_att_moyenne_def_moyenne_vs_favori": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "Leeds": {
-      "domicile": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "Brighton": {
-      "domicile": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "FAVORI_MODERE": {
-      "1": 4,
-      "X": 3,
-      "2": 0,
-      "total": 7
-    },
-    "1.8_4.0_3.8": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "ZONE_Z4_vs_Z4": {
-      "1": 1,
-      "X": 1,
-      "2": 1,
-      "total": 3
-    },
     "FORCE_outsider_dom_vs_outsider_ext": {
-      "1": 1,
-      "X": 1,
-      "2": 1,
-      "total": 3
-    },
-    "LIEU_dom_Z4_vs_Z4": {
       "1": 1,
       "X": 1,
       "2": 1,
@@ -326,100 +72,6 @@
       "2": 0,
       "total": 1
     },
-    "TENDADV_dom_att_moyenne_def_moyenne_vs_outsider": {
-      "1": 2,
-      "X": 2,
-      "2": 1,
-      "total": 5
-    },
-    "TENDADV_ext_att_moyenne_def_moyenne_vs_outsider": {
-      "1": 1,
-      "X": 2,
-      "2": 1,
-      "total": 4
-    },
-    "TENDEQ_dom_London Reds_att_moyenne_def_moyenne_vs_outsider": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "London Reds": {
-      "domicile": {
-        "V": 2,
-        "N": 0,
-        "D": 0,
-        "total": 2
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "Brentford": {
-      "domicile": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "1.4_5.4_5.8": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "SERIE_D_vs_V": {
-      "1": 0,
-      "X": 0,
-      "2": 3,
-      "total": 3
-    },
-    "SERIE_dom_D": {
-      "1": 0,
-      "X": 0,
-      "2": 3,
-      "total": 3
-    },
-    "SERIE_ext_V": {
-      "1": 0,
-      "X": 0,
-      "2": 3,
-      "total": 3
-    },
     "RANGEV_DOM_Sunderland_stable": {
       "1": 0,
       "X": 0,
@@ -432,83 +84,7 @@
       "2": 1,
       "total": 1
     },
-    "TENDEQ_dom_Sunderland_att_moyenne_def_moyenne_vs_outsider": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "Sunderland": {
-      "domicile": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "N. Forest": {
-      "domicile": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 1,
-        "N": 0,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "3.5_4.0_1.9": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "ZONE_Z3_vs_Z4": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
-    },
     "FORCE_medium_dom_vs_outsider_ext": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
-    },
-    "LIEU_dom_Z3_vs_Z4": {
       "1": 1,
       "X": 1,
       "2": 0,
@@ -532,99 +108,11 @@
       "2": 0,
       "total": 1
     },
-    "TENDADV_ext_att_moyenne_def_moyenne_vs_medium": {
-      "1": 3,
-      "X": 4,
-      "2": 4,
-      "total": 11
-    },
-    "TENDEQ_dom_London Blues_att_moyenne_def_moyenne_vs_outsider": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "London Blues": {
-      "domicile": {
-        "V": 1,
-        "N": 0,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "Wolverhampton": {
-      "domicile": {
-        "V": 1,
-        "N": 0,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "COTES_SERREES": {
-      "1": 0,
-      "X": 1,
-      "2": 1,
-      "total": 2
-    },
-    "2.6_3.9_2.4": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "ZONE_Z3_vs_Z3": {
-      "1": 0,
-      "X": 0,
-      "2": 2,
-      "total": 2
-    },
     "FORCE_medium_dom_vs_medium_ext": {
       "1": 2,
       "X": 2,
       "2": 2,
       "total": 6
-    },
-    "LIEU_dom_Z3_vs_Z3": {
-      "1": 0,
-      "X": 0,
-      "2": 2,
-      "total": 2
     },
     "RANGEV_DOM_Manchester Red_stable": {
       "1": 0,
@@ -637,88 +125,6 @@
       "X": 0,
       "2": 1,
       "total": 1
-    },
-    "TENDADV_dom_att_moyenne_def_moyenne_vs_medium": {
-      "1": 2,
-      "X": 4,
-      "2": 2,
-      "total": 8
-    },
-    "TENDEQ_dom_Manchester Red_att_moyenne_def_moyenne_vs_medium": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "Manchester Red": {
-      "domicile": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "Everton": {
-      "domicile": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 1,
-        "N": 0,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "1.6_3.6_5.7": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "ZONE_Z2_vs_Z2": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
-    },
-    "LIEU_dom_Z2_vs_Z2": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
     },
     "AVANTAGE_dom_Z2": {
       "1": 2,
@@ -738,70 +144,6 @@
       "2": 0,
       "total": 1
     },
-    "TENDEQ_dom_West Ham_att_moyenne_def_moyenne_vs_medium": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "West Ham": {
-      "domicile": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "Liverpool": {
-      "domicile": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "1.5_4.5_6.2": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
     "RANGEV_DOM_Spurs_stable": {
       "1": 1,
       "X": 0,
@@ -814,89 +156,7 @@
       "2": 0,
       "total": 1
     },
-    "TENDEQ_dom_Spurs_att_moyenne_def_moyenne_vs_medium": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "Spurs": {
-      "domicile": {
-        "V": 1,
-        "N": 0,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 1,
-        "N": 0,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "Burnley": {
-      "domicile": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "4.4_3.8_1.8": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "ZONE_Z1_vs_Z2": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
-    },
     "FORCE_fort_dom_vs_medium_ext": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
-    },
-    "FORTE_DOM_C. Palace_vs_medium": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "LIEU_dom_Z1_vs_Z2": {
       "1": 1,
       "X": 1,
       "2": 0,
@@ -914,70 +174,6 @@
       "2": 0,
       "total": 1
     },
-    "TENDEQ_dom_C. Palace_att_moyenne_def_moyenne_vs_medium": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "C. Palace": {
-      "domicile": {
-        "V": 1,
-        "N": 0,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 1,
-        "N": 0,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "Bournemouth": {
-      "domicile": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "1.4_4.7_6.3": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
     "RANGEV_DOM_Fulham_stable": {
       "1": 0,
       "X": 0,
@@ -990,153 +186,17 @@
       "2": 1,
       "total": 2
     },
-    "TENDEQ_dom_Fulham_att_moyenne_def_moyenne_vs_medium": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "Fulham": {
-      "domicile": {
-        "V": 0,
-        "N": 0,
-        "D": 1,
-        "total": 1
-      },
-      "exterieur": {
-        "V": 0,
-        "N": 1,
-        "D": 0,
-        "total": 1
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "Newcastle": {
-      "domicile": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "exterieur": {
-        "V": 1,
-        "N": 0,
-        "D": 1,
-        "total": 2
-      },
-      "apres_victoire": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      },
-      "apres_defaite": {
-        "V": 0,
-        "N": 0,
-        "D": 0,
-        "total": 0
-      }
-    },
-    "1.9_3.9_3.6": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
-    },
     "DIFF_PLUS5": {
       "1": 1,
       "X": 3,
       "2": 0,
       "total": 4
     },
-    "ZONE_Z2_vs_Z3": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
-    },
-    "LIEU_dom_Z2_vs_Z3": {
-      "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
-    },
-    "SERIE_VV_vs_ND": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_dom_VV": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_ext_ND": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
     "RANGEV_EXT_West Ham_stable": {
       "1": 1,
       "X": 0,
       "2": 0,
       "total": 1
-    },
-    "TEND_att_forte_def_forte_vs_att_moyenne_def_moyenne": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "TENDADV_dom_att_forte_def_forte_vs_medium": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "TENDEQ_dom_London Reds_att_forte_def_forte_vs_medium": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "2.0_3.2_4.0": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_DN_vs_DN": {
-      "1": 0,
-      "X": 2,
-      "2": 0,
-      "total": 2
-    },
-    "SERIE_dom_DN": {
-      "1": 0,
-      "X": 3,
-      "2": 0,
-      "total": 3
-    },
-    "SERIE_ext_DN": {
-      "1": 0,
-      "X": 3,
-      "2": 0,
-      "total": 3
     },
     "RANGEV_DOM_Manchester Blue_stable": {
       "1": 0,
@@ -1150,65 +210,17 @@
       "2": 0,
       "total": 1
     },
-    "TENDEQ_dom_Manchester Blue_att_moyenne_def_moyenne_vs_outsider": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "2.0_3.5_3.5": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
     "DIFF_MOINS10": {
       "1": 1,
       "X": 1,
       "2": 2,
       "total": 4
     },
-    "ZONE_Z3_vs_Z1": {
-      "1": 0,
-      "X": 0,
-      "2": 2,
-      "total": 2
-    },
     "FORCE_medium_dom_vs_fort_ext": {
       "1": 0,
       "X": 1,
       "2": 2,
       "total": 3
-    },
-    "FORTE_EXT_C. Palace_vs_medium": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "LIEU_dom_Z3_vs_Z1": {
-      "1": 0,
-      "X": 0,
-      "2": 2,
-      "total": 2
-    },
-    "SERIE_DD_vs_VV": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "SERIE_dom_DD": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "SERIE_ext_VV": {
-      "1": 0,
-      "X": 0,
-      "2": 2,
-      "total": 2
     },
     "RANGEV_DOM_Brentford_stable": {
       "1": 0,
@@ -1220,18 +232,6 @@
       "1": 0,
       "X": 0,
       "2": 1,
-      "total": 1
-    },
-    "TENDEQ_dom_Brentford_att_moyenne_def_moyenne_vs_favori": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "2.6_3.1_2.8": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
       "total": 1
     },
     "RANGEV_DOM_Bournemouth_stable": {
@@ -1246,36 +246,6 @@
       "2": 0,
       "total": 1
     },
-    "TENDEQ_dom_Bournemouth_att_moyenne_def_moyenne_vs_outsider": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "3.1_3.7_2.1": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "FORTE_EXT_Spurs_vs_medium": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "SERIE_ND_vs_VV": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "SERIE_dom_ND": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
     "RANGEV_DOM_Liverpool_stable": {
       "1": 0,
       "X": 0,
@@ -1288,55 +258,7 @@
       "2": 1,
       "total": 1
     },
-    "TENDEQ_dom_Liverpool_att_moyenne_def_moyenne_vs_favori": {
-      "1": 0,
-      "X": 0,
-      "2": 1,
-      "total": 1
-    },
-    "1.3_6.1_9.3": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "ZONE_Z4_vs_Z1": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
     "FORCE_outsider_dom_vs_fort_ext": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "FORTE_EXT_Newcastle_vs_outsider": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "LIEU_dom_Z4_vs_Z1": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_DV_vs_VD": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_dom_DV": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_ext_VD": {
       "1": 1,
       "X": 0,
       "2": 0,
@@ -1347,42 +269,6 @@
       "X": 0,
       "2": 0,
       "total": 1
-    },
-    "TEND_att_moyenne_def_moyenne_vs_att_forte_def_moyenne": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "TENDADV_ext_att_forte_def_moyenne_vs_outsider": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "TENDEQ_dom_Wolverhampton_att_moyenne_def_moyenne_vs_favori": {
-      "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
-    },
-    "1.4_5.5_7.0": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_VN_vs_DN": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_dom_VN": {
-      "1": 0,
-      "X": 2,
-      "2": 0,
-      "total": 2
     },
     "RANGEV_DOM_Everton_stable": {
       "1": 0,
@@ -1396,36 +282,6 @@
       "2": 0,
       "total": 1
     },
-    "TENDEQ_dom_Everton_att_moyenne_def_moyenne_vs_medium": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "1.9_3.6_3.8": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "FORTE_DOM_N. Forest_vs_medium": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_VN_vs_VN": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_ext_VN": {
-      "1": 0,
-      "X": 2,
-      "2": 0,
-      "total": 2
-    },
     "RANGEV_DOM_N. Forest_stable": {
       "1": 0,
       "X": 1,
@@ -1438,37 +294,7 @@
       "2": 0,
       "total": 1
     },
-    "TENDEQ_dom_N. Forest_att_moyenne_def_moyenne_vs_medium": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "ZONE_Z4_vs_Z2": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
     "FORCE_outsider_dom_vs_medium_ext": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "LIEU_dom_Z4_vs_Z2": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_DN_vs_NN": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_ext_NN": {
       "1": 0,
       "X": 1,
       "2": 0,
@@ -1486,49 +312,7 @@
       "2": 0,
       "total": 1
     },
-    "TENDEQ_dom_Burnley_att_moyenne_def_moyenne_vs_medium": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "1.2_6.2_10.2": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
     "DIFF_MOINS5": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "ZONE_Z2_vs_Z1": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "FORTE_EXT_London Blues_vs_medium": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "LIEU_dom_Z2_vs_Z1": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_NN_vs_VN": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_dom_NN": {
       "1": 0,
       "X": 1,
       "2": 0,
@@ -1541,12 +325,6 @@
       "total": 1
     },
     "RANGEV_EXT_London Blues_stable": {
-      "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "TENDEQ_dom_Brighton_att_moyenne_def_moyenne_vs_favori": {
       "1": 0,
       "X": 1,
       "2": 0,
