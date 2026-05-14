@@ -183,22 +183,22 @@
             5.04,
             1.43
           ],
-          "indice": 50,
+          "indice": 51,
           "classe": "FUN",
           "score": "1-1",
           "prediction": "X"
         },
         {
-          "m": "Nul (cote 3.67)",
+          "m": "A. Villa (cote 2.95)",
           "c": [
             2.95,
             3.67,
             2.23
           ],
-          "indice": 42,
+          "indice": 40,
           "classe": "FUN",
-          "score": "1-1",
-          "prediction": "X"
+          "score": "3-1",
+          "prediction": "1"
         },
         {
           "m": "C. Palace (cote 1.81)",
@@ -207,9 +207,9 @@
             4.05,
             3.84
           ],
-          "indice": 40,
+          "indice": 50,
           "classe": "FUN",
-          "score": "2-0",
+          "score": "4-0",
           "prediction": "1"
         },
         {
@@ -219,46 +219,46 @@
             5.41,
             5.75
           ],
-          "indice": 41,
-          "classe": "FUN",
-          "score": "3-0",
+          "indice": 57,
+          "classe": "RISQUE CALCULÉ",
+          "score": "5-0",
           "prediction": "1"
         },
         {
-          "m": "Nul (cote 4.02)",
+          "m": "Liverpool (cote 1.89)",
           "c": [
             3.54,
             4.02,
             1.89
           ],
-          "indice": 44,
+          "indice": 40,
           "classe": "FUN",
-          "score": "1-1",
-          "prediction": "X"
+          "score": "1-2",
+          "prediction": "2"
         },
         {
-          "m": "Nul (cote 3.9)",
+          "m": "Newcastle (cote 2.36)",
           "c": [
             2.63,
             3.9,
             2.36
           ],
-          "indice": 41,
+          "indice": 42,
           "classe": "FUN",
-          "score": "1-1",
-          "prediction": "X"
+          "score": "0-3",
+          "prediction": "2"
         },
         {
-          "m": "Manchester Red (cote 1.65)",
+          "m": "Nul (cote 3.6)",
           "c": [
             1.65,
             3.6,
             5.72
           ],
-          "indice": 40,
+          "indice": 45,
           "classe": "FUN",
-          "score": "2-0",
-          "prediction": "1"
+          "score": "1-2",
+          "prediction": "X"
         },
         {
           "m": "London Blues (cote 1.47)",
@@ -267,22 +267,22 @@
             4.51,
             6.24
           ],
-          "indice": 40,
-          "classe": "FUN",
-          "score": "3-0",
+          "indice": 55,
+          "classe": "RISQUE CALCULÉ",
+          "score": "4-0",
           "prediction": "1"
         },
         {
-          "m": "Nul (cote 3.84)",
+          "m": "N. Forest (cote 1.75)",
           "c": [
             4.41,
             3.84,
             1.75
           ],
-          "indice": 46,
+          "indice": 49,
           "classe": "FUN",
-          "score": "1-1",
-          "prediction": "X"
+          "score": "0-4",
+          "prediction": "2"
         },
         {
           "m": "London Reds (cote 1.45)",
@@ -291,9 +291,9 @@
             4.73,
             6.27
           ],
-          "indice": 40,
+          "indice": 50,
           "classe": "FUN",
-          "score": "3-0",
+          "score": "4-0",
           "prediction": "1"
         }
       ]
