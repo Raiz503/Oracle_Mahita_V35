@@ -1,38 +1,1248 @@
 {
-  "patterns": {},
-  "poids": {
-    "cote_favorite": 0.14,
-    "forme_recente": 0.11,
-    "classement": 0.11,
-    "classement_diff": 0.09,
-    "zone_vs_zone": 0.09,
-    "force_lieu": 0.08,
-    "lieu_rang": 0.06,
-    "serie_forme": 0.08,
-    "serie_rang": 0.06,
-    "tendance_buts": 0.07,
-    "historique_h2h": 0.06,
-    "cotes_proches": 0.05
+  "patterns": {
+    "FAVORI_FORT": {
+      "1": 2,
+      "X": 0,
+      "2": 2,
+      "total": 4
+    },
+    "6.2_5.0_1.4": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "DIFF_EGAL": {
+      "1": 5,
+      "X": 2,
+      "2": 3,
+      "total": 10
+    },
+    "ZONE_Z1_vs_Z1": {
+      "1": 1,
+      "X": 1,
+      "2": 0,
+      "total": 2
+    },
+    "FORCE_fort_dom_vs_fort_ext": {
+      "1": 1,
+      "X": 1,
+      "2": 0,
+      "total": 2
+    },
+    "FORTE_DOM_A. Villa_vs_fort": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "FORTE_EXT_Manchester Blue_vs_fort": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "LIEU_dom_Z1_vs_Z1": {
+      "1": 1,
+      "X": 1,
+      "2": 0,
+      "total": 2
+    },
+    "AVANTAGE_dom_Z1": {
+      "1": 2,
+      "X": 1,
+      "2": 0,
+      "total": 3
+    },
+    "SERIE_V_vs_D": {
+      "1": 5,
+      "X": 0,
+      "2": 0,
+      "total": 5
+    },
+    "SERIE_dom_V": {
+      "1": 5,
+      "X": 0,
+      "2": 0,
+      "total": 5
+    },
+    "SERIE_ext_D": {
+      "1": 5,
+      "X": 0,
+      "2": 0,
+      "total": 5
+    },
+    "RANGEV_stable_vs_stable": {
+      "1": 5,
+      "X": 2,
+      "2": 3,
+      "total": 10
+    },
+    "RANGEV_DOM_A. Villa_stable": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "RANGEV_EXT_Manchester Blue_stable": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "TEND_att_moyenne_def_moyenne_vs_att_moyenne_def_moyenne": {
+      "1": 5,
+      "X": 2,
+      "2": 3,
+      "total": 10
+    },
+    "TENDADV_dom_att_moyenne_def_moyenne_vs_favori": {
+      "1": 1,
+      "X": 1,
+      "2": 0,
+      "total": 2
+    },
+    "TENDADV_ext_att_moyenne_def_moyenne_vs_favori": {
+      "1": 2,
+      "X": 1,
+      "2": 0,
+      "total": 3
+    },
+    "TENDEQ_dom_A. Villa_att_moyenne_def_moyenne_vs_favori": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "A. Villa": {
+      "domicile": {
+        "V": 1,
+        "N": 0,
+        "D": 0,
+        "total": 1
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "Manchester Blue": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 1,
+        "total": 1
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "MATCH_OUVERT": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "3.0_3.7_2.2": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "FORTE_DOM_Leeds_vs_fort": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "FORTE_EXT_Brighton_vs_fort": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "SERIE_N_vs_N": {
+      "1": 0,
+      "X": 2,
+      "2": 0,
+      "total": 2
+    },
+    "SERIE_dom_N": {
+      "1": 0,
+      "X": 2,
+      "2": 0,
+      "total": 2
+    },
+    "SERIE_ext_N": {
+      "1": 0,
+      "X": 2,
+      "2": 0,
+      "total": 2
+    },
+    "RANGEV_DOM_Leeds_stable": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "RANGEV_EXT_Brighton_stable": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "TENDEQ_dom_Leeds_att_moyenne_def_moyenne_vs_favori": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "Leeds": {
+      "domicile": {
+        "V": 0,
+        "N": 1,
+        "D": 0,
+        "total": 1
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "Brighton": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 1,
+        "D": 0,
+        "total": 1
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "FAVORI_MODERE": {
+      "1": 3,
+      "X": 1,
+      "2": 0,
+      "total": 4
+    },
+    "1.8_4.0_3.8": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "ZONE_Z4_vs_Z4": {
+      "1": 1,
+      "X": 0,
+      "2": 1,
+      "total": 2
+    },
+    "FORCE_outsider_dom_vs_outsider_ext": {
+      "1": 1,
+      "X": 0,
+      "2": 1,
+      "total": 2
+    },
+    "LIEU_dom_Z4_vs_Z4": {
+      "1": 1,
+      "X": 0,
+      "2": 1,
+      "total": 2
+    },
+    "AVANTAGE_dom_Z4": {
+      "1": 1,
+      "X": 0,
+      "2": 1,
+      "total": 2
+    },
+    "RANGEV_DOM_London Reds_stable": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "RANGEV_EXT_Brentford_stable": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "TENDADV_dom_att_moyenne_def_moyenne_vs_outsider": {
+      "1": 2,
+      "X": 0,
+      "2": 1,
+      "total": 3
+    },
+    "TENDADV_ext_att_moyenne_def_moyenne_vs_outsider": {
+      "1": 1,
+      "X": 0,
+      "2": 1,
+      "total": 2
+    },
+    "TENDEQ_dom_London Reds_att_moyenne_def_moyenne_vs_outsider": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "London Reds": {
+      "domicile": {
+        "V": 1,
+        "N": 0,
+        "D": 0,
+        "total": 1
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "Brentford": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 1,
+        "total": 1
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "1.4_5.4_5.8": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "SERIE_D_vs_V": {
+      "1": 0,
+      "X": 0,
+      "2": 3,
+      "total": 3
+    },
+    "SERIE_dom_D": {
+      "1": 0,
+      "X": 0,
+      "2": 3,
+      "total": 3
+    },
+    "SERIE_ext_V": {
+      "1": 0,
+      "X": 0,
+      "2": 3,
+      "total": 3
+    },
+    "RANGEV_DOM_Sunderland_stable": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "RANGEV_EXT_N. Forest_stable": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "TENDEQ_dom_Sunderland_att_moyenne_def_moyenne_vs_outsider": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "Sunderland": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 1,
+        "total": 1
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "N. Forest": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "exterieur": {
+        "V": 1,
+        "N": 0,
+        "D": 0,
+        "total": 1
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "3.5_4.0_1.9": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "ZONE_Z3_vs_Z4": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "FORCE_medium_dom_vs_outsider_ext": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "LIEU_dom_Z3_vs_Z4": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "AVANTAGE_dom_Z3": {
+      "1": 1,
+      "X": 0,
+      "2": 2,
+      "total": 3
+    },
+    "RANGEV_DOM_London Blues_stable": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "RANGEV_EXT_Wolverhampton_stable": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "TENDADV_ext_att_moyenne_def_moyenne_vs_medium": {
+      "1": 2,
+      "X": 1,
+      "2": 2,
+      "total": 5
+    },
+    "TENDEQ_dom_London Blues_att_moyenne_def_moyenne_vs_outsider": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "London Blues": {
+      "domicile": {
+        "V": 1,
+        "N": 0,
+        "D": 0,
+        "total": 1
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "Wolverhampton": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 1,
+        "total": 1
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "COTES_SERREES": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "2.6_3.9_2.4": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "ZONE_Z3_vs_Z3": {
+      "1": 0,
+      "X": 0,
+      "2": 2,
+      "total": 2
+    },
+    "FORCE_medium_dom_vs_medium_ext": {
+      "1": 1,
+      "X": 1,
+      "2": 2,
+      "total": 4
+    },
+    "LIEU_dom_Z3_vs_Z3": {
+      "1": 0,
+      "X": 0,
+      "2": 2,
+      "total": 2
+    },
+    "RANGEV_DOM_Manchester Red_stable": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "RANGEV_EXT_Everton_stable": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "TENDADV_dom_att_moyenne_def_moyenne_vs_medium": {
+      "1": 2,
+      "X": 1,
+      "2": 2,
+      "total": 5
+    },
+    "TENDEQ_dom_Manchester Red_att_moyenne_def_moyenne_vs_medium": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "Manchester Red": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 1,
+        "total": 1
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "Everton": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "exterieur": {
+        "V": 1,
+        "N": 0,
+        "D": 0,
+        "total": 1
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "1.6_3.6_5.7": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "ZONE_Z2_vs_Z2": {
+      "1": 1,
+      "X": 1,
+      "2": 0,
+      "total": 2
+    },
+    "LIEU_dom_Z2_vs_Z2": {
+      "1": 1,
+      "X": 1,
+      "2": 0,
+      "total": 2
+    },
+    "AVANTAGE_dom_Z2": {
+      "1": 1,
+      "X": 1,
+      "2": 0,
+      "total": 2
+    },
+    "RANGEV_DOM_West Ham_stable": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "RANGEV_EXT_Liverpool_stable": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "TENDEQ_dom_West Ham_att_moyenne_def_moyenne_vs_medium": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "West Ham": {
+      "domicile": {
+        "V": 0,
+        "N": 1,
+        "D": 0,
+        "total": 1
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "Liverpool": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 1,
+        "D": 0,
+        "total": 1
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "1.5_4.5_6.2": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "RANGEV_DOM_Spurs_stable": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "RANGEV_EXT_Burnley_stable": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "TENDEQ_dom_Spurs_att_moyenne_def_moyenne_vs_medium": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "Spurs": {
+      "domicile": {
+        "V": 1,
+        "N": 0,
+        "D": 0,
+        "total": 1
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "Burnley": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 1,
+        "total": 1
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "4.4_3.8_1.8": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "ZONE_Z1_vs_Z2": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "FORCE_fort_dom_vs_medium_ext": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "FORTE_DOM_C. Palace_vs_medium": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "LIEU_dom_Z1_vs_Z2": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "RANGEV_DOM_C. Palace_stable": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "RANGEV_EXT_Bournemouth_stable": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "TENDEQ_dom_C. Palace_att_moyenne_def_moyenne_vs_medium": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "C. Palace": {
+      "domicile": {
+        "V": 1,
+        "N": 0,
+        "D": 0,
+        "total": 1
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "Bournemouth": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 1,
+        "total": 1
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "1.4_4.7_6.3": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "RANGEV_DOM_Fulham_stable": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "RANGEV_EXT_Newcastle_stable": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "TENDEQ_dom_Fulham_att_moyenne_def_moyenne_vs_medium": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "Fulham": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 1,
+        "total": 1
+      },
+      "exterieur": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    },
+    "Newcastle": {
+      "domicile": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "exterieur": {
+        "V": 1,
+        "N": 0,
+        "D": 0,
+        "total": 1
+      },
+      "apres_victoire": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      },
+      "apres_defaite": {
+        "V": 0,
+        "N": 0,
+        "D": 0,
+        "total": 0
+      }
+    }
   },
-  "historique_predictions": [],
+  "poids": {
+    "cote_favorite": 0.1282,
+    "forme_recente": 0.1108,
+    "classement": 0.1157,
+    "classement_diff": 0.0908,
+    "zone_vs_zone": 0.0908,
+    "force_lieu": 0.0806,
+    "lieu_rang": 0.0605,
+    "serie_forme": 0.0806,
+    "serie_rang": 0.0605,
+    "tendance_buts": 0.0705,
+    "historique_h2h": 0.0605,
+    "cotes_proches": 0.0505
+  },
+  "historique_predictions": [
+    {
+      "match": "A. Villa vs Manchester Blue",
+      "cotes": [
+        6.25,
+        5.04,
+        1.43
+      ],
+      "prediction": "X",
+      "confiance": 50,
+      "resultat_reel": "1",
+      "facteurs": {
+        "cote_favorite": "2",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T07:29:48.872034"
+    },
+    {
+      "match": "Leeds vs Brighton",
+      "cotes": [
+        2.95,
+        3.67,
+        2.23
+      ],
+      "prediction": "X",
+      "confiance": 42,
+      "resultat_reel": "X",
+      "facteurs": {
+        "cote_favorite": "2",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T07:29:48.875752"
+    },
+    {
+      "match": "London Reds vs Brentford",
+      "cotes": [
+        1.81,
+        4.05,
+        3.84
+      ],
+      "prediction": "1",
+      "confiance": 40,
+      "resultat_reel": "1",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T07:29:48.879064"
+    },
+    {
+      "match": "Sunderland vs N. Forest",
+      "cotes": [
+        1.43,
+        5.41,
+        5.75
+      ],
+      "prediction": "1",
+      "confiance": 41,
+      "resultat_reel": "2",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T07:29:48.882064"
+    },
+    {
+      "match": "London Blues vs Wolverhampton",
+      "cotes": [
+        3.54,
+        4.02,
+        1.89
+      ],
+      "prediction": "X",
+      "confiance": 44,
+      "resultat_reel": "1",
+      "facteurs": {
+        "cote_favorite": "2",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T07:29:48.885036"
+    },
+    {
+      "match": "Manchester Red vs Everton",
+      "cotes": [
+        2.63,
+        3.9,
+        2.36
+      ],
+      "prediction": "X",
+      "confiance": 41,
+      "resultat_reel": "2",
+      "facteurs": {
+        "cote_favorite": "2",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T07:29:48.887529"
+    },
+    {
+      "match": "West Ham vs Liverpool",
+      "cotes": [
+        1.65,
+        3.6,
+        5.72
+      ],
+      "prediction": "1",
+      "confiance": 40,
+      "resultat_reel": "X",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T07:29:48.890410"
+    },
+    {
+      "match": "Spurs vs Burnley",
+      "cotes": [
+        1.47,
+        4.51,
+        6.24
+      ],
+      "prediction": "1",
+      "confiance": 40,
+      "resultat_reel": "1",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T07:29:48.893713"
+    },
+    {
+      "match": "C. Palace vs Bournemouth",
+      "cotes": [
+        4.41,
+        3.84,
+        1.75
+      ],
+      "prediction": "X",
+      "confiance": 46,
+      "resultat_reel": "1",
+      "facteurs": {
+        "cote_favorite": "2",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T07:29:48.897059"
+    },
+    {
+      "match": "Fulham vs Newcastle",
+      "cotes": [
+        1.45,
+        4.73,
+        6.27
+      ],
+      "prediction": "1",
+      "confiance": 40,
+      "resultat_reel": "2",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T07:29:48.900984"
+    }
+  ],
   "stats_globales": {
-    "total_matchs": 0,
-    "predictions_correctes": 0,
-    "predictions_1n2_correctes": 0,
+    "total_matchs": 20,
+    "predictions_correctes": 3,
+    "predictions_1n2_correctes": 3,
     "scores_exacts": 0
   },
   "perf_facteurs": {
     "cote_favorite": {
-      "correct": 0,
-      "total": 0
+      "correct": 3,
+      "total": 10
     },
     "forme_recente": {
       "correct": 0,
       "total": 0
     },
     "classement": {
-      "correct": 0,
-      "total": 0
+      "correct": 5,
+      "total": 10
     },
     "classement_diff": {
       "correct": 0,
@@ -71,5 +1281,7 @@
       "total": 0
     }
   },
-  "journees_apprises": []
+  "journees_apprises": [
+    "Saison 2026::Journée 1"
+  ]
 }
