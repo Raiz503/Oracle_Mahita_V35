@@ -1,10 +1,10 @@
 {
   "patterns": {
     "FAVORI_FORT": {
-      "1": 8,
+      "1": 9,
       "X": 5,
       "2": 4,
-      "total": 17
+      "total": 18
     },
     "6.2_5.0_1.4": {
       "1": 1,
@@ -14,21 +14,21 @@
     },
     "DIFF_EGAL": {
       "1": 7,
-      "X": 4,
+      "X": 5,
       "2": 5,
-      "total": 16
+      "total": 17
     },
     "ZONE_Z1_vs_Z1": {
       "1": 3,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 4
+      "total": 5
     },
     "FORCE_fort_dom_vs_fort_ext": {
       "1": 3,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 4
+      "total": 5
     },
     "FORTE_DOM_A. Villa_vs_fort": {
       "1": 1,
@@ -44,15 +44,15 @@
     },
     "LIEU_dom_Z1_vs_Z1": {
       "1": 3,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 4
+      "total": 5
     },
     "AVANTAGE_dom_Z1": {
       "1": 7,
-      "X": 3,
-      "2": 0,
-      "total": 10
+      "X": 5,
+      "2": 1,
+      "total": 13
     },
     "SERIE_V_vs_D": {
       "1": 5,
@@ -73,10 +73,10 @@
       "total": 5
     },
     "RANGEV_stable_vs_stable": {
-      "1": 19,
-      "X": 17,
-      "2": 14,
-      "total": 50
+      "1": 21,
+      "X": 23,
+      "2": 16,
+      "total": 60
     },
     "RANGEV_DOM_A. Villa_stable": {
       "1": 3,
@@ -85,10 +85,10 @@
       "total": 3
     },
     "RANGEV_EXT_Manchester Blue_stable": {
-      "1": 1,
+      "1": 2,
       "X": 0,
       "2": 1,
-      "total": 2
+      "total": 3
     },
     "TEND_att_moyenne_def_moyenne_vs_att_moyenne_def_moyenne": {
       "1": 5,
@@ -104,9 +104,9 @@
     },
     "TENDADV_ext_att_moyenne_def_moyenne_vs_favori": {
       "1": 3,
-      "X": 2,
-      "2": 0,
-      "total": 5
+      "X": 3,
+      "2": 1,
+      "total": 7
     },
     "TENDEQ_dom_A. Villa_att_moyenne_def_moyenne_vs_favori": {
       "1": 1,
@@ -123,9 +123,9 @@
       },
       "exterieur": {
         "V": 0,
-        "N": 2,
+        "N": 3,
         "D": 0,
-        "total": 2
+        "total": 3
       },
       "apres_victoire": {
         "V": 0,
@@ -150,8 +150,8 @@
       "exterieur": {
         "V": 1,
         "N": 0,
-        "D": 1,
-        "total": 2
+        "D": 2,
+        "total": 3
       },
       "apres_victoire": {
         "V": 0,
@@ -168,9 +168,9 @@
     },
     "MATCH_OUVERT": {
       "1": 1,
-      "X": 3,
-      "2": 2,
-      "total": 6
+      "X": 6,
+      "2": 3,
+      "total": 10
     },
     "3.0_3.7_2.2": {
       "1": 0,
@@ -216,9 +216,9 @@
     },
     "RANGEV_EXT_Brighton_stable": {
       "1": 0,
-      "X": 2,
+      "X": 3,
       "2": 1,
-      "total": 3
+      "total": 4
     },
     "TENDEQ_dom_Leeds_att_moyenne_def_moyenne_vs_favori": {
       "1": 0,
@@ -234,10 +234,10 @@
         "total": 3
       },
       "exterieur": {
-        "V": 0,
+        "V": 1,
         "N": 2,
         "D": 0,
-        "total": 2
+        "total": 3
       },
       "apres_victoire": {
         "V": 0,
@@ -261,9 +261,9 @@
       },
       "exterieur": {
         "V": 1,
-        "N": 2,
+        "N": 3,
         "D": 0,
-        "total": 3
+        "total": 4
       },
       "apres_victoire": {
         "V": 0,
@@ -279,10 +279,10 @@
       }
     },
     "FAVORI_MODERE": {
-      "1": 10,
-      "X": 7,
-      "2": 6,
-      "total": 23
+      "1": 11,
+      "X": 10,
+      "2": 7,
+      "total": 28
     },
     "1.8_4.0_3.8": {
       "1": 2,
@@ -292,33 +292,33 @@
     },
     "ZONE_Z4_vs_Z4": {
       "1": 1,
-      "X": 2,
+      "X": 3,
       "2": 2,
-      "total": 5
+      "total": 6
     },
     "FORCE_outsider_dom_vs_outsider_ext": {
       "1": 1,
-      "X": 2,
+      "X": 3,
       "2": 2,
-      "total": 5
+      "total": 6
     },
     "LIEU_dom_Z4_vs_Z4": {
       "1": 1,
-      "X": 2,
+      "X": 3,
       "2": 2,
-      "total": 5
+      "total": 6
     },
     "AVANTAGE_dom_Z4": {
       "1": 3,
-      "X": 5,
-      "2": 5,
-      "total": 13
+      "X": 7,
+      "2": 6,
+      "total": 16
     },
     "RANGEV_DOM_London Reds_stable": {
       "1": 2,
       "X": 1,
-      "2": 0,
-      "total": 3
+      "2": 1,
+      "total": 4
     },
     "RANGEV_EXT_Brentford_stable": {
       "1": 1,
@@ -328,15 +328,15 @@
     },
     "TENDADV_dom_att_moyenne_def_moyenne_vs_outsider": {
       "1": 2,
-      "X": 2,
+      "X": 3,
       "2": 1,
-      "total": 5
+      "total": 6
     },
     "TENDADV_ext_att_moyenne_def_moyenne_vs_outsider": {
       "1": 1,
-      "X": 3,
+      "X": 4,
       "2": 3,
-      "total": 7
+      "total": 8
     },
     "TENDEQ_dom_London Reds_att_moyenne_def_moyenne_vs_outsider": {
       "1": 1,
@@ -348,8 +348,8 @@
       "domicile": {
         "V": 2,
         "N": 1,
-        "D": 0,
-        "total": 3
+        "D": 1,
+        "total": 4
       },
       "exterieur": {
         "V": 1,
@@ -373,9 +373,9 @@
     "Brentford": {
       "domicile": {
         "V": 0,
-        "N": 1,
+        "N": 2,
         "D": 1,
-        "total": 2
+        "total": 3
       },
       "exterieur": {
         "V": 2,
@@ -423,8 +423,8 @@
     "RANGEV_DOM_Sunderland_stable": {
       "1": 0,
       "X": 0,
-      "2": 3,
-      "total": 3
+      "2": 4,
+      "total": 4
     },
     "RANGEV_EXT_N. Forest_stable": {
       "1": 1,
@@ -442,8 +442,8 @@
       "domicile": {
         "V": 0,
         "N": 0,
-        "D": 3,
-        "total": 3
+        "D": 4,
+        "total": 4
       },
       "exterieur": {
         "V": 0,
@@ -467,9 +467,9 @@
     "N. Forest": {
       "domicile": {
         "V": 0,
-        "N": 1,
+        "N": 2,
         "D": 1,
-        "total": 2
+        "total": 3
       },
       "exterieur": {
         "V": 1,
@@ -498,27 +498,27 @@
     },
     "ZONE_Z3_vs_Z4": {
       "1": 2,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 3
+      "total": 4
     },
     "FORCE_medium_dom_vs_outsider_ext": {
       "1": 2,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 3
+      "total": 4
     },
     "LIEU_dom_Z3_vs_Z4": {
       "1": 2,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 3
+      "total": 4
     },
     "AVANTAGE_dom_Z3": {
-      "1": 3,
-      "X": 4,
+      "1": 4,
+      "X": 5,
       "2": 6,
-      "total": 13
+      "total": 15
     },
     "RANGEV_DOM_London Blues_stable": {
       "1": 2,
@@ -527,10 +527,10 @@
       "total": 3
     },
     "RANGEV_EXT_Wolverhampton_stable": {
-      "1": 2,
+      "1": 3,
       "X": 1,
       "2": 0,
-      "total": 3
+      "total": 4
     },
     "TENDADV_ext_att_moyenne_def_moyenne_vs_medium": {
       "1": 4,
@@ -553,9 +553,9 @@
       },
       "exterieur": {
         "V": 0,
-        "N": 1,
+        "N": 2,
         "D": 1,
-        "total": 2
+        "total": 3
       },
       "apres_victoire": {
         "V": 0,
@@ -580,8 +580,8 @@
       "exterieur": {
         "V": 0,
         "N": 1,
-        "D": 2,
-        "total": 3
+        "D": 3,
+        "total": 4
       },
       "apres_victoire": {
         "V": 0,
@@ -615,10 +615,10 @@
       "total": 3
     },
     "FORCE_medium_dom_vs_medium_ext": {
-      "1": 6,
-      "X": 4,
+      "1": 7,
+      "X": 5,
       "2": 5,
-      "total": 15
+      "total": 17
     },
     "LIEU_dom_Z3_vs_Z3": {
       "1": 0,
@@ -634,15 +634,15 @@
     },
     "RANGEV_EXT_Everton_stable": {
       "1": 0,
-      "X": 0,
+      "X": 1,
       "2": 2,
-      "total": 2
+      "total": 3
     },
     "TENDADV_dom_att_moyenne_def_moyenne_vs_medium": {
       "1": 2,
-      "X": 5,
+      "X": 6,
       "2": 3,
-      "total": 10
+      "total": 11
     },
     "TENDEQ_dom_Manchester Red_att_moyenne_def_moyenne_vs_medium": {
       "1": 0,
@@ -659,9 +659,9 @@
       },
       "exterieur": {
         "V": 0,
-        "N": 1,
+        "N": 2,
         "D": 1,
-        "total": 2
+        "total": 3
       },
       "apres_victoire": {
         "V": 0,
@@ -685,9 +685,9 @@
       },
       "exterieur": {
         "V": 2,
-        "N": 0,
+        "N": 1,
         "D": 0,
-        "total": 2
+        "total": 3
       },
       "apres_victoire": {
         "V": 0,
@@ -709,28 +709,28 @@
       "total": 1
     },
     "ZONE_Z2_vs_Z2": {
-      "1": 2,
-      "X": 2,
+      "1": 3,
+      "X": 3,
       "2": 0,
-      "total": 4
+      "total": 6
     },
     "LIEU_dom_Z2_vs_Z2": {
-      "1": 2,
-      "X": 2,
+      "1": 3,
+      "X": 3,
       "2": 0,
-      "total": 4
+      "total": 6
     },
     "AVANTAGE_dom_Z2": {
-      "1": 6,
-      "X": 5,
+      "1": 7,
+      "X": 6,
       "2": 3,
-      "total": 14
+      "total": 16
     },
     "RANGEV_DOM_West Ham_stable": {
       "1": 0,
-      "X": 2,
+      "X": 3,
       "2": 0,
-      "total": 2
+      "total": 3
     },
     "RANGEV_EXT_Liverpool_stable": {
       "1": 0,
@@ -747,9 +747,9 @@
     "West Ham": {
       "domicile": {
         "V": 0,
-        "N": 2,
+        "N": 3,
         "D": 0,
-        "total": 2
+        "total": 3
       },
       "exterieur": {
         "V": 0,
@@ -772,10 +772,10 @@
     },
     "Liverpool": {
       "domicile": {
-        "V": 1,
+        "V": 2,
         "N": 0,
         "D": 1,
-        "total": 2
+        "total": 3
       },
       "exterieur": {
         "V": 1,
@@ -804,9 +804,9 @@
     },
     "RANGEV_DOM_Spurs_stable": {
       "1": 2,
-      "X": 0,
+      "X": 1,
       "2": 0,
-      "total": 2
+      "total": 3
     },
     "RANGEV_EXT_Burnley_stable": {
       "1": 3,
@@ -823,9 +823,9 @@
     "Spurs": {
       "domicile": {
         "V": 2,
-        "N": 0,
+        "N": 1,
         "D": 0,
-        "total": 2
+        "total": 3
       },
       "exterieur": {
         "V": 2,
@@ -849,9 +849,9 @@
     "Burnley": {
       "domicile": {
         "V": 0,
-        "N": 2,
+        "N": 3,
         "D": 0,
-        "total": 2
+        "total": 3
       },
       "exterieur": {
         "V": 0,
@@ -886,15 +886,15 @@
     },
     "FORCE_fort_dom_vs_medium_ext": {
       "1": 1,
-      "X": 1,
-      "2": 0,
-      "total": 2
+      "X": 2,
+      "2": 1,
+      "total": 4
     },
     "FORTE_DOM_C. Palace_vs_medium": {
       "1": 1,
-      "X": 0,
+      "X": 1,
       "2": 0,
-      "total": 1
+      "total": 2
     },
     "LIEU_dom_Z1_vs_Z2": {
       "1": 1,
@@ -904,9 +904,9 @@
     },
     "RANGEV_DOM_C. Palace_stable": {
       "1": 3,
-      "X": 0,
+      "X": 1,
       "2": 0,
-      "total": 3
+      "total": 4
     },
     "RANGEV_EXT_Bournemouth_stable": {
       "1": 2,
@@ -923,9 +923,9 @@
     "C. Palace": {
       "domicile": {
         "V": 3,
-        "N": 0,
+        "N": 1,
         "D": 0,
-        "total": 3
+        "total": 4
       },
       "exterieur": {
         "V": 2,
@@ -948,10 +948,10 @@
     },
     "Bournemouth": {
       "domicile": {
-        "V": 1,
+        "V": 2,
         "N": 1,
         "D": 0,
-        "total": 2
+        "total": 3
       },
       "exterieur": {
         "V": 0,
@@ -987,8 +987,8 @@
     "RANGEV_EXT_Newcastle_stable": {
       "1": 1,
       "X": 1,
-      "2": 1,
-      "total": 3
+      "2": 2,
+      "total": 4
     },
     "TENDEQ_dom_Fulham_att_moyenne_def_moyenne_vs_medium": {
       "1": 0,
@@ -1005,9 +1005,9 @@
       },
       "exterieur": {
         "V": 0,
-        "N": 1,
+        "N": 2,
         "D": 1,
-        "total": 2
+        "total": 3
       },
       "apres_victoire": {
         "V": 0,
@@ -1030,10 +1030,10 @@
         "total": 2
       },
       "exterieur": {
-        "V": 1,
+        "V": 2,
         "N": 1,
         "D": 1,
-        "total": 3
+        "total": 4
       },
       "apres_victoire": {
         "V": 0,
@@ -1057,8 +1057,8 @@
     "DIFF_PLUS5": {
       "1": 4,
       "X": 4,
-      "2": 2,
-      "total": 10
+      "2": 3,
+      "total": 11
     },
     "ZONE_Z2_vs_Z3": {
       "1": 3,
@@ -1098,21 +1098,21 @@
     },
     "TEND_att_forte_def_forte_vs_att_moyenne_def_moyenne": {
       "1": 2,
-      "X": 0,
-      "2": 0,
-      "total": 2
+      "X": 1,
+      "2": 1,
+      "total": 4
     },
     "TENDADV_dom_att_forte_def_forte_vs_medium": {
       "1": 1,
-      "X": 0,
-      "2": 0,
-      "total": 1
+      "X": 1,
+      "2": 1,
+      "total": 3
     },
     "TENDEQ_dom_London Reds_att_forte_def_forte_vs_medium": {
       "1": 1,
       "X": 0,
-      "2": 0,
-      "total": 1
+      "2": 1,
+      "total": 2
     },
     "2.0_3.2_4.0": {
       "1": 0,
@@ -1146,9 +1146,9 @@
     },
     "RANGEV_EXT_Manchester Red_stable": {
       "1": 1,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 2
+      "total": 3
     },
     "TENDEQ_dom_Manchester Blue_att_moyenne_def_moyenne_vs_outsider": {
       "1": 0,
@@ -1163,22 +1163,22 @@
       "total": 1
     },
     "DIFF_MOINS10": {
-      "1": 1,
-      "X": 2,
-      "2": 4,
-      "total": 7
-    },
-    "ZONE_Z3_vs_Z1": {
-      "1": 0,
+      "1": 2,
       "X": 3,
-      "2": 3,
-      "total": 6
-    },
-    "FORCE_medium_dom_vs_fort_ext": {
-      "1": 1,
-      "X": 4,
       "2": 4,
       "total": 9
+    },
+    "ZONE_Z3_vs_Z1": {
+      "1": 1,
+      "X": 3,
+      "2": 3,
+      "total": 7
+    },
+    "FORCE_medium_dom_vs_fort_ext": {
+      "1": 2,
+      "X": 4,
+      "2": 4,
+      "total": 10
     },
     "FORTE_EXT_C. Palace_vs_medium": {
       "1": 0,
@@ -1187,10 +1187,10 @@
       "total": 2
     },
     "LIEU_dom_Z3_vs_Z1": {
-      "1": 0,
+      "1": 1,
       "X": 3,
       "2": 3,
-      "total": 6
+      "total": 7
     },
     "SERIE_DD_vs_VV": {
       "1": 0,
@@ -1212,9 +1212,9 @@
     },
     "RANGEV_DOM_Brentford_stable": {
       "1": 0,
-      "X": 1,
+      "X": 2,
       "2": 1,
-      "total": 2
+      "total": 3
     },
     "RANGEV_EXT_C. Palace_stable": {
       "1": 0,
@@ -1235,10 +1235,10 @@
       "total": 1
     },
     "RANGEV_DOM_Bournemouth_stable": {
-      "1": 1,
+      "1": 2,
       "X": 1,
       "2": 0,
-      "total": 2
+      "total": 3
     },
     "RANGEV_EXT_Sunderland_stable": {
       "1": 0,
@@ -1277,10 +1277,10 @@
       "total": 1
     },
     "RANGEV_DOM_Liverpool_stable": {
-      "1": 1,
+      "1": 2,
       "X": 0,
       "2": 1,
-      "total": 2
+      "total": 3
     },
     "RANGEV_EXT_Spurs_stable": {
       "1": 1,
@@ -1392,9 +1392,9 @@
     },
     "RANGEV_EXT_Fulham_stable": {
       "1": 1,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 2
+      "total": 3
     },
     "TENDEQ_dom_Everton_att_moyenne_def_moyenne_vs_medium": {
       "1": 0,
@@ -1428,15 +1428,15 @@
     },
     "RANGEV_DOM_N. Forest_stable": {
       "1": 0,
-      "X": 1,
+      "X": 2,
       "2": 1,
-      "total": 2
+      "total": 3
     },
     "RANGEV_EXT_A. Villa_stable": {
       "1": 0,
-      "X": 2,
+      "X": 3,
       "2": 0,
-      "total": 2
+      "total": 3
     },
     "TENDEQ_dom_N. Forest_att_moyenne_def_moyenne_vs_medium": {
       "1": 0,
@@ -1446,21 +1446,21 @@
     },
     "ZONE_Z4_vs_Z2": {
       "1": 0,
-      "X": 3,
+      "X": 4,
       "2": 1,
-      "total": 4
+      "total": 5
     },
     "FORCE_outsider_dom_vs_medium_ext": {
       "1": 1,
-      "X": 3,
-      "2": 2,
-      "total": 6
+      "X": 4,
+      "2": 3,
+      "total": 8
     },
     "LIEU_dom_Z4_vs_Z2": {
       "1": 0,
-      "X": 3,
+      "X": 4,
       "2": 1,
-      "total": 4
+      "total": 5
     },
     "SERIE_DN_vs_NN": {
       "1": 0,
@@ -1476,15 +1476,15 @@
     },
     "RANGEV_DOM_Burnley_stable": {
       "1": 0,
-      "X": 2,
+      "X": 3,
       "2": 0,
-      "total": 2
+      "total": 3
     },
     "RANGEV_EXT_Leeds_stable": {
       "1": 0,
       "X": 2,
-      "2": 0,
-      "total": 2
+      "2": 1,
+      "total": 3
     },
     "TENDEQ_dom_Burnley_att_moyenne_def_moyenne_vs_medium": {
       "1": 0,
@@ -1501,8 +1501,8 @@
     "DIFF_MOINS5": {
       "1": 0,
       "X": 5,
-      "2": 1,
-      "total": 6
+      "2": 2,
+      "total": 7
     },
     "ZONE_Z2_vs_Z1": {
       "1": 1,
@@ -1542,9 +1542,9 @@
     },
     "RANGEV_EXT_London Blues_stable": {
       "1": 1,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 2
+      "total": 3
     },
     "TENDEQ_dom_Brighton_att_moyenne_def_moyenne_vs_favori": {
       "1": 0,
@@ -1608,9 +1608,9 @@
     },
     "DIFF_PLUS10": {
       "1": 3,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 4
+      "total": 5
     },
     "ZONE_Z1_vs_Z4": {
       "1": 3,
@@ -1685,10 +1685,10 @@
       "total": 1
     },
     "DIFF_PLUS2": {
-      "1": 1,
-      "X": 1,
+      "1": 2,
+      "X": 2,
       "2": 0,
-      "total": 2
+      "total": 4
     },
     "SERIE_VDN_vs_NNN": {
       "1": 0,
@@ -1782,9 +1782,9 @@
     },
     "FORTE_DOM_Spurs_vs_fort": {
       "1": 1,
-      "X": 0,
+      "X": 1,
       "2": 0,
-      "total": 1
+      "total": 2
     },
     "FORTE_EXT_London Reds_vs_fort": {
       "1": 1,
@@ -1799,10 +1799,10 @@
       "total": 2
     },
     "SERIE_ext_VVD": {
-      "1": 2,
+      "1": 3,
       "X": 0,
       "2": 0,
-      "total": 2
+      "total": 3
     },
     "RANGEV_EXT_London Reds_stable": {
       "1": 1,
@@ -1841,10 +1841,10 @@
       "total": 3
     },
     "SERIE_dom_VNV": {
-      "1": 3,
+      "1": 5,
       "X": 0,
       "2": 0,
-      "total": 3
+      "total": 5
     },
     "SERIE_ext_DND": {
       "1": 4,
@@ -1890,9 +1890,9 @@
     },
     "SERIE_ext_VNN": {
       "1": 0,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 1
+      "total": 2
     },
     "TEND_att_faible_def_forte_vs_att_forte_def_forte": {
       "1": 0,
@@ -1926,15 +1926,15 @@
     },
     "TEND_att_moyenne_def_forte_vs_att_moyenne_def_moyenne": {
       "1": 1,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 2
+      "total": 3
     },
     "TENDADV_dom_att_moyenne_def_forte_vs_medium": {
       "1": 2,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 3
+      "total": 4
     },
     "TENDEQ_dom_A. Villa_att_moyenne_def_forte_vs_medium": {
       "1": 1,
@@ -1963,8 +1963,8 @@
     "SERIE_ext_NDV": {
       "1": 0,
       "X": 0,
-      "2": 2,
-      "total": 2
+      "2": 3,
+      "total": 3
     },
     "TEND_att_forte_def_moyenne_vs_att_forte_def_moyenne": {
       "1": 0,
@@ -1973,10 +1973,10 @@
       "total": 1
     },
     "TENDADV_dom_att_forte_def_moyenne_vs_medium": {
-      "1": 2,
+      "1": 3,
       "X": 0,
       "2": 2,
-      "total": 4
+      "total": 5
     },
     "TENDEQ_dom_Leeds_att_forte_def_moyenne_vs_medium": {
       "1": 0,
@@ -2034,21 +2034,21 @@
     },
     "DIFF_MOINS2": {
       "1": 3,
-      "X": 0,
+      "X": 2,
       "2": 2,
-      "total": 5
+      "total": 7
     },
     "ZONE_Z4_vs_Z3": {
       "1": 1,
       "X": 0,
-      "2": 1,
-      "total": 2
+      "2": 2,
+      "total": 3
     },
     "LIEU_dom_Z4_vs_Z3": {
       "1": 1,
       "X": 0,
-      "2": 1,
-      "total": 2
+      "2": 2,
+      "total": 3
     },
     "SERIE_NDV_vs_NND": {
       "1": 1,
@@ -2070,15 +2070,15 @@
     },
     "TEND_att_moyenne_def_forte_vs_att_forte_def_faible": {
       "1": 1,
-      "X": 0,
+      "X": 1,
       "2": 0,
-      "total": 1
+      "total": 2
     },
     "TENDADV_ext_att_forte_def_faible_vs_outsider": {
       "1": 1,
-      "X": 0,
+      "X": 1,
       "2": 1,
-      "total": 2
+      "total": 3
     },
     "TENDEQ_dom_Bournemouth_att_moyenne_def_forte_vs_medium": {
       "1": 1,
@@ -2100,9 +2100,9 @@
     },
     "SERIE_dom_NDN": {
       "1": 0,
-      "X": 1,
+      "X": 3,
       "2": 0,
-      "total": 1
+      "total": 3
     },
     "SERIE_ext_DNN": {
       "1": 0,
@@ -2112,9 +2112,9 @@
     },
     "TENDEQ_dom_Burnley_att_moyenne_def_forte_vs_medium": {
       "1": 0,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 1
+      "total": 2
     },
     "1.3_5.4_8.1": {
       "1": 1,
@@ -2166,21 +2166,21 @@
     },
     "SERIE_DVN_vs_NVN": {
       "1": 0,
-      "X": 1,
-      "2": 0,
-      "total": 1
-    },
-    "SERIE_dom_DVN": {
-      "1": 0,
       "X": 2,
       "2": 0,
       "total": 2
     },
+    "SERIE_dom_DVN": {
+      "1": 0,
+      "X": 3,
+      "2": 0,
+      "total": 3
+    },
     "SERIE_ext_NVN": {
       "1": 0,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 1
+      "total": 2
     },
     "TEND_att_forte_def_faible_vs_att_forte_def_moyenne": {
       "1": 1,
@@ -2238,9 +2238,9 @@
     },
     "SERIE_dom_DDN": {
       "1": 0,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 1
+      "total": 2
     },
     "SERIE_ext_NDN": {
       "1": 0,
@@ -2249,10 +2249,10 @@
       "total": 2
     },
     "TEND_att_forte_def_moyenne_vs_att_moyenne_def_forte": {
-      "1": 0,
-      "X": 1,
+      "1": 1,
+      "X": 2,
       "2": 1,
-      "total": 2
+      "total": 4
     },
     "TENDADV_dom_att_forte_def_moyenne_vs_outsider": {
       "1": 0,
@@ -2263,8 +2263,8 @@
     "TENDADV_ext_att_moyenne_def_forte_vs_outsider": {
       "1": 0,
       "X": 1,
-      "2": 0,
-      "total": 1
+      "2": 1,
+      "total": 2
     },
     "TENDEQ_dom_West Ham_att_forte_def_moyenne_vs_outsider": {
       "1": 0,
@@ -2279,10 +2279,10 @@
       "total": 1
     },
     "TENDADV_ext_att_moyenne_def_forte_vs_medium": {
-      "1": 0,
-      "X": 0,
+      "1": 1,
+      "X": 1,
       "2": 1,
-      "total": 1
+      "total": 3
     },
     "TENDEQ_dom_N. Forest_att_forte_def_moyenne_vs_medium": {
       "1": 0,
@@ -2346,9 +2346,9 @@
     },
     "TENDADV_ext_att_moyenne_def_forte_vs_favori": {
       "1": 0,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 1
+      "total": 2
     },
     "TENDEQ_dom_London Reds_att_forte_def_forte_vs_outsider": {
       "1": 0,
@@ -2425,8 +2425,8 @@
     "SERIE_dom_NDD": {
       "1": 0,
       "X": 0,
-      "2": 2,
-      "total": 2
+      "2": 3,
+      "total": 3
     },
     "SERIE_ext_VNV": {
       "1": 0,
@@ -2694,9 +2694,9 @@
     },
     "SERIE_ext_VVN": {
       "1": 0,
-      "X": 1,
+      "X": 2,
       "2": 0,
-      "total": 1
+      "total": 2
     },
     "TEND_att_moyenne_def_forte_vs_att_forte_def_moyenne": {
       "1": 0,
@@ -2715,21 +2715,291 @@
       "X": 1,
       "2": 0,
       "total": 1
+    },
+    "3.6_3.9_1.9": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "SERIE_NDN_vs_VVN": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "1.9_4.1_3.6": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "FORTE_EXT_A. Villa_vs_fort": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "TENDADV_dom_att_forte_def_moyenne_vs_favori": {
+      "1": 1,
+      "X": 1,
+      "2": 0,
+      "total": 2
+    },
+    "TENDEQ_dom_Spurs_att_forte_def_moyenne_vs_favori": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "1.7_3.8_4.6": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "SERIE_NVN_vs_VNN": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "SERIE_dom_NVN": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "TEND_att_moyenne_def_moyenne_vs_att_moyenne_def_forte": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "TENDEQ_dom_Brentford_att_moyenne_def_moyenne_vs_medium": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "2.2_3.6_3.0": {
+      "1": 0,
+      "X": 2,
+      "2": 0,
+      "total": 2
+    },
+    "SERIE_NDN_vs_DDN": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "SERIE_ext_DDN": {
+      "1": 0,
+      "X": 3,
+      "2": 0,
+      "total": 3
+    },
+    "TENDADV_dom_att_moyenne_def_forte_vs_outsider": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "TENDEQ_dom_West Ham_att_moyenne_def_forte_vs_outsider": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "ZONE_Z1_vs_Z3": {
+      "1": 0,
+      "X": 1,
+      "2": 1,
+      "total": 2
+    },
+    "LIEU_dom_Z1_vs_Z3": {
+      "1": 0,
+      "X": 1,
+      "2": 1,
+      "total": 2
+    },
+    "SERIE_VVN_vs_DDN": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "SERIE_dom_VVN": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "TENDEQ_dom_C. Palace_att_forte_def_forte_vs_medium": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "1.5_4.8_5.1": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "FORTE_DOM_London Reds_vs_medium": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "SERIE_NVD_vs_NNV": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "SERIE_dom_NVD": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "SERIE_ext_NNV": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "5.0_3.6_1.7": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "FORTE_EXT_Manchester Blue_vs_medium": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "SERIE_VNV_vs_VVD": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "TENDEQ_dom_Bournemouth_att_forte_def_moyenne_vs_favori": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "1.2_7.0_13.1": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "SERIE_VNV_vs_DVD": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "SERIE_ext_DVD": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "TEND_att_forte_def_moyenne_vs_att_faible_def_moyenne": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "TENDADV_ext_att_faible_def_moyenne_vs_medium": {
+      "1": 1,
+      "X": 1,
+      "2": 0,
+      "total": 2
+    },
+    "TENDEQ_dom_Liverpool_att_forte_def_moyenne_vs_medium": {
+      "1": 1,
+      "X": 0,
+      "2": 0,
+      "total": 1
+    },
+    "2.2_3.4_3.1": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "SERIE_DDN_vs_DDN": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "TEND_att_moyenne_def_moyenne_vs_att_faible_def_moyenne": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "TENDEQ_dom_N. Forest_att_moyenne_def_moyenne_vs_outsider": {
+      "1": 0,
+      "X": 1,
+      "2": 0,
+      "total": 1
+    },
+    "3.2_3.2_2.3": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "SERIE_NDD_vs_NDV": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "TEND_att_faible_def_faible_vs_att_moyenne_def_forte": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "TENDADV_dom_att_faible_def_faible_vs_medium": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
+    },
+    "TENDEQ_dom_Sunderland_att_faible_def_faible_vs_medium": {
+      "1": 0,
+      "X": 0,
+      "2": 1,
+      "total": 1
     }
   },
   "poids": {
-    "cote_favorite": 0.126,
-    "forme_recente": 0.1129,
-    "classement": 0.1059,
-    "classement_diff": 0.0924,
-    "zone_vs_zone": 0.0924,
-    "force_lieu": 0.082,
-    "lieu_rang": 0.0611,
-    "serie_forme": 0.082,
-    "serie_rang": 0.0611,
-    "tendance_buts": 0.0717,
-    "historique_h2h": 0.0611,
-    "cotes_proches": 0.0514
+    "cote_favorite": 0.1108,
+    "forme_recente": 0.1172,
+    "classement": 0.0932,
+    "classement_diff": 0.0956,
+    "zone_vs_zone": 0.0956,
+    "force_lieu": 0.0849,
+    "lieu_rang": 0.0633,
+    "serie_forme": 0.0849,
+    "serie_rang": 0.0633,
+    "tendance_buts": 0.0745,
+    "historique_h2h": 0.0633,
+    "cotes_proches": 0.0533
   },
   "historique_predictions": [
     {
@@ -3531,26 +3801,186 @@
         "classement": "2"
       },
       "timestamp": "2026-05-14T12:50:10.914082"
+    },
+    {
+      "match": "Burnley vs Brighton",
+      "cotes": [
+        3.63,
+        3.92,
+        1.89
+      ],
+      "prediction": "X",
+      "confiance": 45,
+      "resultat_reel": "X",
+      "facteurs": {
+        "cote_favorite": "2",
+        "classement": "2"
+      },
+      "timestamp": "2026-05-14T12:54:28.087432"
+    },
+    {
+      "match": "Spurs vs A. Villa",
+      "cotes": [
+        1.85,
+        4.11,
+        3.63
+      ],
+      "prediction": "1",
+      "confiance": 41,
+      "resultat_reel": "X",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T12:54:28.089929"
+    },
+    {
+      "match": "Brentford vs Everton",
+      "cotes": [
+        1.72,
+        3.83,
+        4.59
+      ],
+      "prediction": "1",
+      "confiance": 40,
+      "resultat_reel": "X",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "2"
+      },
+      "timestamp": "2026-05-14T12:54:28.092349"
+    },
+    {
+      "match": "West Ham vs Manchester Red",
+      "cotes": [
+        2.21,
+        3.62,
+        3.03
+      ],
+      "prediction": "X",
+      "confiance": 44,
+      "resultat_reel": "X",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "2"
+      },
+      "timestamp": "2026-05-14T12:54:28.094871"
+    },
+    {
+      "match": "C. Palace vs London Blues",
+      "cotes": [
+        2.21,
+        3.6,
+        3.04
+      ],
+      "prediction": "1",
+      "confiance": 45,
+      "resultat_reel": "X",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T12:54:28.098749"
+    },
+    {
+      "match": "London Reds vs Newcastle",
+      "cotes": [
+        1.53,
+        4.8,
+        5.09
+      ],
+      "prediction": "1",
+      "confiance": 44,
+      "resultat_reel": "2",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T12:54:28.101135"
+    },
+    {
+      "match": "Bournemouth vs Manchester Blue",
+      "cotes": [
+        5.03,
+        3.64,
+        1.71
+      ],
+      "prediction": "X",
+      "confiance": 45,
+      "resultat_reel": "1",
+      "facteurs": {
+        "cote_favorite": "2",
+        "classement": "2"
+      },
+      "timestamp": "2026-05-14T12:54:28.103820"
+    },
+    {
+      "match": "Liverpool vs Wolverhampton",
+      "cotes": [
+        1.19,
+        6.95,
+        13.07
+      ],
+      "prediction": "1",
+      "confiance": 46,
+      "resultat_reel": "1",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T12:54:28.106297"
+    },
+    {
+      "match": "N. Forest vs Fulham",
+      "cotes": [
+        2.24,
+        3.43,
+        3.11
+      ],
+      "prediction": "1",
+      "confiance": 40,
+      "resultat_reel": "X",
+      "facteurs": {
+        "cote_favorite": "1",
+        "classement": "1"
+      },
+      "timestamp": "2026-05-14T12:54:28.108641"
+    },
+    {
+      "match": "Sunderland vs Leeds",
+      "cotes": [
+        3.16,
+        3.2,
+        2.32
+      ],
+      "prediction": "2",
+      "confiance": 40,
+      "resultat_reel": "2",
+      "facteurs": {
+        "cote_favorite": "2",
+        "classement": "2"
+      },
+      "timestamp": "2026-05-14T12:54:28.111243"
     }
   ],
   "stats_globales": {
-    "total_matchs": 100,
-    "predictions_correctes": 17,
-    "predictions_1n2_correctes": 17,
+    "total_matchs": 120,
+    "predictions_correctes": 21,
+    "predictions_1n2_correctes": 21,
     "scores_exacts": 0
   },
   "perf_facteurs": {
     "cote_favorite": {
-      "correct": 20,
-      "total": 50
+      "correct": 22,
+      "total": 60
     },
     "forme_recente": {
       "correct": 0,
       "total": 0
     },
     "classement": {
-      "correct": 21,
-      "total": 50
+      "correct": 23,
+      "total": 60
     },
     "classement_diff": {
       "correct": 0,
@@ -3590,10 +4020,11 @@
     }
   },
   "journees_apprises": [
-    "Saison 2026::Journée 3",
-    "Saison 2026::Journée 5",
     "Saison 2026::Journée 1",
     "Saison 2026::Journée 4",
+    "Saison 2026::Journée 3",
+    "Saison 2026::Journée 5",
+    "Saison 2026::Journée 6",
     "Saison 2026::Journée 2"
   ]
 }
