@@ -391,7 +391,88 @@
           ]
         }
       ],
-      "res": [],
+      "res": [
+        {
+          "h": "London Reds",
+          "a": "West Ham",
+          "s": "4:0",
+          "mt": "2:0",
+          "hm": "19' 41' 46' 46'",
+          "am": ""
+        },
+        {
+          "h": "Manchester Blue",
+          "a": "Manchester Red",
+          "s": "3:3",
+          "mt": "1:2",
+          "hm": "19' 56' 85'",
+          "am": "6' 30' 58'"
+        },
+        {
+          "h": "Brentford",
+          "a": "C. Palace",
+          "s": "2:3",
+          "mt": "1:2",
+          "hm": "45' 73'",
+          "am": "43' 45' 88'"
+        },
+        {
+          "h": "Bournemouth",
+          "a": "Sunderland",
+          "s": "1:1",
+          "mt": "1:0",
+          "hm": "43'",
+          "am": "87'"
+        },
+        {
+          "h": "Liverpool",
+          "a": "Spurs",
+          "s": "2:3",
+          "mt": "1:1",
+          "hm": "21' 55'",
+          "am": "33' 51' 86'"
+        },
+        {
+          "h": "Wolverhampton",
+          "a": "Newcastle",
+          "s": "2:0",
+          "mt": "0:0",
+          "hm": "60' 71'",
+          "am": ""
+        },
+        {
+          "h": "Everton",
+          "a": "Fulham",
+          "s": "0:0",
+          "mt": "0:0",
+          "hm": "",
+          "am": ""
+        },
+        {
+          "h": "N. Forest",
+          "a": "A. Villa",
+          "s": "2:2",
+          "mt": "1:1",
+          "hm": "28' 53'",
+          "am": "30' 49'"
+        },
+        {
+          "h": "Burnley",
+          "a": "Leeds",
+          "s": "1:1",
+          "mt": "1:1",
+          "hm": "36'",
+          "am": "9'"
+        },
+        {
+          "h": "Brighton",
+          "a": "London Blues",
+          "s": "2:2",
+          "mt": "0:2",
+          "hm": "57' 58'",
+          "am": "27' 34'"
+        }
+      ],
       "pro": [
         {
           "m": "Nul (cote 3.9)",
@@ -400,58 +481,58 @@
             3.9,
             3.56
           ],
-          "indice": 41,
+          "indice": 40,
           "classe": "FUN",
           "score": "1-2",
           "prediction": "X"
         },
         {
-          "m": "Leeds (cote 3.96)",
+          "m": "Nul (cote 3.24)",
           "c": [
             2.01,
             3.24,
             3.96
           ],
-          "indice": 40,
+          "indice": 43,
           "classe": "FUN",
-          "score": "1-2",
-          "prediction": "2"
+          "score": "1-1",
+          "prediction": "X"
         },
         {
-          "m": "N. Forest (cote 2.04)",
+          "m": "Nul (cote 3.5)",
           "c": [
             2.04,
             3.5,
             3.51
           ],
-          "indice": 42,
+          "indice": 40,
           "classe": "FUN",
-          "score": "3-1",
-          "prediction": "1"
+          "score": "2-2",
+          "prediction": "X"
         },
         {
-          "m": "Everton (cote 2.59)",
+          "m": "Nul (cote 3.15)",
           "c": [
             2.59,
             3.15,
             2.8
           ],
-          "indice": 40,
+          "indice": 42,
           "classe": "FUN",
-          "score": "3-1",
-          "prediction": "1"
+          "score": "2-1",
+          "prediction": "X"
         },
         {
-          "m": "Newcastle (cote 2.12)",
+          "m": "Nul (cote 3.7)",
           "c": [
             3.13,
             3.7,
             2.12
           ],
-          "indice": 45,
+          "indice": 40,
           "classe": "FUN",
-          "score": "0-4",
-          "prediction": "2"
+          "score": "2-2",
+          "prediction": "X"
         },
         {
           "m": "London Reds (cote 1.27)",
@@ -460,9 +541,9 @@
             6.07,
             9.35
           ],
-          "indice": 51,
-          "classe": "FUN",
-          "score": "4-0",
+          "indice": 56,
+          "classe": "RISQUE CALCULÉ",
+          "score": "5-0",
           "prediction": "1"
         },
         {
@@ -472,22 +553,22 @@
             5.51,
             6.98
           ],
-          "indice": 48,
-          "classe": "FUN",
+          "indice": 55,
+          "classe": "RISQUE CALCULÉ",
           "score": "1-2",
           "prediction": "X"
         },
         {
-          "m": "Bournemouth (cote 1.92)",
+          "m": "Nul (cote 3.62)",
           "c": [
             1.92,
             3.62,
             3.81
           ],
-          "indice": 43,
+          "indice": 40,
           "classe": "FUN",
-          "score": "2-0",
-          "prediction": "1"
+          "score": "1-1",
+          "prediction": "X"
         },
         {
           "m": "C. Palace (cote 3.62)",
@@ -498,7 +579,7 @@
           ],
           "indice": 40,
           "classe": "FUN",
-          "score": "1-3",
+          "score": "0-3",
           "prediction": "2"
         },
         {
@@ -508,10 +589,308 @@
             6.23,
             10.21
           ],
-          "indice": 58,
+          "indice": 59,
           "classe": "RISQUE CALCULÉ",
           "score": "2-2",
           "prediction": "X"
+        }
+      ]
+    },
+    "Journée 3": {
+      "cal": [
+        {
+          "h": "Leeds",
+          "a": "Liverpool",
+          "o": [
+            10.08,
+            6.2,
+            1.25
+          ]
+        },
+        {
+          "h": "A. Villa",
+          "a": "Bournemouth",
+          "o": [
+            1.43,
+            5.14,
+            5.93
+          ]
+        },
+        {
+          "h": "Manchester Red",
+          "a": "N. Forest",
+          "o": [
+            1.54,
+            4.24,
+            5.7
+          ]
+        },
+        {
+          "h": "London Blues",
+          "a": "Burnley",
+          "o": [
+            1.33,
+            5.47,
+            7.88
+          ]
+        },
+        {
+          "h": "Sunderland",
+          "a": "Brentford",
+          "o": [
+            7.39,
+            4.6,
+            1.41
+          ]
+        },
+        {
+          "h": "Spurs",
+          "a": "London Reds",
+          "o": [
+            4.38,
+            4.14,
+            1.69
+          ]
+        },
+        {
+          "h": "Fulham",
+          "a": "Wolverhampton",
+          "o": [
+            1.69,
+            4.12,
+            4.4
+          ]
+        },
+        {
+          "h": "Newcastle",
+          "a": "Brighton",
+          "o": [
+            1.51,
+            4.82,
+            5.24
+          ]
+        },
+        {
+          "h": "C. Palace",
+          "a": "West Ham",
+          "o": [
+            1.77,
+            3.92,
+            4.2
+          ]
+        },
+        {
+          "h": "Everton",
+          "a": "Manchester Blue",
+          "o": [
+            4.96,
+            3.48,
+            1.75
+          ]
+        }
+      ],
+      "res": [
+        {
+          "h": "Everton",
+          "a": "Manchester Blue",
+          "s": "1:3",
+          "mt": "0:2",
+          "hm": "90'",
+          "am": "24' 42' 76'"
+        },
+        {
+          "h": "C. Palace",
+          "a": "West Ham",
+          "s": "2:1",
+          "mt": "1:0",
+          "hm": "16' 73'",
+          "am": "85'"
+        },
+        {
+          "h": "Newcastle",
+          "a": "Brighton",
+          "s": "1:1",
+          "mt": "1:0",
+          "hm": "3'",
+          "am": "85'"
+        },
+        {
+          "h": "Fulham",
+          "a": "Wolverhampton",
+          "s": "1:1",
+          "mt": "1:1",
+          "hm": "8'",
+          "am": "29'"
+        },
+        {
+          "h": "Spurs",
+          "a": "London Reds",
+          "s": "3:2",
+          "mt": "2:0",
+          "hm": "36' 39' 70'",
+          "am": "48' 54'"
+        },
+        {
+          "h": "London Blues",
+          "a": "Burnley",
+          "s": "2:1",
+          "mt": "0:1",
+          "hm": "53' 87'",
+          "am": "3'"
+        },
+        {
+          "h": "Manchester Red",
+          "a": "N. Forest",
+          "s": "1:1",
+          "mt": "1:1",
+          "hm": "15'",
+          "am": "35'"
+        },
+        {
+          "h": "A. Villa",
+          "a": "Bournemouth",
+          "s": "5:1",
+          "mt": "3:0",
+          "hm": "19' 22' 26' 57' 74'",
+          "am": "53'"
+        },
+        {
+          "h": "Leeds",
+          "a": "Liverpool",
+          "s": "1:5",
+          "mt": "1:2",
+          "hm": "36'",
+          "am": "26' 32' 55' 75' 77'"
+        },
+        {
+          "h": "Sunderland",
+          "a": "Brentford",
+          "s": "0:4",
+          "mt": "0:2",
+          "hm": "",
+          "am": "13' 43' 54' 87'"
+        }
+      ],
+      "pro": [
+        {
+          "m": "Nul (cote 6.2)",
+          "c": [
+            10.08,
+            6.2,
+            1.25
+          ],
+          "indice": 56,
+          "classe": "RISQUE CALCULÉ",
+          "score": "1-2",
+          "prediction": "X"
+        },
+        {
+          "m": "A. Villa (cote 1.43)",
+          "c": [
+            1.43,
+            5.14,
+            5.93
+          ],
+          "indice": 60,
+          "classe": "RISQUE CALCULÉ",
+          "score": "4-0",
+          "prediction": "1"
+        },
+        {
+          "m": "Nul (cote 4.24)",
+          "c": [
+            1.54,
+            4.24,
+            5.7
+          ],
+          "indice": 42,
+          "classe": "FUN",
+          "score": "1-2",
+          "prediction": "X"
+        },
+        {
+          "m": "London Blues (cote 1.33)",
+          "c": [
+            1.33,
+            5.47,
+            7.88
+          ],
+          "indice": 62,
+          "classe": "RISQUE CALCULÉ",
+          "score": "5-0",
+          "prediction": "1"
+        },
+        {
+          "m": "Nul (cote 4.6)",
+          "c": [
+            7.39,
+            4.6,
+            1.41
+          ],
+          "indice": 52,
+          "classe": "FUN",
+          "score": "1-2",
+          "prediction": "X"
+        },
+        {
+          "m": "Nul (cote 4.14)",
+          "c": [
+            4.38,
+            4.14,
+            1.69
+          ],
+          "indice": 51,
+          "classe": "FUN",
+          "score": "2-2",
+          "prediction": "X"
+        },
+        {
+          "m": "Nul (cote 4.12)",
+          "c": [
+            1.69,
+            4.12,
+            4.4
+          ],
+          "indice": 42,
+          "classe": "FUN",
+          "score": "1-2",
+          "prediction": "X"
+        },
+        {
+          "m": "Newcastle (cote 1.51)",
+          "c": [
+            1.51,
+            4.82,
+            5.24
+          ],
+          "indice": 43,
+          "classe": "FUN",
+          "score": "4-0",
+          "prediction": "1"
+        },
+        {
+          "m": "C. Palace (cote 1.77)",
+          "c": [
+            1.77,
+            3.92,
+            4.2
+          ],
+          "indice": 58,
+          "classe": "RISQUE CALCULÉ",
+          "score": "4-0",
+          "prediction": "1"
+        },
+        {
+          "m": "Manchester Blue (cote 1.75)",
+          "c": [
+            4.96,
+            3.48,
+            1.75
+          ],
+          "indice": 40,
+          "classe": "FUN",
+          "score": "1-3",
+          "prediction": "2"
         }
       ]
     }
