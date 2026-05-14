@@ -1,1 +1,75 @@
-{}
+{
+  "patterns": {},
+  "poids": {
+    "cote_favorite": 0.14,
+    "forme_recente": 0.11,
+    "classement": 0.11,
+    "classement_diff": 0.09,
+    "zone_vs_zone": 0.09,
+    "force_lieu": 0.08,
+    "lieu_rang": 0.06,
+    "serie_forme": 0.08,
+    "serie_rang": 0.06,
+    "tendance_buts": 0.07,
+    "historique_h2h": 0.06,
+    "cotes_proches": 0.05
+  },
+  "historique_predictions": [],
+  "stats_globales": {
+    "total_matchs": 0,
+    "predictions_correctes": 0,
+    "predictions_1n2_correctes": 0,
+    "scores_exacts": 0
+  },
+  "perf_facteurs": {
+    "cote_favorite": {
+      "correct": 0,
+      "total": 0
+    },
+    "forme_recente": {
+      "correct": 0,
+      "total": 0
+    },
+    "classement": {
+      "correct": 0,
+      "total": 0
+    },
+    "classement_diff": {
+      "correct": 0,
+      "total": 0
+    },
+    "zone_vs_zone": {
+      "correct": 0,
+      "total": 0
+    },
+    "force_lieu": {
+      "correct": 0,
+      "total": 0
+    },
+    "lieu_rang": {
+      "correct": 0,
+      "total": 0
+    },
+    "serie_forme": {
+      "correct": 0,
+      "total": 0
+    },
+    "serie_rang": {
+      "correct": 0,
+      "total": 0
+    },
+    "tendance_buts": {
+      "correct": 0,
+      "total": 0
+    },
+    "historique_h2h": {
+      "correct": 0,
+      "total": 0
+    },
+    "cotes_proches": {
+      "correct": 0,
+      "total": 0
+    }
+  },
+  "journees_apprises": []
+}
