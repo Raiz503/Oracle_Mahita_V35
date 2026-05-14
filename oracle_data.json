@@ -94,7 +94,128 @@
         }
       ],
       "res": [],
-      "pro": []
+      "pro": [
+        {
+          "m": "Nul (cote 5.04)",
+          "c": [
+            6.25,
+            5.04,
+            1.43
+          ],
+          "indice": 50,
+          "classe": "FUN",
+          "score": "1-1",
+          "prediction": "X"
+        },
+        {
+          "m": "Nul (cote 3.67)",
+          "c": [
+            2.95,
+            3.67,
+            2.23
+          ],
+          "indice": 42,
+          "classe": "FUN",
+          "score": "1-1",
+          "prediction": "X"
+        },
+        {
+          "m": "C. Palace (cote 1.81)",
+          "c": [
+            1.81,
+            4.05,
+            3.84
+          ],
+          "indice": 40,
+          "classe": "FUN",
+          "score": "2-0",
+          "prediction": "1"
+        },
+        {
+          "m": "Spurs (cote 1.43)",
+          "c": [
+            1.43,
+            5.41,
+            5.75
+          ],
+          "indice": 41,
+          "classe": "FUN",
+          "score": "3-0",
+          "prediction": "1"
+        },
+        {
+          "m": "Nul (cote 4.02)",
+          "c": [
+            3.54,
+            4.02,
+            1.89
+          ],
+          "indice": 44,
+          "classe": "FUN",
+          "score": "1-1",
+          "prediction": "X"
+        },
+        {
+          "m": "Nul (cote 3.9)",
+          "c": [
+            2.63,
+            3.9,
+            2.36
+          ],
+          "indice": 41,
+          "classe": "FUN",
+          "score": "1-1",
+          "prediction": "X"
+        },
+        {
+          "m": "Manchester Red (cote 1.65)",
+          "c": [
+            1.65,
+            3.6,
+            5.72
+          ],
+          "indice": 40,
+          "classe": "FUN",
+          "score": "2-0",
+          "prediction": "1"
+        },
+        {
+          "m": "London Blues (cote 1.47)",
+          "c": [
+            1.47,
+            4.51,
+            6.24
+          ],
+          "indice": 40,
+          "classe": "FUN",
+          "score": "3-0",
+          "prediction": "1"
+        },
+        {
+          "m": "Nul (cote 3.84)",
+          "c": [
+            4.41,
+            3.84,
+            1.75
+          ],
+          "indice": 46,
+          "classe": "FUN",
+          "score": "1-1",
+          "prediction": "X"
+        },
+        {
+          "m": "London Reds (cote 1.45)",
+          "c": [
+            1.45,
+            4.73,
+            6.27
+          ],
+          "indice": 40,
+          "classe": "FUN",
+          "score": "3-0",
+          "prediction": "1"
+        }
+      ]
     }
   }
 }
