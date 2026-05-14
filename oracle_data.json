@@ -297,6 +297,102 @@
           "prediction": "1"
         }
       ]
+    },
+    "Journée 2": {
+      "cal": [
+        {
+          "h": "Brighton",
+          "a": "London Blues",
+          "o": [
+            1.91,
+            3.9,
+            3.56
+          ]
+        },
+        {
+          "h": "Burnley",
+          "a": "Leeds",
+          "o": [
+            2.01,
+            3.24,
+            3.96
+          ]
+        },
+        {
+          "h": "N. Forest",
+          "a": "A. Villa",
+          "o": [
+            2.04,
+            3.5,
+            3.51
+          ]
+        },
+        {
+          "h": "Everton",
+          "a": "Fulham",
+          "o": [
+            2.59,
+            3.15,
+            2.8
+          ]
+        },
+        {
+          "h": "Wolverhampton",
+          "a": "Newcastle",
+          "o": [
+            3.13,
+            3.7,
+            2.12
+          ]
+        },
+        {
+          "h": "London Reds",
+          "a": "West Ham",
+          "o": [
+            1.27,
+            6.07,
+            9.35
+          ]
+        },
+        {
+          "h": "Liverpool",
+          "a": "Spurs",
+          "o": [
+            1.36,
+            5.51,
+            6.98
+          ]
+        },
+        {
+          "h": "Bournemouth",
+          "a": "Sunderland",
+          "o": [
+            1.92,
+            3.62,
+            3.81
+          ]
+        },
+        {
+          "h": "Brentford",
+          "a": "C. Palace",
+          "o": [
+            1.89,
+            3.91,
+            3.62
+          ]
+        },
+        {
+          "h": "Manchester Blue",
+          "a": "Manchester Red",
+          "o": [
+            1.25,
+            6.23,
+            10.21
+          ]
+        }
+      ],
+      "res": [],
+      "pro": []
     }
   }
 }
