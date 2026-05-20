@@ -4438,12 +4438,12 @@
     }
   },
   "journees_apprises": [
-    "Saison 2026::Journée 7",
     "Saison 2026::Journée 1",
-    "Saison 2026::Journée 4",
-    "Saison 2026::Journée 3",
     "Saison 2026::Journée 5",
+    "Saison 2026::Journée 7",
+    "Saison 2026::Journée 4",
     "Saison 2026::Journée 6",
-    "Saison 2026::Journée 2"
+    "Saison 2026::Journée 2",
+    "Saison 2026::Journée 3"
   ]
 }
