@@ -996,7 +996,7 @@
             4.54,
             5.5
           ],
-          "indice": 44,
+          "indice": 40,
           "classe": "FUN",
           "score": "2-1",
           "prediction": "1"
@@ -1008,7 +1008,7 @@
             7.74,
             17.4
           ],
-          "indice": 58,
+          "indice": 60,
           "classe": "RISQUE CALCULÉ",
           "score": "5-0",
           "prediction": "1"
@@ -1020,7 +1020,7 @@
             5.44,
             8.12
           ],
-          "indice": 42,
+          "indice": 41,
           "classe": "FUN",
           "score": "4-1",
           "prediction": "1"
@@ -1056,13 +1056,13 @@
             5.43,
             7.64
           ],
-          "indice": 47,
+          "indice": 49,
           "classe": "FUN",
           "score": "4-0",
           "prediction": "1"
         },
         {
-          "m": "Nul (cote 3.95)",
+          "m": "A. Villa (cote 3.58)",
           "c": [
             1.9,
             3.95,
@@ -1070,20 +1070,20 @@
           ],
           "indice": 40,
           "classe": "FUN",
-          "score": "2-2",
-          "prediction": "X"
+          "score": "2-3",
+          "prediction": "2"
         },
         {
-          "m": "Bournemouth (cote 2.3)",
+          "m": "Nul (cote 3.24)",
           "c": [
             2.3,
             3.24,
             3.17
           ],
-          "indice": 40,
+          "indice": 44,
           "classe": "FUN",
           "score": "1-1",
-          "prediction": "1"
+          "prediction": "X"
         },
         {
           "m": "C. Palace (cote 2.25)",
@@ -1104,7 +1104,7 @@
             3.87,
             1.73
           ],
-          "indice": 49,
+          "indice": 47,
           "classe": "FUN",
           "score": "1-2",
           "prediction": "X"
